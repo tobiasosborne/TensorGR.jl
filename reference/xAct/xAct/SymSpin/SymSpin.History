@@ -1,0 +1,32 @@
+------------------------------------------------------------------------
+2021
+
+07 September - First version of SymSpin.nb. Chosen version number 0.1.0.
+14 September - Added ToIndexed and fixed bug in SymHToSymMultRule
+15 September - Added TensorMinus and fixed bug with display of valence numbers of SymMult
+17 September - Improved MultScalToSymMultRule
+21 September - Fixed SymMultToMultScalRule and added NumOf(Un)primedSlots for MultScal
+28 October - Fixed a bug with MultScalLeibnizRules
+03 November - Fixed a bug in SortSymMult and a missing definition in IrrDecomposeSymMult
+
+2022
+
+02 June - Fixed bug in IsolateTensorPlus for cases with only one term.
+        - Introduced ExtractCoeffsIndexFree to extract the coefficients of an indexfree spinor in expression or equation.
+
+2023
+23 April - AllSymMultCommutatorRules was made into a public function, and a bug in its definition was fixed.
+28 April - FormatComponentsSymmetric and SetTexComponentsSymmetric are now only does something for tensors with at least one index.
+
+2025
+6 May - Added FundSpinOpBianchiRules for index-free versions of the Bianhci identities.
+      - Added the VarSH section to handle spinorial calculus of variations. See arXiv:1505.03770 for a definition.
+15 May - Added the section "Commutation inside derivative" for valence (2,0) and (1,1) and MultScal
+
+21 May - Removed unnecessary valence number checks on some SymMult commutators for valence (1,1) spinors.
+       - Added Simplify to the Max/Min CommuteSymMultRuleOut and CommuteSymMultRuleIn. This allows symbolic calculations with valence conditions in $Assumptions. 
+27 May - Added checks and error messages for CommuteSymMultRuleOut and CommuteSymMultRuleIn.
+
+8 June - Added support for Matrix operators.
+
+23 June - Fixed a bug in valence checks in CommuteSymMultRuleOut.

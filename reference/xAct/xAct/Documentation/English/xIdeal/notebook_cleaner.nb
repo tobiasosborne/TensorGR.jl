@@ -1,0 +1,369 @@
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Setup", \
+"Subsection",ExpressionUUID->"26272f8f-5297-47e3-abd6-843ae0cf88d1"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"CleanNotebook", "[", "file_", "]"}], ":=", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"nb", ",", "contents", ",", "newcontents"}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"nb", "=", 
+      RowBox[{"NotebookOpen", "[", "file", "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"SetOptions", "[", 
+      RowBox[{"nb", ",", 
+       RowBox[{"\"\<TrackCellChangeTimes\>\"", "\[Rule]", "False"}], ",", 
+       RowBox[{"PrivateNotebookOptions", "\[Rule]", 
+        RowBox[{"{", 
+         RowBox[{"\"\<FileOutlineCache\>\"", "\[Rule]", "False"}], "}"}]}]}], 
+      "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"contents", "=", 
+      RowBox[{"NotebookGet", "[", "nb", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"newcontents", "=", 
+      RowBox[{"contents", "/.", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"CellChangeTimes", "\[Rule]", "_"}], ")"}], "\[Rule]", 
+          RowBox[{"Sequence", "[", "]"}]}], ",", 
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"CellTags", "\[Rule]", "_"}], ")"}], "\[Rule]", 
+          RowBox[{"Sequence", "[", "]"}]}], ",", 
+         RowBox[{"ExpressionUUID", "\[Rule]", 
+          RowBox[{"Sequence", "[", "]"}]}]}], "}"}]}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"NotebookPut", "[", 
+      RowBox[{"newcontents", ",", "nb"}], "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"NotebookSave", "[", "nb", "]"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"NotebookClose", "[", "nb", "]"}]}]}], "]"}]}]], "Input",
+ CellChangeTimes->{
+  3.827675892227623*^9, {3.8276759317055273`*^9, 3.827675933233989*^9}, {
+   3.827676258981192*^9, 3.827676267872974*^9}},
+ CellLabel->"In[1]:=",ExpressionUUID->"0d35ce0f-ffa9-49d8-a059-880221beb715"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Clean notebook", \
+"Subsection",ExpressionUUID->"449dee90-d2d3-4fd8-a364-7cd2f41ea40e"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Directory", "[", "]"}]], "Input",
+ CellLabel->"In[1]:=",ExpressionUUID->"2b3ec4b2-c8ad-4052-8841-2f1d30d7283c"],
+
+Cell[BoxData["\<\"/home/alfonso/trabajos/SalvadorMengual/xIdeal/Documentation/\
+English/ReferencePages/Symbols\"\>"], "Output",
+ CellChangeTimes->{3.907207200818534*^9, 3.907208699192546*^9, 
+  3.907227037482627*^9, 3.9072284278591423`*^9, 3.907228891271451*^9, 
+  3.9072502128101254`*^9},
+ CellLabel->"Out[1]=",ExpressionUUID->"993832f8-8d32-4773-b68c-c5a9ab22f1c5"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"notebook", "=", 
+  RowBox[{
+   RowBox[{"Directory", "[", "]"}], "<>", 
+   "\"\</SaveExactSolution.nb\>\""}]}]], "Input",
+ CellChangeTimes->{{3.8276615316837187`*^9, 3.8276615468937817`*^9}, {
+   3.907207121581999*^9, 3.907207151182728*^9}, {3.907207206600533*^9, 
+   3.907207210523098*^9}, {3.907208222454628*^9, 3.907208228395481*^9}, {
+   3.9072082707649*^9, 3.907208346474122*^9}, {3.9072087026216383`*^9, 
+   3.907208709315445*^9}, {3.907227040335493*^9, 3.9072270664491043`*^9}, {
+   3.907227115754404*^9, 3.907227124792992*^9}, 3.9072271591785793`*^9, {
+   3.907227629250943*^9, 3.9072276539211407`*^9}, {3.907250217113246*^9, 
+   3.9072502258724413`*^9}, {3.9096586005908003`*^9, 3.909658606151972*^9}},
+ CellLabel->"In[1]:=",ExpressionUUID->"5a7139e9-8400-4515-849f-c5cc45523714"],
+
+Cell[BoxData["\<\"/home/alfonso/trabajos/SalvadorMengual/xIdeal/Documentation/\
+English/ReferencePages/Symbols/SaveExactSolution.nb\"\>"], "Output",
+ CellChangeTimes->{
+  3.827661547574359*^9, 3.827675963034618*^9, 3.8276777029446697`*^9, 
+   3.907207098866166*^9, {3.907207142270289*^9, 3.907207168595985*^9}, 
+   3.9072072120347233`*^9, 3.90720823390704*^9, 3.9072082783474417`*^9, 
+   3.907208312040353*^9, 3.9072083472656918`*^9, 3.9072087117742453`*^9, 
+   3.907227068951248*^9, 3.907227128827838*^9, 3.907227159687701*^9, 
+   3.907227666958494*^9, 3.907228431822825*^9, 3.90722889300103*^9, 
+   3.9072502269604797`*^9, 3.907250426339919*^9, 3.9096526121374702`*^9, 
+   3.909658607687518*^9, 3.909724716041642*^9},
+ CellLabel->"Out[1]=",ExpressionUUID->"1d42ac97-1a87-49f9-8bc9-db13f6d89539"]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{"CleanNotebook", "[", "notebook", "]"}]], "Input",
+ CellChangeTimes->{{3.827661517958569*^9, 3.8276615621670313`*^9}, 
+   3.827661761252636*^9, {3.907207163859419*^9, 3.907207165681293*^9}},
+ CellLabel->"In[9]:=",ExpressionUUID->"59a34555-0257-4207-bbea-ce154b42ce09"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ResourceFunction", "[", "\"\<SaveReadableNotebook\>\"", "]"}], "[", 
+  RowBox[{"notebook", ",", "\"\<SaveExactSolution.nb\>\"", ",", 
+   RowBox[{"\"\<ExcludedCellOptions\>\"", "->", 
+    RowBox[{"{", 
+     RowBox[{
+     "CellChangeTimes", ",", "ExpressionUUID", ",", "CellLabel", ",", " ", 
+      "CellID", ",", "FrontEndVersion"}], "}"}]}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.907207574153264*^9, 3.9072075980406437`*^9}, {
+  3.9072076571890717`*^9, 3.9072076619506273`*^9}, {3.907207694234769*^9, 
+  3.907207722347186*^9}, {3.9072077732685547`*^9, 3.907207777202688*^9}, {
+  3.907208249285439*^9, 3.907208254507666*^9}, {3.907208287435354*^9, 
+  3.9072083231843767`*^9}, {3.907208355453635*^9, 3.907208361267434*^9}, {
+  3.907208719973404*^9, 3.9072087354164886`*^9}, {3.907227099564636*^9, 
+  3.907227105728765*^9}, {3.907227135746641*^9, 3.907227165337852*^9}, {
+  3.907227678954754*^9, 3.9072276872576*^9}, {3.907228438874984*^9, 
+  3.907228439497521*^9}, {3.9072285632187147`*^9, 3.907228564425956*^9}, {
+  3.907228899328356*^9, 3.907228899944193*^9}, {3.907250234265403*^9, 
+  3.907250242456719*^9}, {3.907250415644267*^9, 3.9072504175846643`*^9}, {
+  3.909658613730658*^9, 3.909658622032794*^9}},
+ CellLabel->"In[2]:=",ExpressionUUID->"afef37ca-7d80-40e7-be0d-592d46eec530"],
+
+Cell[BoxData[
+ RowBox[{"File", "[", 
+  TemplateBox[{
+   "\"/home/alfonso/trabajos/SalvadorMengual/xIdeal/Documentation/English/\
+ReferencePages/Symbols/SaveExactSolution.nb\""},
+   "FileArgument"], "]"}]], "Output",
+ CellChangeTimes->{{3.907207604162016*^9, 3.9072076109165382`*^9}, {
+   3.9072076515425987`*^9, 3.9072076520707903`*^9}, 3.90720773077081*^9, 
+   3.907207781919959*^9, 3.9072079124755507`*^9, 3.907208263167337*^9, 
+   3.90720829969622*^9, 3.90720833172297*^9, 3.907208363089096*^9, 
+   3.907208741410335*^9, {3.907227087358994*^9, 3.9072271084285793`*^9}, {
+   3.9072271495581837`*^9, 3.907227174282723*^9}, 3.907227690967641*^9, 
+   3.9072284426578417`*^9, 3.907228574740131*^9, 3.907228903337503*^9, 
+   3.907250248803586*^9, 3.907250427628051*^9, 3.909652634792737*^9, 
+   3.909656664578402*^9, 3.9096586267076397`*^9, 3.909724721939971*^9},
+ CellLabel->"Out[2]=",ExpressionUUID->"d9683d6c-5f18-4f01-a19b-1c33104786fe"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResourceFunction", "[", "\"\<SaveReadableNotebook\>\"", 
+  "]"}]], "Input",
+ CellLabel->"In[14]:=",ExpressionUUID->"c1703c7a-00c3-460b-80b9-ee7e3712434c"],
+
+Cell[BoxData[
+ InterpretationBox[
+  TagBox[
+   TagBox[
+    DynamicModuleBox[{Typeset`open = True}, 
+     FrameBox[
+      PaneSelectorBox[{False->GridBox[{
+         {
+          PaneBox[GridBox[{
+             {
+              StyleBox[
+               StyleBox[
+                AdjustmentBox["\<\"[\[FilledSmallSquare]]\"\>",
+                 BoxBaselineShift->-0.25,
+                 BoxMargins->{{0, 0}, {-1, -1}}], "ResourceFunctionIcon",
+                
+                FontColor->RGBColor[
+                 0.8745098039215686, 0.2784313725490196, 0.03137254901960784]],
+               
+               ShowStringCharacters->False,
+               FontFamily->"Source Sans Pro Black",
+               FontSize->0.6538461538461539 Inherited,
+               FontWeight->"Heavy",
+               PrivateFontOptions->{"OperatorSubstitution"->False}], 
+              StyleBox[
+               RowBox[{
+                StyleBox["SaveReadableNotebook", "ResourceFunctionLabel"], 
+                " "}],
+               ShowAutoStyles->False,
+               ShowStringCharacters->False,
+               FontSize->Rational[12, 13] Inherited,
+               FontColor->GrayLevel[0.1]]}
+            },
+            GridBoxSpacings->{"Columns" -> {{0.25}}}],
+           Alignment->Left,
+           BaseStyle->{LineSpacing -> {0, 0}, LineBreakWithin -> False},
+           BaselinePosition->Baseline,
+           FrameMargins->{{3, 0}, {0, 0}}], 
+          ItemBox[
+           PaneBox[
+            TogglerBox[Dynamic[Typeset`open], {True->
+             
+             DynamicBox[FEPrivate`FrontEndResource[
+              "FEBitmaps", "IconizeCloser"],
+              ImageSizeCache->{11., {1., 10.}}], False->
+             
+             DynamicBox[FEPrivate`FrontEndResource[
+              "FEBitmaps", "IconizeOpener"],
+              ImageSizeCache->{11., {1., 10.}}]},
+             Appearance->None,
+             BaselinePosition->Baseline,
+             ContentPadding->False,
+             FrameMargins->0],
+            Alignment->Left,
+            BaselinePosition->Baseline,
+            FrameMargins->{{1, 1}, {0, 0}}],
+           Frame->{{
+              RGBColor[
+              0.8313725490196079, 0.8470588235294118, 0.8509803921568627, 
+               0.5], False}, {False, False}}]}
+        },
+        BaselinePosition->{1, 1},
+        GridBoxAlignment->{"Columns" -> {{Left}}, "Rows" -> {{Baseline}}},
+        GridBoxItemSize->{"Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}},
+        GridBoxSpacings->{"Columns" -> {{0}}, "Rows" -> {{0}}}], True->
+       GridBox[{
+         {GridBox[{
+            {
+             PaneBox[GridBox[{
+                {
+                 StyleBox[
+                  StyleBox[
+                   AdjustmentBox["\<\"[\[FilledSmallSquare]]\"\>",
+                    BoxBaselineShift->-0.25,
+                    BoxMargins->{{0, 0}, {-1, -1}}], "ResourceFunctionIcon",
+                   
+                   FontColor->RGBColor[
+                    0.8745098039215686, 0.2784313725490196, 
+                    0.03137254901960784]],
+                  ShowStringCharacters->False,
+                  FontFamily->"Source Sans Pro Black",
+                  FontSize->0.6538461538461539 Inherited,
+                  FontWeight->"Heavy",
+                  PrivateFontOptions->{"OperatorSubstitution"->False}], 
+                 StyleBox[
+                  RowBox[{
+                   StyleBox["SaveReadableNotebook", "ResourceFunctionLabel"], 
+                   " "}],
+                  ShowAutoStyles->False,
+                  ShowStringCharacters->False,
+                  FontSize->Rational[12, 13] Inherited,
+                  FontColor->GrayLevel[0.1]]}
+               },
+               GridBoxSpacings->{"Columns" -> {{0.25}}}],
+              Alignment->Left,
+              BaseStyle->{LineSpacing -> {0, 0}, LineBreakWithin -> False},
+              BaselinePosition->Baseline,
+              FrameMargins->{{3, 0}, {0, 0}}], 
+             ItemBox[
+              PaneBox[
+               TogglerBox[Dynamic[Typeset`open], {True->
+                
+                DynamicBox[FEPrivate`FrontEndResource[
+                 "FEBitmaps", "IconizeCloser"],
+                 ImageSizeCache->{11., {1., 10.}}], False->
+                
+                DynamicBox[FEPrivate`FrontEndResource[
+                 "FEBitmaps", "IconizeOpener"],
+                 ImageSizeCache->{11., {1., 10.}}]},
+                Appearance->None,
+                BaselinePosition->Baseline,
+                ContentPadding->False,
+                FrameMargins->0],
+               Alignment->Left,
+               BaselinePosition->Baseline,
+               FrameMargins->{{1, 1}, {0, 0}}],
+              Frame->{{
+                 RGBColor[
+                 0.8313725490196079, 0.8470588235294118, 0.8509803921568627, 
+                  0.5], False}, {False, False}}]}
+           },
+           BaselinePosition->{1, 1},
+           GridBoxAlignment->{"Columns" -> {{Left}}, "Rows" -> {{Baseline}}},
+           
+           GridBoxItemSize->{
+            "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}},
+           GridBoxSpacings->{"Columns" -> {{0}}, "Rows" -> {{0}}}]},
+         {
+          StyleBox[
+           PaneBox[GridBox[{
+              {
+               RowBox[{
+                TagBox["\<\"Version (latest): \"\>",
+                 "IconizedLabel"], " ", 
+                TagBox["\<\"1.1.1\"\>",
+                 "IconizedItem"]}]},
+              {
+               TagBox[
+                
+                TemplateBox[{
+                 "\"Documentation \[RightGuillemet]\"", 
+                  "https://resources.wolframcloud.com/FunctionRepository/\
+resources/04cc599a-fc56-410f-9a4f-dda65e163f9b/"},
+                 "HyperlinkURL"],
+                "IconizedItem"]}
+             },
+             DefaultBaseStyle->"Column",
+             GridBoxAlignment->{"Columns" -> {{Left}}},
+             
+             GridBoxItemSize->{
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],
+            Alignment->Left,
+            BaselinePosition->Baseline,
+            FrameMargins->{{5, 4}, {0, 4}}], "DialogStyle",
+           FontFamily->"Roboto",
+           FontSize->11]}
+        },
+        BaselinePosition->{1, 1},
+        GridBoxAlignment->{"Columns" -> {{Left}}, "Rows" -> {{Baseline}}},
+        GridBoxDividers->{"Columns" -> {{None}}, "Rows" -> {False, {
+             GrayLevel[0.8]}, False}},
+        GridBoxItemSize->{
+         "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}]}, Dynamic[
+       Typeset`open],
+       BaselinePosition->Baseline,
+       ImageSize->Automatic],
+      Background->RGBColor[
+       0.9686274509803922, 0.9764705882352941, 0.984313725490196],
+      BaselinePosition->Baseline,
+      DefaultBaseStyle->{},
+      FrameMargins->{{0, 0}, {1, 0}},
+      FrameStyle->RGBColor[
+       0.8313725490196079, 0.8470588235294118, 0.8509803921568627],
+      RoundingRadius->4]],
+    #& ,
+    TagBoxNote->" "],
+   {"FunctionResourceBox", 
+    RGBColor[0.8745098039215686, 0.2784313725490196, 0.03137254901960784], 
+    "SaveReadableNotebook"},
+   TagBoxNote->"FunctionResourceBox"],
+  ResourceFunction[
+   ResourceObject[<|
+    "Name" -> "SaveReadableNotebook", "ShortName" -> "SaveReadableNotebook", 
+     "UUID" -> "04cc599a-fc56-410f-9a4f-dda65e163f9b", "ResourceType" -> 
+     "Function", "Version" -> "1.1.1", "Description" -> 
+     "Save a notebook to a file that is formatted to maximize readability \
+when viewing changes in version control systems", "RepositoryLocation" -> 
+     URL["https://www.wolframcloud.com/obj/resourcesystem/api/1.0"], 
+     "SymbolName" -> 
+     "FunctionRepository`$9298fd4aa57d43068016c5bc51c8e1b8`\
+SaveReadableNotebook", "FunctionLocation" -> 
+     CloudObject[
+      "https://www.wolframcloud.com/obj/0b1be190-62f6-4fea-83ee-e71f1d66fea6"]\
+|>, ResourceSystemBase -> Automatic]],
+  Selectable->False]], "Output",
+ CellChangeTimes->{{3.907208072024948*^9, 3.9072080768769217`*^9}},
+ CellLabel->
+  "Out[14]=",ExpressionUUID->"459f22c6-0e64-4f34-b827-35196cfe2756"]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{1440., 761.25},
+WindowMargins->{{Automatic, 552.75}, {99, Automatic}},
+PrivateNotebookOptions->{"FileOutlineCache"->False},
+TaggingRules->{
+ "WelcomeScreenSettings" -> {"FEStarting" -> False}, "TryRealOnly" -> False},
+FrontEndVersion->"13.3 for Linux x86 (64-bit) (July 24, 2023)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"e8c7beba-38d9-4246-8fcd-11787e68b80e"
+]
+

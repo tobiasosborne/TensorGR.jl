@@ -1,0 +1,92 @@
+****************************************
+INSTALLATION NOTES FOR THE xAct PACKAGES
+****************************************
+
+Most xAct packages can be downloaded as a single archive xAct_V.tgz
+(linux or mac) or xAct_V.zip (windows) from the webpage
+
+   https://www.xact.es/
+
+The V in xAct_V represents the current version number of xTensor,
+the leading package of the system. Note that the database of Riemann
+relations in Invar must be downloaded separately.
+
+Some of the xAct packages must be downloaded from their respective
+webs. See xact.es for the required links.
+
+When uncompressed, the archive files give a number of files hanging
+from a directory called xAct/. This directory must be placed at
+(or linked from) one of the places Wolfram Mathematica prepares for
+external applications. You can find the actual paths in your Wolfram
+Language installation in the variables $BaseDirectory (for system-wide
+installations) and $UserBaseDirectory (for single-user installations).
+You need the Applications/ subdirectory (or subfolder) of those
+returned by those variables.
+
+For Wolfram Language versions before 14.1 use Mathematica instead of
+Wolfram in the following links.
+
+Linux:
+
+   - system-wide installation (requires root priviledges):
+
+        /usr/share/Wolfram/Applications/
+
+   - single-user installation:
+
+        $HOME/.Wolfram/Applications/
+
+Mac OS:
+
+   - system-wide installation (requires root priviledges):
+
+        /Library/Wolfram/Applications/
+
+   - single-user installation:
+
+        /Users/<user>/Library/Wolfram/Applications/
+
+MSWindows:
+
+   - system-wide installation:
+
+	C:\Program Files\Wolfram Research\Wolfram\<version>\AddOns\Applications\
+
+   - single-user installation:
+
+	C:\Users\<user>\AppData\Roaming\Wolfram\Applications\
+
+   Beware that in Windows these directories might be hidden!
+
+To install xAct on a Raspberry Pi, do the following:
+
+   Place the xAct tree in
+      ~/.WolframEngine/Applications
+
+   Run the following commands:
+
+      cd ~/.WolframEngine/Applications/xAct/xPerm/mathlink/
+
+      sudo apt-get install uuid-dev
+
+      mcc xperm.tm -luuid -O3 -o xperm.linux.32-bit
+
+Documentation files (like xTensorDoc.nb, etc) are placed in the xAct/Documentation/English directory.
+
+Then the packages can be loaded using unix style
+
+        <<xAct/xTensor.m
+
+or Mathematica style
+
+        <<xAct`xTensor`
+
+If you have any problem, don't hesitate to contact
+
+        jose@xact.es
+
+or even better, post your question in our group (everybody welcome to post!)
+
+        http://groups.google.com/group/xAct
+
+This is the "install" file of xAct. Last update: 9 July 2025.

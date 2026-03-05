@@ -1,0 +1,34 @@
+--------------------
+2015
+
+12 August - Package SpinFrames pre-released with initial version 0.5.0.
+
+--------------------
+2016
+
+12 August - Moved OrderedPlus definitions to TexAct.
+
+--------------------
+
+2017
+3 March - Added $DyadCalcInfo option.
+
+
+--------------------
+
+2018
+21 February - Fixed some problems with InertScalarOp.
+
+--------------------
+
+2021
+3 September - Added section 5.4 and 5.5 for symmetric spinor calculations.
+3 November - Improved Tex code for primed GHP operators.
+   Made DyadComponentByNumberSymmetric, AllDyadComponentsSymmetric    and SetGHPWeightAndFormatSymmetric public functions.
+
+2025
+8 May - Added GHPWeightOf for the tetrad and dyad.
+9 May - Introduced GHPPrime
+8 June - Added section 6.2 to handle matrix operators acting on weighted scalars.
+13 November - Added options IndexFormattingFunction and IndexTexFunction to DefSpinDyad.
+23 December - Added DyadIndexFormattingFunction and DyadIndexTexFunction to connect the corresponding options to the correct dyads.

@@ -1,0 +1,102 @@
+############################################################################
+#
+# Readme file of the Invar (version 2) package - Installation Instructions
+#
+# Language: Mathematica 5.0 or later. (There is a version for Maple)
+#
+# Description: The Invar tensor package is a fast manipulator of generic
+#   scalar polynomial expressions formed from the Riemann tensor
+#   and its covariant derivatives. The package can maximally simplify
+#   any polynomial containing tensor products of up to 7 Riemann
+#   tensors or objects with up to 12 derivatives of the metric.
+#   It has been implemented both in Mathematica and Maple algebraic systems.
+#
+# Developers: Jose M. Martin-Garcia and David Yllanes
+#             Instituto de Estructura de la Materia (IEM), CSIC, Madrid.
+#                   and
+#             Renato Portugal
+#             Laboratorio Nacional de Computacao Cientifica (LNCC)
+#
+# Contact and bug report: jose@xact.es
+#
+############################################################################
+
+The authors kindly ask that researchers who have used the package cite
+references describing it.
+
+INSTALLATION INSTRUCTIONS
+
+In order to run the Mathematica version of the package Invar you
+need to have first:
+
+1) Mathematica, at least version 5.0.
+
+2) The xAct software, including Invar and other packages it needs.
+   They can all be downloaded as a single file:
+
+   Linux/Unix/Mac users:
+      https://xact.es/download/xAct_1.3.0.tgz
+   Windows users:
+      https://xact.es/download/xAct_1.3.0.zip
+
+3) The Invar database of identities:
+
+      http://xact.es/Invar/Riemann.tar.gz
+
+The file xAct_1.3.0.tgz (or .zip) must be unpacked in one of the
+directories prepared for Mathematica addons. We recommend,
+for single-user installations:
+
+  Linux/Unix:
+      $HOME/.Wolfram/Applications/
+  Windows:
+      C:\Document and Settings\<user>\Application Data\Wolfram\Applications\
+  Mac:
+      /Users/<user>/Library/Wolfram/Applications/
+
+or for system-wide installations:
+
+  Linux/Unix:
+      /usr/share/Wolfram/Applications/
+  Windows:
+      C:\Documents and settings\All Users\Application data\Wolfram\Applications\
+  Mac:
+      /Library/Wolfram/Applications/
+
+For WL versions before 14.1 replace Wolfram by Mathematica in those paths.
+
+Everything will be placed in a directory xAct under Applications/.
+For further installation hints see the "Installation Notes" at the
+xAct webpage.
+
+Finally untar the database Riemann.tar.gz inside the xAct/Invar/ directory.
+There are additional files for the database in the file
+Riemann_expand4order12.tar.gz. This must be untarred in the directory
+xAct/Invar/Riemann/ .
+
+That means that the structure should be something like
+
+.../Applications/xAct/xTensor.m
+                     /xPerm.m
+                     ...
+                     /Invar/Invar.m
+                           /Kernel/init.m
+                           /InvarDoc.nb
+                           /Riemann/1
+                                   /2
+                                   ...
+                                   /6_4
+                           ...
+
+At this point, it should be possible to execute everything in the
+InvarDoc.nb file. An example in section 7 (In[230]) requires the use
+of the extended database Riemann_expand4order12.tar.gz.
+
+SPECIAL NOTES FOR WINDOWS USERS:
+
+1) The external executable of the xPerm package is required to speed up
+   the computations. It works for all Mathematica versions under Linux and
+   Mac, but only for Mathematica 6.0 under Windows.
+
+2) A DOS-like window may appear when loading this executable. Do not
+   close it; it can be minimized at the task bar.
