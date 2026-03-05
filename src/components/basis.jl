@@ -86,3 +86,4 @@ function get_basis(reg::TensorRegistry, name::Symbol)
     get(props.options, :is_basis, false) || error("$name is not a basis")
     props.options[:basis_props]::BasisProperties
 end
+

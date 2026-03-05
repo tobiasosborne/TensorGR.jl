@@ -193,6 +193,44 @@ function _normalize_dummies_for_display(expr::TensorExpr)
 end
 
 """
+    split_index(expr::TensorExpr, idx::Symbol, dim::Int) -> TensorExpr
+
+Replace an abstract index with a sum over component indices.
+T_{a} → Σ_{μ=1}^{dim} T_{μ}  (returns a sum of expressions with component markers)
+"""
+function split_index(expr::TensorExpr, idx::Symbol, dim::Int)
+    terms = TensorExpr[]
+    for μ in 1:dim
+        # Replace the abstract index with a component marker
+        component_sym = Symbol(:_, idx, :_, μ)
+        push!(terms, _replace_index_name(expr, idx, component_sym))
+    end
+    tsum(terms)
+end
+
+function _replace_index_name(t::Tensor, old::Symbol, new::Symbol)
+    new_indices = map(t.indices) do idx
+        idx.name == old ? TIndex(new, idx.position) : idx
+    end
+    Tensor(t.name, new_indices)
+end
+
+function _replace_index_name(p::TProduct, old::Symbol, new::Symbol)
+    TProduct(p.scalar, TensorExpr[_replace_index_name(f, old, new) for f in p.factors])
+end
+
+function _replace_index_name(s::TSum, old::Symbol, new::Symbol)
+    TSum(TensorExpr[_replace_index_name(t, old, new) for t in s.terms])
+end
+
+function _replace_index_name(d::TDeriv, old::Symbol, new::Symbol)
+    new_idx = d.index.name == old ? TIndex(new, d.index.position) : d.index
+    TDeriv(new_idx, _replace_index_name(d.arg, old, new))
+end
+
+_replace_index_name(s::TScalar, ::Symbol, ::Symbol) = s
+
+"""
     ensure_no_dummy_clash(a::TensorExpr, b::TensorExpr) -> TensorExpr
 
 Return a modified version of `b` where any dummy index names that clash

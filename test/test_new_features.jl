@@ -560,4 +560,36 @@
         Ω = cartan_second_structure(:Ω, :Γ, up(:a), down(:b), down(:c), down(:d))
         @test Ω isa TensorExpr
     end
+
+    # ── A8: SplitIndex ──
+    @testset "SplitIndex" begin
+        T = Tensor(:T, [down(:a)])
+        result = split_index(T, :a, 3)
+        @test result isa TSum
+        @test length(result.terms) == 3
+    end
+
+    # ── F6: BasisChange ──
+    @testset "BasisChange" begin
+        v = CTensor([1.0, 0.0, 0.0], :cart, [Up])
+        J = Float64[0 1 0; 1 0 0; 0 0 1]  # swap x,y
+        v2 = basis_change(v, J)
+        @test v2.data ≈ [0.0, 1.0, 0.0]
+
+        # Rank-2 test
+        g = CTensor(Float64[1 0; 0 1], :cart, [Down, Down])
+        J2 = Float64[2 0; 0 1]
+        g2 = basis_change(g, J2)
+        @test g2.data[1,1] ≈ 0.25  # g'_11 = J^{-1 a}_1 J^{-1 b}_1 g_{ab} = (1/2)^2
+    end
+
+    # ── G7: Tensor weight ──
+    @testset "TensorWeight" begin
+        reg = TensorRegistry()
+        register_manifold!(reg, ManifoldProperties(:M, 4, :g, :d, [:a,:b,:c,:d]))
+        register_tensor!(reg, TensorProperties(name=:T, manifold=:M, rank=(0,2),
+            weight=1))
+        tp = get_tensor(reg, :T)
+        @test tp.weight == 1
+    end
 end

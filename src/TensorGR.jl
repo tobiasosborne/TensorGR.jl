@@ -94,7 +94,7 @@ export current_registry, with_registry
 # Exports: AST primitives
 export indices, free_indices, dummy_pairs
 export rename_dummy, fresh_index, ensure_no_dummy_clash
-export index_sort, same_dummies
+export index_sort, same_dummies, split_index
 export walk, substitute, children
 export derivative_order, is_constant, is_sorted_covds
 export dagger
@@ -191,9 +191,7 @@ export CTensor, ctensor_contract, ctensor_trace, ctensor_inverse, ctensor_det
 export metric_christoffel, metric_riemann, metric_ricci, metric_ricci_scalar
 export metric_einstein, metric_weyl, metric_kretschmann
 export ComponentStore, set_component!, get_component, independent_components
-export BasisProperties, define_basis!, get_basis
-export to_basis, component_array, to_ctensor
-export BasisProperties, define_basis!, get_basis
+export BasisProperties, define_basis!, get_basis, basis_change
 export to_basis, component_array, to_ctensor
 
 # Exports: Macros

@@ -151,3 +151,37 @@ function ctensor_trace(ct::CTensor, idx1::Int, idx2::Int)
 
     CTensor(result, ct.chart, result_positions)
 end
+
+"""
+    basis_change(ct::CTensor, jacobian::Matrix) -> CTensor
+
+Transform a CTensor from one basis to another using a Jacobian matrix.
+Handles rank-1 and rank-2 tensors. For Up indices, multiply by J;
+for Down indices, multiply by J^{-1 T}.
+"""
+function basis_change(ct::CTensor{T,1}, jacobian::Matrix) where T
+    dim = size(ct.data, 1)
+    @assert size(jacobian) == (dim, dim)
+    if ct.positions[1] == Up
+        CTensor(jacobian * ct.data, ct.chart, ct.positions)
+    else
+        CTensor(inv(jacobian)' * ct.data, ct.chart, ct.positions)
+    end
+end
+
+function basis_change(ct::CTensor{T,2}, jacobian::Matrix) where T
+    dim = size(ct.data, 1)
+    @assert size(jacobian) == (dim, dim)
+    J = jacobian
+    Jinv = inv(jacobian)
+
+    result = zeros(promote_type(T, eltype(J)), dim, dim)
+    for a in 1:dim, b in 1:dim
+        for c in 1:dim, d in 1:dim
+            transform_a = ct.positions[1] == Up ? J[a, c] : Jinv[c, a]
+            transform_b = ct.positions[2] == Up ? J[b, d] : Jinv[d, b]
+            result[a, b] += transform_a * transform_b * ct.data[c, d]
+        end
+    end
+    CTensor(result, ct.chart, ct.positions)
+end
