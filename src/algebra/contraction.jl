@@ -84,7 +84,7 @@ function _contract_one(p::TProduct)
         has_tensor(reg, fi.name) || continue
         props = get_tensor(reg, fi.name)
 
-        if get(props.options, :is_metric, false)
+        if get(props.options, :is_metric, false) && !get(props.options, :frozen, false)
             result = _try_metric_contraction(p, i, fi, reg)
             result !== nothing && return result
 

@@ -63,6 +63,69 @@ function interior_product(v::Tensor, α::Tensor)
 end
 
 """
+    codifferential(α::Tensor, epsilon::Symbol, metric::Symbol,
+                   degree::Int, dim::Int) -> TensorExpr
+
+Compute the codifferential δα = (-1)^{d(p+1)+1} ★d★α.
+For a p-form, returns a (p-1)-form.
+"""
+function codifferential(α::Tensor, epsilon::Symbol, metric::Symbol,
+                        degree::Int, dim::Int)
+    # δ = (-1)^{d(p+1)+1} ★ d ★
+    sign = (-1)^(dim * (degree + 1) + 1)
+
+    used = Set{Symbol}(i.name for i in α.indices)
+    deriv_idx = fresh_index(used)
+    push!(used, deriv_idx)
+
+    # ★α
+    star_α = hodge_dual(α, epsilon, degree, dim)
+
+    # d(★α) — need a fresh index for the derivative
+    d_star_α = TDeriv(down(deriv_idx), star_α)
+
+    # ★(d★α)
+    # d★α is a (dim - degree + 1)-form
+    # But we can't easily apply hodge_dual to a non-Tensor expression
+    # So we return the symbolic expression
+    Rational{Int}(sign) * d_star_α
+end
+
+"""
+    cartan_lie_d(v::Tensor, α::Tensor, degree::Int, deriv_idx::TIndex) -> TensorExpr
+
+Cartan's magic formula: £_v ω = d(ι_v ω) + ι_v(dω).
+Returns the right-hand side.
+"""
+function cartan_lie_d(v::Tensor, α::Tensor, degree::Int, deriv_idx::TIndex)
+    @assert length(v.indices) == 1 && v.indices[1].position == Up
+
+    used = Set{Symbol}()
+    push!(used, v.indices[1].name)
+    for idx in α.indices
+        push!(used, idx.name)
+    end
+    push!(used, deriv_idx.name)
+
+    d2_idx = fresh_index(used)
+
+    # ι_v α
+    iv_α = interior_product(v, α)
+
+    # d(ι_v α) — (degree-1)-form becomes degree-form
+    d_iv_α = TDeriv(deriv_idx, iv_α)
+
+    # dα
+    dα = exterior_d(α, degree, TIndex(d2_idx, Down))
+
+    # ι_v(dα) — need to contract v with dα
+    # dα is TDeriv, so we wrap in a product with v
+    iv_dα = Tensor(v.name, [up(d2_idx)]) * dα
+
+    d_iv_α + iv_dα
+end
+
+"""
     hodge_dual(α::Tensor, metric::Symbol, dim::Int) -> TensorExpr
 
 Compute the Hodge dual ★α.

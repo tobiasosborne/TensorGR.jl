@@ -5,6 +5,7 @@ using TensorGR
     include("test_types.jl")
     include("test_registry.jl")
     include("test_show.jl")
+    include("test_display.jl")
     include("test_xperm.jl")
     include("test_indices.jl")
     include("test_walk.jl")
@@ -33,10 +34,16 @@ using TensorGR
     include("test_phase4.jl")
     # Phase 5+6: Curvature Algebra + Exterior Calculus
     include("test_phase56.jl")
+    # Curvature algebra conversions
+    include("test_conversions.jl")
     # Phase 7: Advanced Features
     include("test_phase7.jl")
     # Phase 8: Hardening & Extensions
     include("test_phase8.jl")
     # Integration V2: Full pipeline
     include("test_integration_v2.jl")
+    # Symmetrize / Antisymmetrize
+    include("test_symmetrize.jl")
+    # New features (streams A-K)
+    include("test_new_features.jl")
 end

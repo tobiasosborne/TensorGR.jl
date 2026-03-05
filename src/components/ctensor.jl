@@ -97,6 +97,32 @@ function ctensor_contract(a::CTensor, b::CTensor, idx_a::Int, idx_b::Int)
 end
 
 """
+    ctensor_inverse(ct::CTensor{T,2}) -> CTensor where T
+
+Compute the matrix inverse of a rank-2 CTensor.
+"""
+function ctensor_inverse(ct::CTensor{T,2}) where T
+    @assert size(ct.data, 1) == size(ct.data, 2) "Must be square"
+    inv_data = inv(ct.data)
+    # Flip positions: Up↔Down
+    inv_pos = [p == Up ? Down : Up for p in ct.positions]
+    CTensor(inv_data, ct.chart, inv_pos)
+end
+
+"""
+    ctensor_det(ct::CTensor{T,2}) -> T where T
+
+Compute the determinant of a rank-2 CTensor.
+"""
+function ctensor_det(ct::CTensor{T,2}) where T
+    @assert size(ct.data, 1) == size(ct.data, 2) "Must be square"
+    det(ct.data)
+end
+
+# Import det from LinearAlgebra when available, otherwise use a simple implementation
+using LinearAlgebra: det, inv
+
+"""
     ctensor_trace(ct::CTensor, idx1::Int, idx2::Int) -> CTensor
 
 Trace over indices `idx1` and `idx2`.

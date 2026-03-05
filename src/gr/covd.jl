@@ -45,6 +45,16 @@ function define_covd!(reg::TensorRegistry, name::Symbol;
                                      :metric => metric)))
     end
 
+    # Register torsion tensor if not torsion-free
+    torsion_sym = Symbol(:T, name)
+    if !torsion_free && !has_tensor(reg, torsion_sym)
+        register_tensor!(reg, TensorProperties(
+            name=torsion_sym, manifold=manifold, rank=(1, 2),
+            symmetries=Any[AntiSymmetric(2, 3)],
+            options=Dict{Symbol,Any}(:is_torsion => true,
+                                     :covd => name)))
+    end
+
     covd_props = CovDProperties(name, manifold, metric, christoffel,
                                  torsion_free, metric_compatible)
 
@@ -183,16 +193,115 @@ end
     change_covd(expr, from_covd, to_covd; registry=current_registry()) -> TensorExpr
 
 Change from one covariant derivative to another by inserting the difference
-of Christoffel symbols.
+of Christoffel symbols. ∇₁ T = ∇₂ T + (Γ₁ - Γ₂) terms.
 """
 function change_covd(expr::TensorExpr, from::Symbol, to::Symbol;
                      registry::TensorRegistry=current_registry())
     with_registry(registry) do
-        # Strategy: expand from_covd into partials + Christoffel_from,
-        # then re-express partials as to_covd - Christoffel_to.
-        # Equivalently: ∇₁ = ∇₂ + (Γ₁ - Γ₂)
-        # For now, expand both to partial derivatives
-        result = _expand_covd(expr, from, registry)
-        result
+        _change_covd_walk(expr, from, to, registry)
     end
+end
+
+function _change_covd_walk(expr::Tensor, ::Symbol, ::Symbol, ::TensorRegistry)
+    expr
+end
+function _change_covd_walk(expr::TScalar, ::Symbol, ::Symbol, ::TensorRegistry)
+    expr
+end
+function _change_covd_walk(expr::TSum, from::Symbol, to::Symbol, reg::TensorRegistry)
+    tsum(TensorExpr[_change_covd_walk(t, from, to, reg) for t in expr.terms])
+end
+function _change_covd_walk(expr::TProduct, from::Symbol, to::Symbol, reg::TensorRegistry)
+    TProduct(expr.scalar, TensorExpr[_change_covd_walk(f, from, to, reg) for f in expr.factors])
+end
+function _change_covd_walk(expr::TDeriv, from::Symbol, to::Symbol, reg::TensorRegistry)
+    inner = _change_covd_walk(expr.arg, from, to, reg)
+
+    if inner isa Tensor
+        # ∇₁_a T = ∇₂_a T + (Γ₁ - Γ₂) terms
+        from_props = get_covd(reg, from)
+        to_props = get_covd(reg, to)
+        Γ1 = from_props.christoffel
+        Γ2 = to_props.christoffel
+
+        # Start with ∇₂_a T (keep as TDeriv)
+        result = TDeriv(expr.index, inner)
+
+        used = Set{Symbol}()
+        push!(used, expr.index.name)
+        for idx in inner.indices
+            push!(used, idx.name)
+        end
+
+        # Add difference tensor terms for each index
+        for (i, tidx) in enumerate(inner.indices)
+            dummy = fresh_index(used)
+            push!(used, dummy)
+
+            if tidx.position == Up
+                # +(Γ₁ - Γ₂)^{b_i}_{a d} T^{...d...}
+                diff1 = Tensor(Γ1, [tidx, expr.index, down(dummy)])
+                diff2 = Tensor(Γ2, [tidx, expr.index, down(dummy)])
+                new_indices = copy(inner.indices)
+                new_indices[i] = up(dummy)
+                t_mod = Tensor(inner.name, new_indices)
+                result = result + (diff1 - diff2) * t_mod
+            else
+                # -(Γ₁ - Γ₂)^{d}_{a b_i} T^{...}_{...d...}
+                diff1 = Tensor(Γ1, [up(dummy), expr.index, tidx])
+                diff2 = Tensor(Γ2, [up(dummy), expr.index, tidx])
+                new_indices = copy(inner.indices)
+                new_indices[i] = down(dummy)
+                t_mod = Tensor(inner.name, new_indices)
+                result = result - (diff1 - diff2) * t_mod
+            end
+        end
+
+        return result
+    end
+
+    TDeriv(expr.index, inner)
+end
+
+"""
+    christoffel_to_grad_metric(christoffel::Symbol, metric::Symbol,
+                                a::TIndex, b::TIndex, c::TIndex) -> TensorExpr
+
+Express Γ^a_{bc} = (1/2) g^{ad} (∂_b g_{cd} + ∂_c g_{bd} - ∂_d g_{bc}).
+"""
+function christoffel_to_grad_metric(metric::Symbol,
+                                     a::TIndex, b::TIndex, c::TIndex)
+    @assert a.position == Up
+    @assert b.position == Down && c.position == Down
+
+    used = Set{Symbol}([a.name, b.name, c.name])
+    d = fresh_index(used)
+
+    g_inv = Tensor(metric, [a, up(d)])
+    g_cd = Tensor(metric, [c, down(d)])  # these get differentiated
+    g_bd = Tensor(metric, [b, down(d)])
+    g_bc = Tensor(metric, [b, c])
+
+    (1 // 2) * g_inv * (TDeriv(b, Tensor(metric, [c, down(d)])) +
+                          TDeriv(c, Tensor(metric, [b, down(d)])) -
+                          TDeriv(down(d), g_bc))
+end
+
+"""
+    grad_metric_to_christoffel(metric::Symbol, christoffel::Symbol,
+                                a::TIndex, b::TIndex, c::TIndex) -> TensorExpr
+
+Express ∂_a g_{bc} = Γ^d_{ab} g_{dc} + Γ^d_{ac} g_{db}.
+(Metric compatibility: ∇_a g_{bc} = 0.)
+"""
+function grad_metric_to_christoffel(metric::Symbol, christoffel::Symbol,
+                                     a::TIndex, b::TIndex, c::TIndex)
+    @assert a.position == Down
+    @assert b.position == Down && c.position == Down
+
+    used = Set{Symbol}([a.name, b.name, c.name])
+    d = fresh_index(used)
+
+    Tensor(christoffel, [up(d), a, b]) * Tensor(metric, [down(d), c]) +
+    Tensor(christoffel, [up(d), a, c]) * Tensor(metric, [down(d), b])
 end

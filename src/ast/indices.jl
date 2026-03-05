@@ -131,6 +131,68 @@ end
 rename_dummy(expr::TScalar, ::Symbol, ::Symbol) = expr
 
 """
+    index_sort(idxs::Vector{TIndex}; by=:name) -> Vector{TIndex}
+
+Sort indices canonically: by name alphabetically, preserving position.
+"""
+function index_sort(idxs::Vector{TIndex}; by::Symbol=:name)
+    if by == :name
+        sort(idxs, by = idx -> idx.name)
+    elseif by == :position
+        sort(idxs, by = idx -> (idx.position == Up ? 0 : 1, idx.name))
+    else
+        sort(idxs, by = idx -> idx.name)
+    end
+end
+
+"""
+    same_dummies(expr::TSum) -> TSum
+
+Rename dummies in all terms of a sum to use the same canonical names.
+Improves readability without changing mathematical meaning.
+"""
+function same_dummies(expr::TSum)
+    isempty(expr.terms) && return expr
+    TSum(TensorExpr[_normalize_dummies_for_display(t) for t in expr.terms])
+end
+
+same_dummies(expr::TensorExpr) = expr
+
+function _normalize_dummies_for_display(expr::TensorExpr)
+    pairs = dummy_pairs(expr)
+    isempty(pairs) && return expr
+
+    all_idxs = indices(expr)
+    first_occurrence = Dict{Symbol, Int}()
+    for (i, idx) in enumerate(all_idxs)
+        haskey(first_occurrence, idx.name) || (first_occurrence[idx.name] = i)
+    end
+
+    dummy_names = [p[1].name for p in pairs]
+    sort!(dummy_names, by = n -> get(first_occurrence, n, 0))
+
+    # Rename to standard dummy names: p, q, r, s, ...
+    canonical_dummy_names = [:p, :q, :r, :s, :t, :u, :v, :w]
+    result = expr
+    used = Set(idx.name for idx in free_indices(expr))
+    for n in canonical_dummy_names
+        push!(used, n)
+    end
+
+    for (i, old_name) in enumerate(dummy_names)
+        if i <= length(canonical_dummy_names)
+            new_name = canonical_dummy_names[i]
+        else
+            new_name = Symbol("_d", i)
+        end
+        if old_name != new_name && new_name ∉ Set(idx.name for idx in free_indices(result))
+            result = rename_dummy(result, old_name, new_name)
+        end
+    end
+    result
+end
+
+"""
     ensure_no_dummy_clash(a::TensorExpr, b::TensorExpr) -> TensorExpr
 
 Return a modified version of `b` where any dummy index names that clash

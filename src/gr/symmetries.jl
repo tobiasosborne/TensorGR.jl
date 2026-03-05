@@ -95,3 +95,47 @@ function _sym_to_perm(::RiemannSymmetry, n)
         _sym_to_perm(PairSymmetric(1, 2, 3, 4), n),
     )
 end
+
+"""
+    FullySymmetric(slots::Int...)
+
+Full symmetry under exchange of any pair among the given slot positions.
+Generates adjacent transposition generators (i, i+1) for all consecutive pairs.
+"""
+struct FullySymmetric
+    slots::Vector{Int}
+end
+
+FullySymmetric(slots::Int...) = FullySymmetric(collect(slots))
+
+function _sym_to_perm(s::FullySymmetric, n)
+    gens = Perm[]
+    for i in 1:length(s.slots)-1
+        p = collect(Int32, 1:n)
+        p[s.slots[i]], p[s.slots[i+1]] = p[s.slots[i+1]], p[s.slots[i]]
+        push!(gens, Perm(p))
+    end
+    gens
+end
+
+"""
+    FullyAntiSymmetric(slots::Int...)
+
+Full antisymmetry under exchange of any pair among the given slot positions.
+"""
+struct FullyAntiSymmetric
+    slots::Vector{Int}
+end
+
+FullyAntiSymmetric(slots::Int...) = FullyAntiSymmetric(collect(slots))
+
+function _sym_to_perm(s::FullyAntiSymmetric, n)
+    gens = Perm[]
+    for i in 1:length(s.slots)-1
+        p = collect(Int32, 1:n)
+        p[s.slots[i]], p[s.slots[i+1]] = p[s.slots[i+1]], p[s.slots[i]]
+        p[n-1], p[n] = p[n], p[n-1]  # sign flip
+        push!(gens, Perm(p))
+    end
+    gens
+end

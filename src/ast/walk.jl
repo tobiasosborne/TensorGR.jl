@@ -49,3 +49,53 @@ function substitute(expr::TensorExpr, rule::Pair{<:TensorExpr, <:TensorExpr})
         node == old ? new : node
     end
 end
+
+"""
+    derivative_order(expr::TensorExpr) -> Int
+
+Count the total number of derivatives acting in an expression.
+"""
+derivative_order(::Tensor) = 0
+derivative_order(::TScalar) = 0
+derivative_order(d::TDeriv) = 1 + derivative_order(d.arg)
+function derivative_order(p::TProduct)
+    isempty(p.factors) ? 0 : maximum(derivative_order(f) for f in p.factors)
+end
+function derivative_order(s::TSum)
+    isempty(s.terms) ? 0 : maximum(derivative_order(t) for t in s.terms)
+end
+
+"""
+    is_constant(expr::TensorExpr) -> Bool
+
+Check if expression has no free or dummy indices (i.e., is a scalar constant).
+"""
+is_constant(::TScalar) = true
+is_constant(t::Tensor) = isempty(t.indices)
+is_constant(d::TDeriv) = false
+function is_constant(p::TProduct)
+    all(is_constant, p.factors)
+end
+function is_constant(s::TSum)
+    all(is_constant, s.terms)
+end
+
+"""
+    is_sorted_covds(expr::TensorExpr) -> Bool
+
+Check if covariant derivatives in the expression are in canonical (alphabetical) order.
+"""
+is_sorted_covds(::Tensor) = true
+is_sorted_covds(::TScalar) = true
+function is_sorted_covds(d::TDeriv)
+    if d.arg isa TDeriv
+        d.index.name <= d.arg.index.name || return false
+    end
+    is_sorted_covds(d.arg)
+end
+function is_sorted_covds(p::TProduct)
+    all(is_sorted_covds, p.factors)
+end
+function is_sorted_covds(s::TSum)
+    all(is_sorted_covds, s.terms)
+end

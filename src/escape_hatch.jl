@@ -105,9 +105,71 @@ function is_well_formed(expr::TProduct)
 end
 
 function is_well_formed(expr::TSum)
-    all(is_well_formed, expr.terms)
+    all(is_well_formed, expr.terms) || return false
+    # Check that all terms have the same free indices
+    isempty(expr.terms) && return true
+    ref_free = sort(free_indices(expr.terms[1]), by=idx -> (idx.name, idx.position))
+    for i in 2:length(expr.terms)
+        term_free = sort(free_indices(expr.terms[i]), by=idx -> (idx.name, idx.position))
+        length(ref_free) == length(term_free) || return false
+        for (a, b) in zip(ref_free, term_free)
+            a.name == b.name && a.position == b.position || return false
+        end
+    end
+    true
 end
 
 function is_well_formed(expr::TDeriv)
     is_well_formed(expr.arg)
+end
+
+"""
+    validate(expr::TensorExpr; registry=current_registry()) -> Vector{String}
+
+Deep validation of an expression. Returns a list of issues found.
+Checks:
+- Well-formedness (index pairing)
+- Free index consistency in sums
+- Tensor rank consistency with registry
+"""
+function validate(expr::TensorExpr; registry::TensorRegistry=current_registry())
+    issues = String[]
+    _validate_walk(expr, registry, issues)
+    issues
+end
+
+function _validate_walk(t::Tensor, reg::TensorRegistry, issues::Vector{String})
+    if has_tensor(reg, t.name)
+        props = get_tensor(reg, t.name)
+        expected_rank = sum(props.rank)
+        actual_rank = length(t.indices)
+        if actual_rank != expected_rank
+            push!(issues, "Tensor $(t.name): expected $(expected_rank) indices, got $(actual_rank)")
+        end
+    end
+end
+
+function _validate_walk(s::TScalar, ::TensorRegistry, ::Vector{String})
+end
+
+function _validate_walk(p::TProduct, reg::TensorRegistry, issues::Vector{String})
+    for f in p.factors
+        _validate_walk(f, reg, issues)
+    end
+    if !is_well_formed(p)
+        push!(issues, "Product has malformed index structure")
+    end
+end
+
+function _validate_walk(s::TSum, reg::TensorRegistry, issues::Vector{String})
+    for t in s.terms
+        _validate_walk(t, reg, issues)
+    end
+    if !is_well_formed(s)
+        push!(issues, "Sum has inconsistent free indices across terms")
+    end
+end
+
+function _validate_walk(d::TDeriv, reg::TensorRegistry, issues::Vector{String})
+    _validate_walk(d.arg, reg, issues)
 end

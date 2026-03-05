@@ -104,6 +104,74 @@ function _perturb(d::TDeriv, mp::MetricPerturbation, order::Int)
 end
 
 """
+    define_tensor_perturbation!(reg, tensor, pert_tensor; manifold)
+
+Define a perturbation of an arbitrary tensor: T = T₀ + ε δT.
+"""
+function define_tensor_perturbation!(reg::TensorRegistry, tensor::Symbol,
+                                     pert_tensor::Symbol;
+                                     manifold::Union{Symbol,Nothing}=nothing)
+    has_tensor(reg, tensor) || error("Tensor $tensor not registered")
+    tp = get_tensor(reg, tensor)
+    mf = manifold !== nothing ? manifold : tp.manifold
+
+    if !has_tensor(reg, pert_tensor)
+        register_tensor!(reg, TensorProperties(
+            name=pert_tensor, manifold=mf, rank=tp.rank,
+            symmetries=copy(tp.symmetries),
+            options=Dict{Symbol,Any}(:is_perturbation => true,
+                                     :perturbs => tensor)))
+    end
+    nothing
+end
+
+"""
+    perturbation_order(expr::TensorExpr, pert_tensors::Set{Symbol}) -> Int
+
+Determine the perturbative order of an expression by counting
+occurrences of perturbation tensors.
+"""
+function perturbation_order(expr::Tensor, pert_tensors::Set{Symbol})
+    expr.name in pert_tensors ? 1 : 0
+end
+perturbation_order(::TScalar, ::Set{Symbol}) = 0
+function perturbation_order(d::TDeriv, pert_tensors::Set{Symbol})
+    perturbation_order(d.arg, pert_tensors)
+end
+function perturbation_order(p::TProduct, pert_tensors::Set{Symbol})
+    sum(perturbation_order(f, pert_tensors) for f in p.factors; init=0)
+end
+function perturbation_order(s::TSum, pert_tensors::Set{Symbol})
+    isempty(s.terms) ? 0 : maximum(perturbation_order(t, pert_tensors) for t in s.terms)
+end
+
+"""
+    background_solution!(reg, rules::Vector{Pair})
+
+Apply background field equations (e.g., Ric=0 for vacuum) by
+registering rules that set specified tensors to zero or given values.
+"""
+function background_solution!(reg::TensorRegistry, rules::Vector{Pair{Symbol, TensorExpr}})
+    for (tensor, replacement) in rules
+        register_rule!(reg, RewriteRule(
+            expr -> expr isa Tensor && expr.name == tensor,
+            _ -> replacement
+        ))
+    end
+    nothing
+end
+
+function background_solution!(reg::TensorRegistry, rules::Vector{Symbol})
+    for tensor in rules
+        register_rule!(reg, RewriteRule(
+            expr -> expr isa Tensor && expr.name == tensor,
+            _ -> TScalar(0 // 1)
+        ))
+    end
+    nothing
+end
+
+"""
     δinverse_metric(mp::MetricPerturbation, idx_a::TIndex, idx_b::TIndex, order::Int) -> TensorExpr
 
 Compute the perturbation of the inverse metric at a given order.

@@ -91,6 +91,73 @@ Return all registered rewrite rules.
 """
 get_rules(reg::TensorRegistry) = reg.rules
 
+"""
+    unregister_tensor!(reg, name)
+
+Remove a tensor from the registry. Errors if other tensors depend on it.
+"""
+function unregister_tensor!(reg::TensorRegistry, name::Symbol)
+    has_tensor(reg, name) || error("Tensor $name not registered")
+    # Check for dependents
+    for (tname, tp) in reg.tensors
+        tname == name && continue
+        if name in tp.dependencies
+            error("Cannot remove $name: tensor $tname depends on it")
+        end
+        if get(tp.options, :metric, nothing) == name ||
+           get(tp.options, :covd, nothing) == name
+            error("Cannot remove $name: tensor $tname references it")
+        end
+    end
+    delete!(reg.tensors, name)
+    nothing
+end
+
+"""
+    unregister_manifold!(reg, name)
+
+Remove a manifold from the registry. Errors if tensors are defined on it.
+"""
+function unregister_manifold!(reg::TensorRegistry, name::Symbol)
+    has_manifold(reg, name) || error("Manifold $name not registered")
+    for (tname, tp) in reg.tensors
+        tp.manifold == name && error("Cannot remove manifold $name: tensor $tname is defined on it")
+    end
+    delete!(reg.manifolds, name)
+    nothing
+end
+
+"""
+    unregister_covd!(reg, name)
+
+Remove a covariant derivative and its Christoffel symbol.
+"""
+function unregister_covd!(reg::TensorRegistry, name::Symbol)
+    has_tensor(reg, name) || error("CovD $name not registered")
+    props = get_tensor(reg, name)
+    get(props.options, :is_covd, false) || error("$name is not a CovD")
+    christoffel = props.options[:covd_props].christoffel
+    delete!(reg.tensors, name)
+    haskey(reg.tensors, christoffel) && delete!(reg.tensors, christoffel)
+    nothing
+end
+
+"""
+    set_vanishing!(reg, name)
+
+Mark a tensor as identically zero. Adds a rule that replaces it with ZERO.
+"""
+function set_vanishing!(reg::TensorRegistry, name::Symbol)
+    has_tensor(reg, name) || error("Tensor $name not registered")
+    tp = get_tensor(reg, name)
+    tp.options[:vanishing] = true
+    register_rule!(reg, RewriteRule(
+        expr -> expr isa Tensor && expr.name == name,
+        _ -> TScalar(0 // 1)
+    ))
+    nothing
+end
+
 # Global registry with context-based scoping
 const _GLOBAL_REGISTRY = TensorRegistry()
 const _REGISTRY_STACK = TensorRegistry[_GLOBAL_REGISTRY]

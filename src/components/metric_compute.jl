@@ -111,3 +111,98 @@ function metric_ricci_scalar(Ric::Matrix, ginv::Matrix, dim::Int)
     end
     s
 end
+
+"""
+    metric_einstein(Ric::Matrix, R, g::Matrix, dim::Int) -> Matrix
+
+Compute Einstein tensor G_{ab} = R_{ab} - (1/2) g_{ab} R.
+"""
+function metric_einstein(Ric::Matrix, R, g::Matrix, dim::Int)
+    G = Matrix{Any}(undef, dim, dim)
+    for a in 1:dim, b in 1:dim
+        G[a, b] = Ric[a, b] - g[a, b] * R / 2
+    end
+    G
+end
+
+"""
+    metric_weyl(Riem::Array, Ric::Matrix, R, g::Matrix, ginv::Matrix, dim::Int) -> Array
+
+Compute Weyl tensor C_{abcd} from Riemann, Ricci, scalar curvature and metric.
+C_{abcd} = R_{abcd} - 2/(d-2)(g_{a[c}R_{d]b} - g_{b[c}R_{d]a})
+           + 2/((d-1)(d-2)) R g_{a[c}g_{d]b}
+
+Uses the all-lowered Riemann: R_{abcd} = g_{ae} R^e_{bcd}.
+"""
+function metric_weyl(Riem::Array, Ric::Matrix, R, g::Matrix, ginv::Matrix, dim::Int)
+    dim <= 2 && error("Weyl tensor requires dim > 2")
+
+    # Lower the first index of Riemann: R_{abcd} = g_{ae} R^e_{bcd}
+    Riem_down = Array{Any}(undef, dim, dim, dim, dim)
+    for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
+        s = 0
+        for e in 1:dim
+            s += g[a, e] * Riem[e, b, c, d]
+        end
+        Riem_down[a, b, c, d] = s
+    end
+
+    Weyl = Array{Any}(undef, dim, dim, dim, dim)
+    c1 = 1 / (dim - 2)
+    c2 = 1 / ((dim - 1) * (dim - 2))
+
+    for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
+        # Antisymmetrized Ricci terms
+        ricci_part = c1 * (g[a, c] * Ric[d, b] - g[a, d] * Ric[c, b] -
+                           g[b, c] * Ric[d, a] + g[b, d] * Ric[c, a])
+        # Antisymmetrized metric-scalar terms
+        scalar_part = c2 * R * (g[a, c] * g[d, b] - g[a, d] * g[c, b])
+
+        Weyl[a, b, c, d] = Riem_down[a, b, c, d] - ricci_part + scalar_part
+    end
+
+    Weyl
+end
+
+"""
+    metric_kretschmann(Riem::Array, g::Matrix, ginv::Matrix, dim::Int) -> Any
+
+Compute Kretschmann scalar K = R_{abcd} R^{abcd}.
+"""
+function metric_kretschmann(Riem::Array, g::Matrix, ginv::Matrix, dim::Int)
+    # R_{abcd} = g_{ae} R^e_{bcd}
+    # R^{abcd} = g^{bf} g^{cg} g^{dh} R^a_{fgh}
+    K = 0
+    for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
+        R_down = 0
+        for e in 1:dim
+            R_down += g[a, e] * Riem[e, b, c, d]
+        end
+        R_up = 0
+        for f in 1:dim, h in 1:dim, j in 1:dim
+            R_up += ginv[a, f] * ginv[b, h] * ginv[c, j] * Riem[f, h, j, d]  # partial raise
+        end
+        # Actually need full raise: R^{abcd} needs 4 ginv contractions on R_{abcd}
+        # Let me do this properly
+    end
+
+    # Proper computation: K = R_{abcd} R^{abcd}
+    # R^{abcd} = ginv^{ae} ginv^{bf} ginv^{cg} ginv^{dh} R_{efgh}
+    K = 0
+    for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
+        R_low = 0
+        for e in 1:dim
+            R_low += g[a, e] * Riem[e, b, c, d]
+        end
+        R_up = 0
+        for e in 1:dim, f in 1:dim, h in 1:dim, j in 1:dim
+            R_efhj = 0
+            for k in 1:dim
+                R_efhj += g[e, k] * Riem[k, f, h, j]
+            end
+            R_up += ginv[a, e] * ginv[b, f] * ginv[c, h] * ginv[d, j] * R_efhj
+        end
+        K += R_low * R_up
+    end
+    K
+end

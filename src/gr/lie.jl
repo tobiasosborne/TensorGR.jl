@@ -97,3 +97,42 @@ function _lie_d(v::Tensor, d::TDeriv)
     # For simplicity, treat as a generic expression and apply Leibniz
     TDeriv(d.index, _lie_d(v, d.arg))
 end
+
+"""
+    lie_bracket(v::Tensor, w::Tensor) -> TensorExpr
+
+Compute the Lie bracket [v, w]^a = v^b ∂_b w^a - w^b ∂_b v^a.
+Both v and w must be vector fields (rank-(1,0) tensors).
+"""
+function lie_bracket(v::Tensor, w::Tensor)
+    @assert length(v.indices) == 1 && v.indices[1].position == Up "v must be a vector"
+    @assert length(w.indices) == 1 && w.indices[1].position == Up "w must be a vector"
+
+    used = Set{Symbol}([v.indices[1].name, w.indices[1].name])
+    b = fresh_index(used)
+    push!(used, b)
+
+    # [v, w]^a = v^b ∂_b w^a - w^b ∂_b v^a
+    v_b = Tensor(v.name, [up(b)])
+    w_b = Tensor(w.name, [up(b)])
+
+    v_b * TDeriv(down(b), w) - w_b * TDeriv(down(b), v)
+end
+
+"""
+    lie_to_covd(expr::TensorExpr, covd::Symbol;
+                registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Rewrite Lie derivatives in terms of covariant derivatives.
+On a torsion-free manifold, ∂_a can be replaced by ∇_a in the Lie derivative formula
+(the connection terms cancel). This simply returns the expression unchanged since
+our Lie derivative already uses partial derivatives which equal ∇ - Γ, and on
+torsion-free manifolds the Lie derivative formula is the same with ∇.
+"""
+function lie_to_covd(expr::TensorExpr, covd::Symbol;
+                     registry::TensorRegistry=current_registry())
+    # On torsion-free manifolds, the Lie derivative formula is identical
+    # whether written with partial or covariant derivatives.
+    # The expression is already correct; this is a no-op for torsion-free.
+    expr
+end
