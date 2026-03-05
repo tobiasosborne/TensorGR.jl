@@ -487,4 +487,77 @@
         result = to_ricci(sch; metric=:g, dim=4)
         @test result != sch
     end
+
+    # ── G8: Dagger ──
+    @testset "Dagger" begin
+        T = Tensor(:T, [up(:a), down(:b)])
+        Td = dagger(T)
+        @test Td isa Tensor
+        @test Td.name == Symbol("T_dag")
+        @test Td.indices[1].position == Down  # swapped
+        @test Td.indices[2].position == Up    # swapped
+
+        s = TScalar(3//1)
+        @test dagger(s) == s  # scalars unchanged
+    end
+
+    # ── E6: Higher-order gauge ──
+    @testset "GaugeOrder2" begin
+        h = Tensor(:h, [down(:a), down(:b)])
+        ξ = Tensor(:ξ, [up(:c)])
+        result = gauge_transformation(h, ξ, :g; order=2)
+        @test result isa TSum
+    end
+
+    # ── B9: Conformal ──
+    @testset "Conformal" begin
+        reg = TensorRegistry()
+        register_manifold!(reg, ManifoldProperties(:M, 4, :g, :d, [:a,:b,:c,:d]))
+        register_tensor!(reg, TensorProperties(name=:g, manifold=:M, rank=(0,2),
+            symmetries=Any[Symmetric(1,2)],
+            options=Dict{Symbol,Any}(:is_metric => true)))
+        register_tensor!(reg, TensorProperties(name=:g2, manifold=:M, rank=(0,2),
+            symmetries=Any[Symmetric(1,2)],
+            options=Dict{Symbol,Any}(:is_metric => true)))
+        set_conformal_to!(reg, :g, :g2, :f)
+        @test get_tensor(reg, :g).options[:conformal_to] == :g2
+    end
+
+    # ── ExpandPerturbation ──
+    @testset "ExpandPerturbation" begin
+        reg = TensorRegistry()
+        register_manifold!(reg, ManifoldProperties(:M, 4, :g, :d, [:a,:b,:c,:d,:e,:f]))
+        register_tensor!(reg, TensorProperties(name=:g, manifold=:M, rank=(0,2),
+            symmetries=Any[Symmetric(1,2)],
+            options=Dict{Symbol,Any}(:is_metric => true)))
+        register_tensor!(reg, TensorProperties(name=:δ, manifold=:M, rank=(1,1),
+            options=Dict{Symbol,Any}(:is_delta => true)))
+        mp = define_metric_perturbation!(reg, :g, :h)
+
+        # δΓ at order 1
+        result = with_registry(reg) do
+            δchristoffel(mp, up(:a), down(:b), down(:c), 1)
+        end
+        @test result isa TensorExpr
+        @test result != TScalar(0//1)
+    end
+
+    # ── Connection forms ──
+    @testset "ConnectionForms" begin
+        cf = connection_form(:Γ, up(:a), down(:b), down(:c))
+        @test cf isa Tensor
+
+        # Curvature form
+        Ω = curvature_form(:Γ, up(:a), down(:b), down(:c), down(:d))
+        @test Ω isa TensorExpr
+    end
+
+    # ── Cartan structure equations ──
+    @testset "CartanStructure" begin
+        T = cartan_first_structure(:T, :Γ, :θ, up(:a), down(:b), down(:c))
+        @test T isa TensorExpr
+
+        Ω = cartan_second_structure(:Ω, :Γ, up(:a), down(:b), down(:c), down(:d))
+        @test Ω isa TensorExpr
+    end
 end

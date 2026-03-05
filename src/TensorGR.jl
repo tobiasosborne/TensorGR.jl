@@ -73,6 +73,7 @@ include("components/basis.jl")
 include("components/ctensor.jl")
 include("components/metric_compute.jl")
 include("components/values.jl")
+include("components/to_basis.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -96,6 +97,7 @@ export rename_dummy, fresh_index, ensure_no_dummy_clash
 export index_sort, same_dummies
 export walk, substitute, children
 export derivative_order, is_constant, is_sorted_covds
+export dagger
 
 # Exports: Display
 export to_latex, to_unicode
@@ -146,6 +148,7 @@ export freeze_metric!, unfreeze_metric!, is_frozen
 export separate_metric
 export metric_det_expr, sqrt_det_expr
 export gdelta, expand_gdelta
+export set_conformal_to!
 
 # Exports: Perturbation
 export linearize, δRiemann, δRicci, δRicciScalar
@@ -153,7 +156,6 @@ export sorted_partitions, all_compositions, multinomial
 export MetricPerturbation, define_metric_perturbation!, perturb, δinverse_metric
 export δchristoffel, δriemann, δricci, δricci_scalar, expand_perturbation
 export define_tensor_perturbation!, perturbation_order, background_solution!
-export δchristoffel, expand_perturbation
 export gauge_transformation
 export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
@@ -189,6 +191,10 @@ export CTensor, ctensor_contract, ctensor_trace, ctensor_inverse, ctensor_det
 export metric_christoffel, metric_riemann, metric_ricci, metric_ricci_scalar
 export metric_einstein, metric_weyl, metric_kretschmann
 export ComponentStore, set_component!, get_component, independent_components
+export BasisProperties, define_basis!, get_basis
+export to_basis, component_array, to_ctensor
+export BasisProperties, define_basis!, get_basis
+export to_basis, component_array, to_ctensor
 
 # Exports: Macros
 export @tensor

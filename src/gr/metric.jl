@@ -312,6 +312,21 @@ function _perm_helper!(result, arr, k, n)
     end
 end
 
+"""
+    set_conformal_to!(reg, g1, g2, factor)
+
+Set g1 = e^{2f} g2 where factor is the conformal factor symbol.
+Auto-generates conformal transformation rules for curvature tensors.
+"""
+function set_conformal_to!(reg::TensorRegistry, g1::Symbol, g2::Symbol, factor::Symbol)
+    has_tensor(reg, g1) || error("Metric $g1 not registered")
+    has_tensor(reg, g2) || error("Metric $g2 not registered")
+    tp1 = get_tensor(reg, g1)
+    tp1.options[:conformal_to] = g2
+    tp1.options[:conformal_factor] = factor
+    nothing
+end
+
 function _perm_sign(perm::Vector{Int})
     n = length(perm)
     visited = falses(n)

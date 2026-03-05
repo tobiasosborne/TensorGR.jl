@@ -79,9 +79,9 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
         δk_ginv == ZERO && continue
 
         # δˡ(g_{cd}), δˡ(g_{bd}), δˡ(g_{bc})
-        δl_gcd = perturb(Tensor(mp.metric, [down(c), down(d)]), mp, l)  # actually we need to handle l>=2
-        δl_gbd = perturb(Tensor(mp.metric, [down(b), down(d)]), mp, l)
-        δl_gbc = perturb(Tensor(mp.metric, [down(b), down(c)]), mp, l)
+        δl_gcd = perturb(Tensor(mp.metric, [TIndex(c.name, Down), down(d)]), mp, l)
+        δl_gbd = perturb(Tensor(mp.metric, [TIndex(b.name, Down), down(d)]), mp, l)
+        δl_gbc = perturb(Tensor(mp.metric, [TIndex(b.name, Down), TIndex(c.name, Down)]), mp, l)
 
         # For l>=2, perturb returns ZERO for the metric itself (only order 1 is h).
         # However the metric perturbation at order l is just 0 for l>=2 in the

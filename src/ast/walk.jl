@@ -51,6 +51,29 @@ function substitute(expr::TensorExpr, rule::Pair{<:TensorExpr, <:TensorExpr})
 end
 
 """
+    dagger(expr::TensorExpr) -> TensorExpr
+
+Complex conjugation of a tensor expression.
+Swaps Up↔Down on all indices (Hermitian conjugation).
+For real tensors, this is the identity.
+"""
+function dagger(t::Tensor)
+    new_indices = [TIndex(idx.name, idx.position == Up ? Down : Up) for idx in t.indices]
+    Tensor(Symbol(t.name, :_dag), new_indices)
+end
+dagger(s::TScalar) = s  # scalars are assumed real
+function dagger(p::TProduct)
+    # Reverse factor order for non-commutative tensors
+    TProduct(p.scalar, TensorExpr[dagger(f) for f in reverse(p.factors)])
+end
+function dagger(s::TSum)
+    tsum(TensorExpr[dagger(t) for t in s.terms])
+end
+function dagger(d::TDeriv)
+    TDeriv(TIndex(d.index.name, d.index.position == Up ? Down : Up), dagger(d.arg))
+end
+
+"""
     derivative_order(expr::TensorExpr) -> Int
 
 Count the total number of derivatives acting in an expression.

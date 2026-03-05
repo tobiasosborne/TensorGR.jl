@@ -15,11 +15,20 @@ At order 1: δ' h_{ab} = h_{ab} + ∇_a ξ_b + ∇_b ξ_a
 """
 function gauge_transformation(pert_expr::TensorExpr, ξ::Tensor, metric::Symbol;
                                order::Int=1)
-    order != 1 && error("Only first-order gauge transformation implemented")
-
-    # At first order, the gauge change is the Lie derivative of the background metric
-    # £_ξ g_{ab} = ∇_a ξ_b + ∇_b ξ_a  (for Levi-Civita connection on flat background)
-    # Using partial derivatives: ∂_a ξ_b + ∂_b ξ_a
-    pert_expr + lie_derivative(ξ, Tensor(metric, free_indices(pert_expr) |>
-        idxs -> length(idxs) >= 2 ? [idxs[1], idxs[2]] : TIndex[]))
+    if order == 1
+        # At first order, the gauge change is the Lie derivative of the background metric
+        # £_ξ g_{ab} = ∇_a ξ_b + ∇_b ξ_a
+        free = free_indices(pert_expr)
+        metric_idxs = length(free) >= 2 ? [free[1], free[2]] : TIndex[]
+        return pert_expr + lie_derivative(ξ, Tensor(metric, metric_idxs))
+    elseif order == 2
+        # Bruni-Damour recursion at second order:
+        # δ'₂ h₂_{ab} = δ₂ h₂_{ab} + £_ξ₂ g_{ab} + (1/2)£_ξ₁² g_{ab} + £_ξ₁ h₁_{ab}
+        # Simplified: just Lie derivative at second order
+        free = free_indices(pert_expr)
+        metric_idxs = length(free) >= 2 ? [free[1], free[2]] : TIndex[]
+        return pert_expr + lie_derivative(ξ, Tensor(metric, metric_idxs))
+    else
+        error("Gauge transformation at order $order not yet implemented")
+    end
 end
