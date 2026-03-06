@@ -79,6 +79,9 @@ include("components/to_basis.jl")
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
 
+# LaTeX parser
+include("parser/latex_parser.jl")
+
 # Exports: Types
 export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar
 export TIndex, IndexPosition, Up, Down, up, down
@@ -198,6 +201,9 @@ export to_basis, component_array, to_ctensor
 # Exports: Macros
 export @tensor
 export @manifold, @define_tensor, @covd
+
+# Exports: LaTeX parser
+export parse_tex, @tex_str
 
 # Extension stubs (implemented in ext/)
 function to_symbolics end

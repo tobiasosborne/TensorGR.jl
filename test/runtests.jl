@@ -48,4 +48,6 @@ using TensorGR
     include("test_new_features.jl")
     # VBundle support
     include("test_vbundle.jl")
+    # LaTeX parser
+    include("test_latex_parser.jl")
 end
