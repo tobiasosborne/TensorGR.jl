@@ -16,15 +16,22 @@ Eliminate all metric and delta contractions, raising/lowering indices.
 Distributes over sums, recurses into derivatives, runs to fixed point on products.
 """
 function contract_metrics(t::Tensor)
-    # Check for self-traced delta: δ^a_a → dim
     reg = current_registry()
     if has_tensor(reg, t.name)
         props = get_tensor(reg, t.name)
         if get(props.options, :is_delta, false) && length(t.indices) == 2
+            # Self-traced delta: δ^a_a → dim
             if t.indices[1].name == t.indices[2].name &&
                t.indices[1].position != t.indices[2].position
                 mp = get_manifold(reg, props.manifold)
                 return TScalar(mp.dim // 1)
+            end
+            # Same-position delta → metric: δ_{ab} = g_{ab}
+            if t.indices[1].position == t.indices[2].position
+                metric_name = _find_metric(reg, props.manifold)
+                if metric_name !== nothing
+                    return Tensor(metric_name, copy(t.indices))
+                end
             end
         end
         if get(props.options, :is_metric, false) && length(t.indices) == 2
@@ -97,6 +104,15 @@ function _contract_one(p::TProduct)
             result !== nothing && return result
 
         elseif get(props.options, :is_delta, false)
+            # Same-position delta → metric: δ_{ab} = g_{ab}, δ^{ab} = g^{ab}
+            if length(fi.indices) == 2 && fi.indices[1].position == fi.indices[2].position
+                metric_name = _find_metric(reg, props.manifold)
+                if metric_name !== nothing
+                    new_tensor = Tensor(metric_name, copy(fi.indices))
+                    new_factors = TensorExpr[k == i ? new_tensor : fk for (k, fk) in enumerate(factors)]
+                    return tproduct(p.scalar, new_factors)
+                end
+            end
             result = _try_delta_contraction(p, i, fi, reg)
             result !== nothing && return result
         end
@@ -175,6 +191,16 @@ function _find_delta(reg::TensorRegistry, manifold::Symbol)
         end
     end
     :δ
+end
+
+"""Find the metric tensor name for a manifold, or nothing."""
+function _find_metric(reg::TensorRegistry, manifold::Symbol)
+    for (name, tp) in reg.tensors
+        if tp.manifold == manifold && get(tp.options, :is_metric, false)
+            return name
+        end
+    end
+    nothing
 end
 
 function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)

@@ -68,8 +68,8 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             expanded = to_riemann(W_traced)
             contracted = contract_curvature(expanded)
             result = simplify(contracted)
-            @test_broken result == TScalar(0 // 1)
-            println("  C^a_{bad} = 0: @test_broken (metric self-trace fixed, but δ_{ab}=g_{ab} collection pending)")
+            @test result == TScalar(0 // 1)
+            println("  C^a_{bad} = 0: confirmed (factor ordering + δ_{ab}→g_{ab} conversion)")
         end
 
         # ── 4.5: Weyl tensor symmetries ─────────────────────────────────

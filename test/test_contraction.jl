@@ -168,6 +168,44 @@ end
     end
 end
 
+@testset "Same-position delta → metric: δ_{ab} = g_{ab}" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, nothing, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(
+        name=:g, manifold=:M4, rank=(0,2), symmetries=Any[Symmetric(1,2)],
+        options=Dict{Symbol,Any}(:is_metric => true)))
+    register_tensor!(reg, TensorProperties(
+        name=:δ, manifold=:M4, rank=(1,1), symmetries=Any[],
+        options=Dict{Symbol,Any}(:is_delta => true)))
+
+    with_registry(reg) do
+        # Standalone δ_{db} → g_{db}
+        d = Tensor(:δ, [down(:d), down(:b)])
+        result = contract_metrics(d)
+        @test result isa Tensor
+        @test result.name == :g
+        @test result.indices == [down(:d), down(:b)]
+
+        # δ^{ab} → g^{ab}
+        d2 = Tensor(:δ, [up(:a), up(:b)])
+        result2 = contract_metrics(d2)
+        @test result2.name == :g
+        @test result2.indices == [up(:a), up(:b)]
+
+        # In a product: R * δ_{db} → R * g_{db}
+        register_tensor!(reg, TensorProperties(
+            name=:RicScalar, manifold=:M4, rank=(0,0), symmetries=Any[],
+            options=Dict{Symbol,Any}()))
+        rs = Tensor(:RicScalar, TIndex[])
+        d3 = Tensor(:δ, [down(:d), down(:b)])
+        prod = rs * d3
+        result3 = contract_metrics(prod)
+        @test result3 isa TProduct
+        has_g = any(f -> f isa Tensor && f.name == :g, result3.factors)
+        @test has_g
+    end
+end
+
 @testset "Contraction through sums" begin
     reg = TensorRegistry()
     register_manifold!(reg, ManifoldProperties(:M4, 4, :g, nothing, [:a,:b,:c,:d,:e,:f]))

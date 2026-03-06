@@ -127,3 +127,31 @@ end
         end
     end
 end
+
+@testset "Canonical factor ordering in products" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, nothing, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(
+        name=:g, manifold=:M4, rank=(0,2), symmetries=Any[Symmetric(1,2)],
+        options=Dict{Symbol,Any}(:is_metric => true)))
+    register_tensor!(reg, TensorProperties(
+        name=:RicScalar, manifold=:M4, rank=(0,0), symmetries=Any[],
+        options=Dict{Symbol,Any}()))
+
+    with_registry(reg) do
+        rs = Tensor(:RicScalar, TIndex[])
+        gm = Tensor(:g, [down(:b), down(:d)])
+
+        # RicScalar * g and g * RicScalar should canonicalize to same form
+        p1 = canonicalize(tproduct(1//1, TensorExpr[rs, gm]))
+        p2 = canonicalize(tproduct(1//1, TensorExpr[gm, rs]))
+        @test p1 == p2
+
+        # collect_terms should merge them
+        s = simplify(tsum(TensorExpr[
+            tproduct(2//3, TensorExpr[rs, gm]),
+            tproduct(-2//3, TensorExpr[gm, rs])
+        ]))
+        @test s == TScalar(0//1)
+    end
+end

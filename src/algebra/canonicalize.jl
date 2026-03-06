@@ -261,5 +261,32 @@ function _canonicalize_product(p::TProduct)
         push!(new_factors, _explode(new_obj))
     end
 
+    # Sort factors by canonical key so that e.g. RicScalar*g and g*RicScalar
+    # produce the same TProduct, enabling collect_terms to merge them.
+    sort!(new_factors, by=_factor_sort_key)
+
     tproduct(p.scalar * (sign // 1), new_factors)
+end
+
+# ─── Factor sort key for canonical product ordering ──────────────────
+
+function _factor_sort_key(f::TensorExpr)
+    if f isa TScalar
+        return (0, "", "")
+    elseif f isa Tensor
+        idx_str = join([string(idx.name, idx.position == Up ? "^" : "_") for idx in f.indices])
+        return (1, string(f.name), idx_str)
+    elseif f isa TDeriv
+        inner = f
+        depth = 0
+        while inner isa TDeriv
+            depth += 1
+            inner = inner.arg
+        end
+        name = inner isa Tensor ? string(inner.name) : ""
+        idx_str = join([string(idx.name, idx.position == Up ? "^" : "_") for idx in indices(f)])
+        return (2, name * "D$depth", idx_str)
+    else
+        return (3, "", "")
+    end
 end
