@@ -43,6 +43,7 @@ include("gr/bianchi.jl")
 include("gr/metric.jl")
 include("gr/covd.jl")
 include("gr/sort_covds.jl")
+include("gr/box.jl")
 include("gr/lie.jl")
 include("gr/killing.jl")
 
@@ -53,6 +54,7 @@ include("perturbation/metric_perturbation.jl")
 include("perturbation/expand.jl")
 include("perturbation/gauge.jl")
 include("perturbation/variation.jl")
+include("perturbation/backgrounds.jl")
 
 # Layer 4: SVT decomposition
 include("svt/fourier.jl")
@@ -69,11 +71,13 @@ include("foliation/sectors.jl")
 # Layer 4: Quadratic action
 include("action/quadratic_action.jl")
 include("action/extract_quadratic.jl")
+include("action/spin_projectors.jl")
 
 # Layer 4: CAS integration hooks (after QuadraticForm is defined)
 include("scalar/simplify_cas.jl")
 
 # Layer 4.5: Curvature conversions + Exterior calculus
+include("gr/topological.jl")
 include("gr/conversions.jl")
 include("exterior/forms.jl")
 include("exterior/operations.jl")
@@ -154,6 +158,7 @@ export covd_to_christoffel, change_covd
 export christoffel_to_grad_metric, grad_metric_to_christoffel
 export commute_covds
 export sort_covds_to_box, sort_covds_to_div, symmetrize_covds
+export box, grad_squared, covd_chain, covd_product
 export lie_derivative, lie_bracket, lie_to_covd
 
 # Exports: Metric engine
@@ -173,12 +178,16 @@ export MetricPerturbation, define_metric_perturbation!, perturb, δinverse_metri
 export δchristoffel, δriemann, δricci, δricci_scalar, expand_perturbation
 export define_tensor_perturbation!, perturbation_order, background_solution!
 export gauge_transformation
+export maximally_symmetric_background!, cosmological_background!, vacuum_background!
 export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
 
 # Exports: SVT / Fourier
 export to_fourier, FourierConvention
 export transverse_projector, tt_projector
+export theta_projector, omega_projector
+export spin2_projector, spin1_projector, spin0s_projector, spin0w_projector
+export transfer_sw, transfer_ws
 export SVTFields, svt_substitute
 
 # Exports: 3+1 foliation
@@ -206,6 +215,7 @@ export schouten_to_ricci, ricci_to_schouten
 export tfricci_expr, ricci_to_tfricci
 export to_riemann, to_ricci
 export riemann_to_christoffel, kretschmann_expr
+export pontryagin_density, euler_density, chern_simons_action
 
 # Exports: Exterior calculus
 export define_form!, form_degree

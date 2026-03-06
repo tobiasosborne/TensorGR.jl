@@ -583,6 +583,141 @@
         @test g2.data[1,1] ≈ 0.25  # g'_11 = J^{-1 a}_1 J^{-1 b}_1 g_{ab} = (1/2)^2
     end
 
+    # ── Topological densities ──
+    @testset "Topological densities" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+
+            # Pontryagin: ε^{abcd} R_{ab}^{ef} R_{cdef}
+            pont = pontryagin_density(:g; registry=reg)
+            @test pont isa TProduct
+            @test length(pont.factors) == 3
+
+            # Euler: Riem² - 4Ric² + R²
+            euler = euler_density(:g; registry=reg)
+            @test euler isa TSum
+            @test length(euler.terms) == 3
+
+            # Chern-Simons action: ϑ * ★(R∧R)
+            register_tensor!(reg, TensorProperties(name=:ϑ, manifold=:M4, rank=(0,0)))
+            cs = chern_simons_action(Tensor(:ϑ, TIndex[]), :g; registry=reg)
+            @test cs isa TProduct
+        end
+    end
+
+    # ── Background rules ──
+    @testset "Maximally-symmetric background" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            maximally_symmetric_background!(reg, :M4; metric=:g)
+
+            # R = 4Λ
+            R = simplify(Tensor(:RicScalar, TIndex[]))
+            @test R isa TProduct
+            @test R.scalar == 4 // 1
+
+            # Ric_{ab} = Λ g_{ab}
+            Ric = simplify(Tensor(:Ric, [down(:a), down(:b)]))
+            @test Ric isa TProduct
+        end
+    end
+
+    @testset "Vacuum background" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            vacuum_background!(reg, :M4; metric=:g)
+
+            @test simplify(Tensor(:RicScalar, TIndex[])) == TScalar(0//1)
+            @test simplify(Tensor(:Ric, [down(:a), down(:b)])) == TScalar(0//1)
+        end
+    end
+
+    # ── Spin projectors ──
+    @testset "Barnes-Rivers spin projectors" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=η
+            register_tensor!(reg, TensorProperties(name=:k, manifold=:M4, rank=(0,1)))
+
+            # θ_{μν} = η_{μν} - k_μ k_ν / k²
+            θ = theta_projector(down(:a), down(:b); metric=:η)
+            @test θ isa TSum
+            @test length(θ.terms) == 2
+
+            # ω_{μν} = k_μ k_ν / k²
+            ω = omega_projector(down(:a), down(:b))
+            @test ω isa TProduct
+
+            # Completeness: θ + ω = η (structurally, these are the two parts)
+            # P^(2) exists and is a sum
+            p2 = spin2_projector(down(:a), down(:b), down(:c), down(:d); dim=4, metric=:η)
+            @test p2 isa TSum
+
+            # P^(1) exists
+            p1 = spin1_projector(down(:a), down(:b), down(:c), down(:d); metric=:η)
+            @test p1 isa TProduct || p1 isa TSum
+
+            # P^(0-s) and P^(0-w) exist
+            p0s = spin0s_projector(down(:a), down(:b), down(:c), down(:d); dim=4, metric=:η)
+            @test p0s isa TProduct || p0s isa TSum
+            p0w = spin0w_projector(down(:a), down(:b), down(:c), down(:d))
+            @test p0w isa TProduct
+
+            # Transfer operators exist
+            tsw = transfer_sw(down(:a), down(:b), down(:c), down(:d); dim=4, metric=:η)
+            @test tsw isa TProduct || tsw isa TSum
+        end
+    end
+
+    # ── Box operator + scalar CovD helpers ──
+    @testset "Box operator" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            phi = Tensor(:phi, TIndex[])
+            register_tensor!(reg, TensorProperties(name=:phi, manifold=:M4, rank=(0,0)))
+
+            # box(φ, :g) = g^{ab} ∂_a ∂_b φ
+            b = box(phi, :g)
+            @test b isa TProduct
+            @test length(b.factors) == 2  # g^{ab} and ∂_a(∂_b(φ))
+            # The metric factor should have two up indices
+            gfactor = b.factors[1]
+            @test gfactor isa Tensor && gfactor.name == :g
+            @test all(idx -> idx.position == Up, gfactor.indices)
+
+            # grad_squared(φ, :g) = g^{ab} ∂_a φ ∂_b φ
+            gs = grad_squared(phi, :g)
+            @test gs isa TProduct
+            @test length(gs.factors) == 3  # g^{ab}, ∂_a φ, ∂_b φ
+
+            # covd_chain
+            chain = covd_chain(phi, [down(:a), down(:b), down(:c)])
+            @test chain isa TDeriv
+            @test chain.index == down(:a)
+            @test chain.arg isa TDeriv
+            @test chain.arg.index == down(:b)
+
+            # covd_product
+            cp = covd_product(phi, down(:a), down(:b))
+            @test cp isa TProduct
+
+            # Scalar commutation: [∂_a, ∂_b]φ = 0
+            expr = covd_chain(phi, [down(:b), down(:a)])  # ∂_b(∂_a(φ))
+            sorted = commute_covds(expr, :∇g)
+            # Should swap to ∂_a(∂_b(φ)) with zero commutator
+            @test sorted isa TDeriv
+            @test sorted.index.name == :a
+        end
+    end
+
     # ── G7: Tensor weight ──
     @testset "TensorWeight" begin
         reg = TensorRegistry()

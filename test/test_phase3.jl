@@ -121,4 +121,37 @@
             @test length(result.factors) == 3
         end
     end
+
+    @testset "3.6: Curved background perturbation" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+
+            # Curved background registers Γ₀
+            mp = define_metric_perturbation!(reg, :g, :h; curved=true)
+            @test mp.curved == true
+            @test mp.background_christoffel !== nothing
+            @test has_tensor(reg, mp.background_christoffel)
+
+            # δΓ on curved bg has extra ∂g₀ term vs flat
+            mp_flat = define_metric_perturbation!(reg, :g, :h; curved=false)
+            δΓ_flat = δchristoffel(mp_flat, up(:a), down(:b), down(:c), 1)
+            δΓ_curved = δchristoffel(mp, up(:a), down(:b), down(:c), 1)
+            # Curved has extra term from l=0 partition
+            nf = δΓ_flat isa TSum ? length(δΓ_flat.terms) : 1
+            nc = δΓ_curved isa TSum ? length(δΓ_curved.terms) : 1
+            @test nc > nf
+
+            # δR on curved bg has Γ₀ cross terms
+            δR_flat = δriemann(mp_flat, up(:a), down(:b), down(:c), down(:d), 1)
+            δR_curved = δriemann(mp, up(:a), down(:b), down(:c), down(:d), 1)
+            nrf = δR_flat isa TSum ? length(δR_flat.terms) : 1
+            nrc = δR_curved isa TSum ? length(δR_curved.terms) : 1
+            @test nrc > nrf  # curved has extra Γ₀·δΓ cross terms
+
+            # Flat bg behavior unchanged
+            @test δΓ_flat isa TProduct  # single term on flat
+        end
+    end
 end

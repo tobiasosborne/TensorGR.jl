@@ -40,6 +40,23 @@ function _collect_used(exprs::Vector{<:TensorExpr})
 end
 
 # ────────────────────────────────────────────────────────────────────
+# Helper: get Christoffel at order k (returns Γ₀ for k=0 on curved bg)
+# ────────────────────────────────────────────────────────────────────
+
+"""Return δᵏΓ for k≥1, or the background Christoffel Γ₀ for k=0 on curved background."""
+function _get_christoffel_order(mp::MetricPerturbation,
+                                 a::TIndex, b::TIndex, c::TIndex, k::Int)
+    if k == 0
+        if mp.curved && mp.background_christoffel !== nothing
+            return Tensor(mp.background_christoffel, [a, b, c])
+        else
+            return ZERO
+        end
+    end
+    δchristoffel(mp, a, b, c, k)
+end
+
+# ────────────────────────────────────────────────────────────────────
 # dchristoffel: perturbation of the Christoffel symbol at order n
 # ────────────────────────────────────────────────────────────────────
 
@@ -68,7 +85,12 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
 
     for k in 0:order
         l = order - k
-        l < 1 && continue  # δˡg with l=0 is just g, which gives the background Christoffel, not perturbation
+        # On flat background, skip l=0 (∂g₀=0 so the term vanishes).
+        # On curved background, l=0 contributes via ∂g₀ ≠ 0.
+        if l < 1 && !mp.curved
+            continue
+        end
+        l < 0 && continue
 
         # Fresh dummy index d for the metric contraction g^{ad}
         d = fresh_index(used)
@@ -84,8 +106,6 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
         δl_gbc = perturb(Tensor(mp.metric, [TIndex(b.name, Down, b.vbundle), TIndex(c.name, Down, c.vbundle)]), mp, l)
 
         # For l>=2, perturb returns ZERO for the metric itself (only order 1 is h).
-        # However the metric perturbation at order l is just 0 for l>=2 in the
-        # standard single-parameter expansion g = g0 + eps*h.
         # If all three are zero, skip.
         all_zero = (δl_gcd == ZERO && δl_gbd == ZERO && δl_gbc == ZERO)
         all_zero && continue
@@ -156,16 +176,20 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
     end
 
     # --- Quadratic part: Σ_{k+l=n} δᵏΓ^a_{ce} δˡΓ^e_{db} - δᵏΓ^a_{de} δˡΓ^e_{cb} ---
-    for k in 1:order-1
+    # On flat background: k≥1, l≥1 (Γ₀=0 so k=0 and l=0 vanish).
+    # On curved background: k≥0, l≥0 but skip (k=0,l=0) which is the background R₀.
+    k_start = mp.curved ? 0 : 1
+    for k in k_start:order-k_start
         l = order - k
+        (k == 0 && l == 0) && continue  # background Riemann, not a perturbation
 
         # Fresh dummy index e for each (k,l) pair
         e = fresh_index(used)
         push!(used, e)
 
-        # +δᵏΓ^a_{ce} δˡΓ^e_{db}
-        δkΓ_ace = δchristoffel(mp, a, c, down(e), k)
-        δlΓ_edb = δchristoffel(mp, up(e), d, b, l)
+        # δᵏΓ or Γ₀ when k=0 / l=0
+        δkΓ_ace = _get_christoffel_order(mp, a, c, down(e), k)
+        δlΓ_edb = _get_christoffel_order(mp, up(e), d, b, l)
         if δkΓ_ace != ZERO && δlΓ_edb != ZERO
             δlΓ_edb = ensure_no_dummy_clash(δkΓ_ace, δlΓ_edb)
             push!(terms, tproduct(1 // 1, TensorExpr[δkΓ_ace, δlΓ_edb]))
@@ -175,9 +199,8 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
         e2 = fresh_index(used)
         push!(used, e2)
 
-        # -δᵏΓ^a_{de2} δˡΓ^e2_{cb}
-        δkΓ_ade = δchristoffel(mp, a, d, down(e2), k)
-        δlΓ_ecb = δchristoffel(mp, up(e2), c, b, l)
+        δkΓ_ade = _get_christoffel_order(mp, a, d, down(e2), k)
+        δlΓ_ecb = _get_christoffel_order(mp, up(e2), c, b, l)
         if δkΓ_ade != ZERO && δlΓ_ecb != ZERO
             δlΓ_ecb = ensure_no_dummy_clash(δkΓ_ade, δlΓ_ecb)
             push!(terms, tproduct(-1 // 1, TensorExpr[δkΓ_ade, δlΓ_ecb]))

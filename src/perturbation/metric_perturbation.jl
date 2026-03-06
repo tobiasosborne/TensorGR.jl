@@ -20,6 +20,8 @@ struct MetricPerturbation
     perturbation::Symbol
     background::Symbol
     order_param::Symbol
+    curved::Bool
+    background_christoffel::Union{Symbol, Nothing}
 end
 
 """
@@ -31,7 +33,8 @@ Define a metric perturbation and register the perturbation tensor.
 function define_metric_perturbation!(reg::TensorRegistry, metric::Symbol,
                                      perturbation::Symbol;
                                      background::Symbol=Symbol(metric, :_bg),
-                                     order_param::Symbol=:ε)
+                                     order_param::Symbol=:ε,
+                                     curved::Bool=false)
     mp = get_manifold(reg, get_tensor(reg, metric).manifold)
 
     # Register perturbation tensor h_{ab} with same symmetries as metric
@@ -41,7 +44,22 @@ function define_metric_perturbation!(reg::TensorRegistry, metric::Symbol,
             symmetries=Any[Symmetric(1, 2)]))
     end
 
-    MetricPerturbation(metric, perturbation, background, order_param)
+    bg_christoffel = nothing
+    if curved
+        # Register background Christoffel Γ₀^a_{bc} (symmetric in lower pair)
+        bg_christoffel = Symbol(:Γ₀, metric)
+        if !has_tensor(reg, bg_christoffel)
+            register_tensor!(reg, TensorProperties(
+                name=bg_christoffel, manifold=mp.name, rank=(1, 2),
+                symmetries=Any[Symmetric(2, 3)],
+                options=Dict{Symbol,Any}(:is_christoffel => true,
+                                         :is_background => true,
+                                         :metric => metric)))
+        end
+    end
+
+    MetricPerturbation(metric, perturbation, background, order_param,
+                       curved, bg_christoffel)
 end
 
 """
