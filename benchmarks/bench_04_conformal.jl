@@ -69,7 +69,7 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             contracted = contract_curvature(expanded)
             result = simplify(contracted)
             @test_broken result == TScalar(0 // 1)
-            println("  C^a_{bad} = 0: @test_broken (metric self-trace g[c,-c]->4 not resolved)")
+            println("  C^a_{bad} = 0: @test_broken (metric self-trace fixed, but δ_{ab}=g_{ab} collection pending)")
         end
 
         # ── 4.5: Weyl tensor symmetries ─────────────────────────────────

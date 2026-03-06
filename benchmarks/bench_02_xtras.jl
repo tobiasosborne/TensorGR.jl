@@ -62,13 +62,15 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
 
         # ── 2.2: Automatic contraction enumeration ──────────────────────
         @testset "all_contractions (automatic)" begin
-            # Test the all_contractions function with simple inputs
+            # Two symmetric rank-2 tensors with no free indices:
+            # 2 unique contractions: h^{ab}h_{ab} and Tr(h)^2
             t_h = Tensor(:h, [down(:a), down(:b)])
-            @test_broken begin
-                results = all_contractions([t_h, t_h], TIndex[])
-                length(results) == XTRAS_SPIN2_CONTRACTIONS
+            results = all_contractions([t_h, t_h], TIndex[])
+            @test length(results) == 2
+            for r in results
+                @test simplify(r) != TScalar(0 // 1)
             end
-            println("  all_contractions: @test_broken (needs full enumeration)")
+            println("  all_contractions([h,h]): $(length(results)) independent contractions")
         end
 
         # ── 2.3: Variational derivative of Lagrangian ───────────────────

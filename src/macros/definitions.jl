@@ -33,7 +33,7 @@ function _parse_manifold(name, kwargs)
                 derivative = val
             elseif key == :indices
                 if val isa Expr && val.head == :vect
-                    idx_list = val.args
+                    idx_list = [x isa QuoteNode ? x.value : x for x in val.args]
                 end
             end
         end

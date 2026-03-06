@@ -25,16 +25,12 @@ function variational_derivative(lagrangian::TensorExpr, field::Symbol)
     expanded = expand_derivatives(lagrangian)
     expanded = expand_products(expanded)
 
-    # Step 2: For each term in the sum, apply IBP to move derivatives off `field`
+    # Step 2: Apply the Euler-Lagrange formula directly to each term
     if expanded isa TSum
-        terms = TensorExpr[]
-        for term in expanded.terms
-            ibp_result = _ibp_all(term, field)
-            push!(terms, ibp_result)
-        end
+        terms = TensorExpr[_el_term(t, field) for t in expanded.terms]
         result = tsum(terms)
     else
-        result = _ibp_all(expanded, field)
+        result = _el_term(expanded, field)
     end
 
     # Step 3: Collect terms
@@ -42,22 +38,54 @@ function variational_derivative(lagrangian::TensorExpr, field::Symbol)
 end
 
 """
-Apply IBP repeatedly until no derivatives act on `field`.
+Euler-Lagrange contribution from a single product term.
+
+For each factor that is ∂_{a1}...∂_{an}(field), the contribution is:
+  (-1)^n * ∂_{a1}...∂_{an}(product of other factors)
+
+Sums contributions from ALL factors containing the field.
 """
-function _ibp_all(expr::TensorExpr, field::Symbol; maxiter::Int=10)
-    current = expr
-    for _ in 1:maxiter
-        if current isa TProduct
-            next = ibp_product(current, field)
-            next == current && return current
-            current = expand_products(next)
-            current = expand_derivatives(current)
-        else
-            return current
+function _el_term(p::TProduct, field::Symbol)
+    factors = p.factors
+    contributions = TensorExpr[]
+
+    for (i, fi) in enumerate(factors)
+        base, idxs = _peel_all_derivs_of(fi, field)
+        # Check if base is the field itself
+        (base isa Tensor && base.name == field) || continue
+
+        # Build rest = product of all other factors
+        rest_factors = TensorExpr[factors[j] for j in eachindex(factors) if j != i]
+        rest = isempty(rest_factors) ? TScalar(1 // 1) : tproduct(1 // 1, rest_factors)
+
+        # Apply the peeled derivatives to rest
+        d_rest = rest
+        for idx in idxs
+            d_rest = TDeriv(idx, d_rest)
         end
+        d_rest = expand_derivatives(d_rest)
+
+        sign = iseven(length(idxs)) ? 1 : -1
+        push!(contributions, tproduct(Rational{Int}(sign) * p.scalar, TensorExpr[d_rest]))
     end
-    current
+
+    isempty(contributions) ? TScalar(0 // 1) : tsum(contributions)
 end
+
+function _el_term(t::Tensor, field::Symbol)
+    t.name == field ? TScalar(1 // 1) : TScalar(0 // 1)
+end
+
+function _el_term(d::TDeriv, field::Symbol)
+    # Bare derivative ∂_a(field) with no other factors: EL gives -∂_a(1) = 0
+    base, idxs = _peel_all_derivs_of(d, field)
+    (base isa Tensor && base.name == field) || return TScalar(0 // 1)
+    isempty(idxs) && return TScalar(1 // 1)
+    # (-1)^n * ∂^n(1) = 0 for n > 0
+    TScalar(0 // 1)
+end
+
+_el_term(::TScalar, ::Symbol) = TScalar(0 // 1)
 
 """
     euler_lagrange(lagrangian, fields::Vector{Symbol}) -> Vector{TensorExpr}

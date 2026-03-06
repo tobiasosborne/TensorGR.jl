@@ -73,6 +73,17 @@ end
     @test d2.arg isa TDeriv
 end
 
+@testset "@manifold with >6 indices" begin
+    reg = TensorRegistry()
+    with_registry(reg) do
+        @manifold M10 dim=10 metric=G indices=[:A,:B,:C,:D,:E,:F,:H,:I,:J,:K]
+        @test has_manifold(reg, :M10)
+        @test get_manifold(reg, :M10).dim == 10
+        @test length(get_manifold(reg, :M10).indices) == 10
+        @test has_tensor(reg, :G)
+    end
+end
+
 @testset "@tensor complex expressions" begin
     # Einstein tensor: R_{ab} - 1/2 g_{ab} R
     e = @tensor Ric[-a, -b] - (1 // 2) * g[-a, -b] * RicciScalar

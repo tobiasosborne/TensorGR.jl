@@ -361,3 +361,45 @@ end
         end
     end
 end
+
+# ═══════════════════════════════════════════════════════════════════
+# Abstract dummy index splitting (TGR-noi)
+# ═══════════════════════════════════════════════════════════════════
+
+@testset "split_all_spacetime resolves abstract dummy indices" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(name=:g, manifold=:M4, rank=(0,2),
+        symmetries=Any[Symmetric(1,2)],
+        options=Dict{Symbol,Any}(:is_metric => true)))
+    register_tensor!(reg, TensorProperties(name=:h, manifold=:M4, rank=(0,2),
+        symmetries=Any[Symmetric(1,2)]))
+
+    with_registry(reg) do
+        fol = define_foliation!(reg, :flat31; manifold=:M4)
+
+        # g^{cd} ∂_c(h_{_0,_0}): abstract dummies c,d must be split
+        h_00 = Tensor(:h, [down(Symbol("_0")), down(Symbol("_0"))])
+        inner = TDeriv(down(:c), h_00)
+        expr = tproduct(1 // 1, TensorExpr[Tensor(:g, [up(:c), up(:d)]), inner])
+
+        result = split_all_spacetime(expr, fol)
+
+        # Check no abstract indices remain
+        function has_abstract_index(e::TensorExpr)
+            for idx in indices(e)
+                s = string(idx.name)
+                startswith(s, "_") || return true
+            end
+            false
+        end
+        # Result is a sum; check each term
+        if result isa TSum
+            for t in result.terms
+                @test !has_abstract_index(t)
+            end
+        else
+            @test !has_abstract_index(result)
+        end
+    end
+end

@@ -117,6 +117,44 @@ end
     end
 end
 
+@testset "Metric self-trace: g^a_a (bare) = dim" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, nothing, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(
+        name=:g, manifold=:M4, rank=(0,2), symmetries=Any[],
+        options=Dict{Symbol,Any}(:is_metric => true, :metric_inverse => :g)))
+
+    with_registry(reg) do
+        g_traced = Tensor(:g, [up(:a), down(:a)])
+        result = contract_metrics(g_traced)
+        @test result isa TScalar
+        @test result.val == 4
+    end
+end
+
+@testset "Metric self-trace in product: g^a_a * T_{bc} = 4 * T_{bc}" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, nothing, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(
+        name=:g, manifold=:M4, rank=(0,2), symmetries=Any[],
+        options=Dict{Symbol,Any}(:is_metric => true, :metric_inverse => :g)))
+    register_tensor!(reg, TensorProperties(
+        name=:T, manifold=:M4, rank=(0,2), symmetries=Any[],
+        options=Dict{Symbol,Any}()))
+
+    with_registry(reg) do
+        g_traced = Tensor(:g, [up(:a), down(:a)])
+        T = Tensor(:T, [down(:b), down(:c)])
+        expr = g_traced * T
+
+        result = contract_metrics(expr)
+        @test result isa TProduct
+        @test result.scalar == 4
+        @test length(result.factors) == 1
+        @test result.factors[1].name == :T
+    end
+end
+
 @testset "No metrics: expression unchanged" begin
     reg = TensorRegistry()
     register_manifold!(reg, ManifoldProperties(:M4, 4, :g, nothing, [:a,:b,:c,:d,:e,:f]))

@@ -48,7 +48,44 @@ function split_all_spacetime(expr::TensorExpr, fol::FoliationProperties)
     for name in idx_names
         result = split_spacetime(result, name, fol)
     end
-    result
+
+    # Phase 2: split remaining abstract dummy indices
+    _split_abstract_dummies(result, fol)
+end
+
+"""
+Split any remaining abstract (non-component) indices, processing each sum
+term individually to avoid duplicating terms that don't contain a given index.
+"""
+function _split_abstract_dummies(expr::TSum, fol::FoliationProperties)
+    tsum(TensorExpr[_split_abstract_dummies(t, fol) for t in expr.terms])
+end
+
+function _split_abstract_dummies(expr::TensorExpr, fol::FoliationProperties)
+    for _ in 1:20
+        names = _abstract_index_names(expr)
+        isempty(names) && return expr
+        for name in names
+            expr = split_spacetime(expr, name, fol)
+        end
+        expr isa TSum && return _split_abstract_dummies(expr, fol)
+    end
+    expr
+end
+
+"""Find all index names in an expression that are NOT component markers (`:_0`, `:_1`, etc.)."""
+function _abstract_index_names(expr::TensorExpr)
+    all_idxs = indices(expr)
+    names = Symbol[]
+    seen = Set{Symbol}()
+    for idx in all_idxs
+        s = string(idx.name)
+        if !startswith(s, "_") && idx.name ∉ seen
+            push!(names, idx.name)
+            push!(seen, idx.name)
+        end
+    end
+    names
 end
 
 """

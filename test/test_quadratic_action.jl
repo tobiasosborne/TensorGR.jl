@@ -1,5 +1,5 @@
 using TensorGR: QuadraticForm, quadratic_form, propagator, determinant,
-                sym_det, sym_inv, sym_eval, ibp_product
+                sym_det, sym_inv, sym_eval, ibp_product, all_contractions
 
 @testset "Symbolic determinant 2×2" begin
     # Numeric
@@ -56,6 +56,39 @@ end
     @test prop.matrix[1, 1] == 1 // 4
     @test prop.matrix[2, 2] == 1 // 9
     @test prop.matrix[1, 2] == 0
+end
+
+@testset "all_contractions: symmetric rank-2 tensor" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(name=:h, manifold=:M4, rank=(0,2),
+        symmetries=Any[Symmetric(1,2)]))
+
+    with_registry(reg) do
+        h = Tensor(:h, [down(:a), down(:b)])
+        results = all_contractions([h, h], TIndex[])
+        # Two symmetric rank-2 tensors, no free indices:
+        # 2 unique contractions: h^{ab}h_{ab} and Tr(h)^2
+        @test length(results) == 2
+        for r in results
+            @test r != TScalar(0 // 1)
+        end
+    end
+end
+
+@testset "all_contractions: non-symmetric rank-2 tensor" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(name=:T, manifold=:M4, rank=(0,2),
+        symmetries=Any[]))
+
+    with_registry(reg) do
+        T = Tensor(:T, [down(:a), down(:b)])
+        results = all_contractions([T, T], TIndex[])
+        # Without symmetry: 3 matchings from 4 slots, all distinct
+        # T^{ab}T_{ab}, T^a_a T^b_b, T^{ab}T_{ba}
+        @test length(results) == 3
+    end
 end
 
 @testset "IBP on simple product" begin

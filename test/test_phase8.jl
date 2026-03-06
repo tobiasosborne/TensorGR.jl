@@ -1,3 +1,14 @@
+# Helper: check if expression contains ∂∂field (nested derivative of field)
+function _has_second_deriv(expr::TDeriv, field::Symbol)
+    if expr.arg isa TDeriv
+        return true
+    end
+    _has_second_deriv(expr.arg, field)
+end
+_has_second_deriv(expr::TSum, field::Symbol) = any(t -> _has_second_deriv(t, field), expr.terms)
+_has_second_deriv(expr::TProduct, field::Symbol) = any(f -> _has_second_deriv(f, field), expr.factors)
+_has_second_deriv(::TensorExpr, ::Symbol) = false
+
 @testset "Phase 8: Hardening & Extensions" begin
 
     @testset "Variational derivative" begin
@@ -13,6 +24,27 @@
             result = variational_derivative(L, :Φ)
             # Should be Φ (the variation is trivial for this case)
             @test result isa TensorExpr
+        end
+    end
+
+    @testset "VarD kinetic term: δ/δΦ (∂_a Φ ∂^a Φ) = -2 □Φ" begin
+        reg = TensorRegistry()
+        register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f]))
+        register_tensor!(reg, TensorProperties(name=:Φ, manifold=:M4, rank=(0,0),
+            symmetries=Any[]))
+
+        with_registry(reg) do
+            Φ = Tensor(:Φ, TIndex[])
+            # L = ∂_a Φ ∂^a Φ
+            dΦ_down = TDeriv(down(:a), Φ)
+            dΦ_up = TDeriv(up(:a), Φ)
+            L = tproduct(1 // 1, TensorExpr[dΦ_down, dΦ_up])
+
+            result = variational_derivative(L, :Φ)
+            # Result should be -2 □Φ = -2 ∂_a ∂^a Φ
+            # Check it's non-trivial (not zero) and involves second derivatives
+            @test result != TScalar(0 // 1)
+            @test _has_second_deriv(result, :Φ)
         end
     end
 

@@ -27,6 +27,14 @@ function contract_metrics(t::Tensor)
                 return TScalar(mp.dim // 1)
             end
         end
+        if get(props.options, :is_metric, false) && length(t.indices) == 2
+            if t.indices[1].name == t.indices[2].name &&
+               t.indices[1].position != t.indices[2].position &&
+               t.indices[1].vbundle == t.indices[2].vbundle
+                mp = get_manifold(reg, props.manifold)
+                return TScalar(mp.dim // 1)
+            end
+        end
     end
     t
 end
@@ -145,6 +153,15 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
                 end
             end
         end
+    end
+
+    # Self-trace in product: g^a_a * ... → dim * ...
+    if midxs[1].name == midxs[2].name &&
+       midxs[1].position != midxs[2].position &&
+       midxs[1].vbundle == midxs[2].vbundle
+        mp = get_manifold(reg, get_tensor(reg, metric.name).manifold)
+        new_factors = TensorExpr[f for (k, f) in enumerate(p.factors) if k != metric_idx]
+        return tproduct(p.scalar * mp.dim, new_factors)
     end
 
     nothing

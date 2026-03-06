@@ -97,8 +97,15 @@ function foliate_and_decompose(expr::TensorExpr, h_name::Symbol;
     # 1. Split all spacetime indices into 3+1 components
     split_expr = split_all_spacetime(expr, foliation)
 
+    # 1b. Simplify: apply background rules (Ric=0, etc.) and contract metrics
+    split_expr = simplify(split_expr)
+
     # 2. Apply SVT substitution rules
     substituted = apply_svt(split_expr, h_name, foliation; gauge=gauge, fields=fields)
+
+    # 2b. Distribute derivatives/products over sums so each term has a single SVT field type
+    substituted = expand_derivatives(expand_products(substituted))
+    substituted = expand_products(substituted)
 
     # 3. Apply constraint rules (transversality, tracelessness)
     crules = svt_constraint_rules(fields, foliation)
