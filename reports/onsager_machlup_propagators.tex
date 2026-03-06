@@ -1,0 +1,646 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\geometry{margin=2.5cm}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\pp}{p^2}
+\newcommand{\kk}{k^2}
+\newcommand{\TT}{\mathrm{TT}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\Lap}{\Delta}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Position-Space Correlation Functions\\
+for Classical Stochastic Gravity\\[4pt]
+$\boldsymbol{S = \alpha\, R^2 - \beta\, R_{\mu\nu}\,R^{\mu\nu}}$}
+\author{Computed with TensorGR.jl}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We compute the complete set of two-point correlation functions for
+the classical metric perturbation $h_{\mu\nu}$ governed by the
+Onsager--Machlup action
+$S = \alpha\,R^2 - \beta\,R_{\mu\nu}R^{\mu\nu}$
+linearised around flat space.
+All results are expressed in position space as Green's functions
+of fourth-order differential operators.
+The metric $h_{\mu\nu}$ is a real classical stochastic field:
+no ghosts, no unitarity constraints, no $i\varepsilon$~prescriptions
+arise.  The path integral $\int\!\mathcal{D}h\;e^{-S}$ defines a
+probability measure on metric configurations whose covariance is
+the inverse kinetic operator.
+The momentum-space kinetic matrices and their inverses are verified
+numerically with \texttt{TensorGR.jl}; the position-space Green's
+functions are standard analytic results.
+\end{abstract}
+
+\tableofcontents
+
+%% ======================================================================
+\section{Classical stochastic gravity}
+\label{sec:setup}
+
+\subsection{The Onsager--Machlup framework}
+
+A classical metric $g_{\mu\nu}$ subject to stochastic fluctuations is
+described by the probability functional
+\begin{equation}\label{eq:OM}
+  P[g] \;\propto\; e^{-S[g]}\,,
+  \qquad
+  S[g] = \int \dd^4 x\;\sqrt{|g|}\;\bigl[\,
+    \alpha\,R^2 - \beta\,R_{\mu\nu}\,R^{\mu\nu}
+  \,\bigr]\,.
+\end{equation}
+This is an Onsager--Machlup action: $S$ is real and bounded below, so
+that~\eqref{eq:OM} is a normalisable measure on the space of metrics.
+The coefficients $\alpha,\beta$ encode the noise strength of whatever
+stochastic dynamics (Langevin equation, fluctuation--dissipation relation)
+drives the metric fluctuations.
+
+The two-point correlation function of the classical metric perturbation
+$h_{\mu\nu} = g_{\mu\nu} - \eta_{\mu\nu}$ is
+\begin{equation}\label{eq:corr-def}
+  C_{\mu\nu\rho\sigma}(x,y)
+  \equiv \langle h_{\mu\nu}(x)\, h_{\rho\sigma}(y)\rangle
+  = \frac{1}{Z}\int\!\mathcal{D}h\; h_{\mu\nu}(x)\,h_{\rho\sigma}(y)\;
+    e^{-S^{(2)}[h]}\,,
+\end{equation}
+where $S^{(2)}$ is the action expanded to quadratic order.
+For a Gaussian theory this gives
+\begin{equation}\label{eq:gauss}
+  C = \tfrac{1}{2}\,\mathcal{M}^{-1}\,,
+\end{equation}
+with $\mathcal{M}$ the kinetic operator in
+$S^{(2)} = \int h\,\mathcal{M}\, h\;\dd^4x$.
+The factor $\frac{1}{2}$ is the standard Gaussian normalisation;
+it can be absorbed into a redefinition of $\alpha,\beta$.
+In what follows we compute $G = \mathcal{M}^{-1}$ (the Green's function
+of the kinetic operator) and note that
+$C = \tfrac{1}{2}\,G$.
+
+\paragraph{No ghosts, no $i\varepsilon$.}
+Unlike in quantum gravity, the metric here is a \emph{real classical
+field}.  The higher-derivative kinetic operator $\Box^2$ does not
+produce ghost degrees of freedom, because there is no Hilbert space
+and no unitarity requirement.  The $1/p^4$ correlation functions
+are simply the covariance of a smooth stochastic field with
+fourth-order noise.
+
+\subsection{Conventions}
+
+We expand $g_{\mu\nu} = \eta_{\mu\nu} + h_{\mu\nu}$ with signature
+$(-,+,+,+)$.  The d'Alembertian is
+$\Box = -\partial_t^2 + \nabla^2$, and the spatial Laplacian is
+$\nabla^2 = \partial_i\partial_i$.
+
+\paragraph{Bardeen gauge.}
+The SVT decomposition in Bardeen gauge gives
+\begin{equation}\label{eq:svt}
+  h_{00} = 2\Phi\,,\qquad
+  h_{0i} = V_i\,,\qquad
+  h_{ij} = 2\psi\,\delta_{ij} + h^\TT_{ij}\,,
+\end{equation}
+with $\partial^i V_i = 0$ (transverse vector) and
+$\partial^i h^\TT_{ij} = 0$, $h^\TT_{ii} = 0$
+(transverse-traceless tensor).
+The trace is $h = -2\Phi + 6\psi$.
+
+%% ======================================================================
+\section{Position-space action}
+\label{sec:action}
+
+\subsection{Linearised curvature as differential operators}
+
+The linearised Ricci tensor on a flat background is a second-order
+differential operator acting on $h_{\mu\nu}$:
+\begin{equation}\label{eq:lin-ricci}
+  R^{(1)}_{\mu\nu}[h]
+  = \tfrac{1}{2}\bigl(
+      \partial^\rho\partial_\mu h_{\rho\nu}
+    + \partial^\rho\partial_\nu h_{\rho\mu}
+    - \Box\, h_{\mu\nu}
+    - \partial_\mu\partial_\nu h
+  \bigr)\,.
+\end{equation}
+The linearised Ricci scalar is
+\begin{equation}\label{eq:lin-R}
+  R^{(1)}[h] = \partial_\mu\partial_\nu h^{\mu\nu} - \Box\, h\,.
+\end{equation}
+These are \emph{local} differential expressions in position space.
+The quadratic action is therefore
+\begin{equation}\label{eq:action-pos}
+  S^{(2)}[h] = \int\dd^4x\;\Bigl[\,
+    \alpha\bigl(\partial_\mu\partial_\nu h^{\mu\nu} - \Box h\bigr)^2
+  - \frac{\beta}{4}
+    \bigl(\partial^\rho\partial_\mu h_{\rho\nu}
+         + \partial^\rho\partial_\nu h_{\rho\mu}
+         - \Box h_{\mu\nu}
+         - \partial_\mu\partial_\nu h\bigr)^2
+  \,\Bigr]\,,
+\end{equation}
+a manifestly local functional involving up to four derivatives of
+$h_{\mu\nu}$.
+
+\subsection{Ricci components on SVT fields}
+
+Evaluating~\eqref{eq:lin-ricci} on the Bardeen decomposition~\eqref{eq:svt}
+gives (see \cref{tab:ricci}):
+
+\begin{table}[ht]
+\centering
+\caption{Linearised Ricci components on SVT fields.  All expressions
+are position-space differential operators.}
+\label{tab:ricci}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Component & Position-space expression \\
+\midrule
+$R_{00}$ & $-\nabla^2\Phi - 3\,\ddot\psi$ \\[3pt]
+$R_{0i}\big|_V$ & $-\frac{1}{2}\nabla^2 V_i$ \\[3pt]
+$R_{0i}\big|_S$ & $-2\,\partial_i\dot\psi$ \\[3pt]
+$R_{ij}\big|_S$ & $\partial_i\partial_j(\Phi-\psi) - \Box\psi\;\delta_{ij}$ \\[3pt]
+$R_{ij}\big|_\TT$ & $-\frac{1}{2}\Box\, h^\TT_{ij}$ \\[3pt]
+$R^{(1)}$ & $2\nabla^2\Phi - 4\nabla^2\psi + 6\ddot\psi$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Here $\dot f = \partial_t f$ and
+$\ddot f = \partial_t^2 f$.  These are the same as the Fourier-space
+expressions under the correspondence
+$\omega^2 \leftrightarrow -\partial_t^2$,
+$k^2 \leftrightarrow -\nabla^2$,
+$p^2 \leftrightarrow \Box$.
+
+%% ======================================================================
+\section{Kinetic operators by sector}
+\label{sec:operators}
+
+Substituting the Ricci components into $S^{(2)} = \alpha(R^{(1)})^2
+- \beta\,R^{(1)}_{\mu\nu}R^{(1)\mu\nu}$ yields a fourth-order
+differential operator for each SVT sector.
+
+\subsection{Tensor sector}
+
+Since $R^{(1)}|_\TT = 0$ and
+$R^{(1)}_{ij}|_\TT = -\frac{1}{2}\Box h^\TT_{ij}$, the tensor
+action is
+\begin{equation}\label{eq:S-TT}
+  \boxed{
+  S_\TT = -\frac{\beta}{4}\int\dd^4x\;
+    h^\TT_{ij}\;\Box^2\; h^{\TT\,ij}\,.}
+\end{equation}
+The kinetic operator is $\mathcal{M}_\TT = -\frac{\beta}{4}\,\Box^2$.
+
+\subsection{Vector sector}
+
+Since $R^{(1)}|_V = 0$ and
+$R^{(1)}_{0i}|_V = -\frac{1}{2}\nabla^2 V_i$, the vector action is
+\begin{equation}\label{eq:S-V}
+  \boxed{
+  S_V = \frac{\beta}{2}\int\dd^4x\;
+    V_i\;\nabla^2\Box\; V^i\,.}
+\end{equation}
+The kinetic operator is
+$\mathcal{M}_V = \frac{\beta}{2}\,\nabla^2\Box = -\frac{\beta}{2}(-\nabla^2)(-\Box)$.
+
+\subsection{Scalar sector}
+
+The scalar action couples $\Phi$ and $\psi$ through a $2\times 2$
+matrix of differential operators.  Define
+\begin{equation}\label{eq:AB}
+  A \equiv 2\alpha - \beta\,,\qquad
+  B \equiv 3\alpha - \beta\,.
+\end{equation}
+
+\begin{theorem}[Scalar kinetic operator]\label{thm:scalar-M}
+The scalar sector of the quadratic action is
+$S_S = \int\dd^4x\;\phi^I\,\mathcal{M}_{IJ}\,\phi^J$
+with $\phi = (\Phi,\psi)^T$ and
+\begin{equation}\label{eq:scalar-M}
+  \mathcal{M} = \begin{pmatrix}
+    2A\,\nabla^4
+    & -4B\,\nabla^2\Box + 2A\,\nabla^4 \\[6pt]
+    -4B\,\nabla^2\Box + 2A\,\nabla^4
+    & 12B\,\Box^2 - 8B\,\nabla^2\Box + 2A\,\nabla^4
+  \end{pmatrix},
+\end{equation}
+where $\nabla^4 \equiv (\nabla^2)^2$.
+\end{theorem}
+
+The correspondence with the Fourier-space kinetic matrix is
+$\nabla^4 \leftrightarrow k^4$,
+$-\nabla^2\Box \leftrightarrow k^2 p^2$,
+$\Box^2 \leftrightarrow p^4$.
+
+\begin{remark}
+The three differential operators $\nabla^4$, $\nabla^2\Box$, and
+$\Box^2$ are all fourth-order, but have different symmetry:
+$\Box^2$ is Lorentz-invariant,
+$\nabla^4$ is purely spatial (instantaneous), and
+$\nabla^2\Box$ is mixed.
+This trichotomy governs the structure of the correlation functions.
+\end{remark}
+
+%% ======================================================================
+\section{Correlation functions}
+\label{sec:greens}
+
+The two-point correlation function of the classical metric is
+$C = \frac{1}{2}\mathcal{M}^{-1}$,
+i.e.\ half the Green's function of the kinetic operator
+(\cref{eq:gauss}).  We compute $G = \mathcal{M}^{-1}$.
+
+\subsection{Building-block Green's functions}
+\label{sec:building}
+
+All correlation functions decompose into three building blocks, the
+Green's functions of the three fourth-order operators
+$\Box^2$, $(-\nabla^2)(-\Box)$, and $\nabla^4$.
+
+\begin{definition}[Elementary Green's functions]\label{def:greens}
+\begin{alignat}{2}
+  &\Box^2\; G_{\Box^2}(x)
+  &&= \delta^4(x)\,,
+  \label{eq:G-box2}\\[4pt]
+  &(-\nabla^2)(-\Box)\; G_{\nabla^2\Box}(x)
+  &&= \delta^4(x)\,,
+  \label{eq:G-mix}\\[4pt]
+  &\nabla^4\; G_{\nabla^4}(x)
+  &&= \delta^4(x)\,.
+  \label{eq:G-lap4}
+\end{alignat}
+\end{definition}
+
+The biharmonic Green's function $G_{\Box^2}$ is the most regular;
+it exists as a locally integrable function.  The spatial biharmonic
+$G_{\nabla^4}$ is singular: it has no time dependence (the operator
+$\nabla^4$ does not involve $\partial_t$) and produces an
+\emph{instantaneous} correlation.
+
+For the Euclidean theory (see \cref{sec:euclidean}), these have
+explicit closed forms.
+
+\subsection{Tensor correlation function}
+
+The Green's function equation for the tensor sector is
+\begin{equation}
+  -\frac{\beta}{4}\;\Box^2\;
+  G^\TT_{ijkl}(x-y) = \Pi^\TT_{ijkl}\;\delta^4(x-y)\,,
+\end{equation}
+where $\Pi^\TT_{ijkl} = \frac{1}{2}(P^\mathrm{T}_{ik}P^\mathrm{T}_{jl}
++ P^\mathrm{T}_{il}P^\mathrm{T}_{jk} - P^\mathrm{T}_{ij}P^\mathrm{T}_{kl})$
+with $P^\mathrm{T}_{ij} = \delta_{ij} - \partial_i\partial_j/\nabla^2$.
+The solution is
+\begin{equation}\label{eq:corr-TT}
+  \boxed{
+  \bigl\langle h^\TT_{ij}(x)\, h^\TT_{kl}(y)\bigr\rangle
+  = -\frac{2}{\beta}\;
+    \Pi^\TT_{ijkl}\; G_{\Box^2}(x-y)\,.}
+\end{equation}
+
+\subsection{Vector correlation function}
+
+The Green's function equation is
+\begin{equation}
+  \frac{\beta}{2}\;\nabla^2\Box\;
+  G^V_{ij}(x-y) = P^\mathrm{T}_{ij}\;\delta^4(x-y)\,.
+\end{equation}
+The solution is
+\begin{equation}\label{eq:corr-V}
+  \boxed{
+  \bigl\langle V_i(x)\, V_j(y)\bigr\rangle
+  = -\frac{1}{\beta}\;
+    P^\mathrm{T}_{ij}\; G_{\nabla^2\Box}(x-y)\,.}
+\end{equation}
+
+\subsection{Scalar correlation function}
+
+The scalar Green's function $G^S_{IJ}(x-y)$ satisfies
+$\mathcal{M}_{IK}\,G^S_{KJ}(x-y) = \delta_{IJ}\,\delta^4(x-y)$.
+Its entries decompose as linear combinations of the three building
+blocks.
+
+\begin{theorem}[Scalar correlators]\label{thm:scalar-corr}
+\begin{equation}\label{eq:corr-scalar}
+  \boxed{
+  \begin{aligned}
+    \langle\Phi(x)\,\Phi(y)\rangle
+    &= -\frac{3}{2\beta}\;G_{\nabla^4}(x-y)
+     - \frac{1}{\beta}\;G_{\nabla^2\Box}(x-y)
+     - \frac{A}{4\beta B}\;G_{\Box^2}(x-y)\,,\\[6pt]
+    \langle\Phi(x)\,\psi(y)\rangle
+    &= \frac{1}{2\beta}\;G_{\nabla^2\Box}(x-y)
+     + \frac{A}{4\beta B}\;G_{\Box^2}(x-y)\,,\\[6pt]
+    \langle\psi(x)\,\psi(y)\rangle
+    &= -\frac{A}{4\beta B}\;G_{\Box^2}(x-y)\,,
+  \end{aligned}}
+\end{equation}
+where $A = 2\alpha - \beta$ and $B = 3\alpha - \beta$.
+\end{theorem}
+
+\begin{proof}
+Invert the $2\times2$ kinetic matrix in Fourier space
+(Cramer's rule with $\det\mathcal{M} = -8\beta B\,k^4 p^4$),
+then identify each monomial $k^{-4}$, $(k^2 p^2)^{-1}$, $p^{-4}$
+with the corresponding Green's function.
+\end{proof}
+
+\begin{remark}[Structure of the scalar correlator]
+The three terms have distinct physical character:
+\begin{enumerate}
+\item The $G_{\nabla^4}$ term is \emph{instantaneous}: it
+  represents a spatial correlation that is independent of the time
+  separation $|t_x - t_y|$.  It appears only in
+  $\langle\Phi\Phi\rangle$ and reflects the constraint character
+  of the lapse perturbation.
+\item The $G_{\nabla^2\Box}$ term mixes spatial and temporal
+  propagation.  It appears in $\langle\Phi\Phi\rangle$ and
+  $\langle\Phi\psi\rangle$ but not in $\langle\psi\psi\rangle$.
+\item The $G_{\Box^2}$ term is fully covariant (Lorentz-invariant
+  operator) and appears in all three entries.
+  It is the only contribution to $\langle\psi\psi\rangle$ and
+  encodes the genuinely propagating scalar degree of freedom.
+\end{enumerate}
+\end{remark}
+
+%% ======================================================================
+\section{Euclidean Green's functions}
+\label{sec:euclidean}
+
+For a classical stochastic field the path integral $\int\!\mathcal{D}h\;
+e^{-S}$ must converge, which requires positive-definite kinetic operators.
+This is naturally achieved in the Euclidean formulation obtained by
+Wick-rotating $t \to -i\tau$.  The Lorentzian operators become
+Euclidean elliptic operators:
+\begin{equation}
+  \Box \;\to\; -\Lap_E\,,\qquad
+  \Lap_E = \partial_\tau^2 + \nabla^2\,,\qquad
+  |x_E|^2 = \tau^2 + |\mathbf{x}|^2\,.
+\end{equation}
+The Euclidean kinetic operators are positive-definite for
+$\alpha > 0$ and $\beta > 0$.
+
+\subsection{Biharmonic Green's function}
+
+The Green's function of $\Lap_E^2$ in four Euclidean dimensions is
+logarithmic (critical dimension):
+\begin{equation}\label{eq:GE-biharm}
+  \boxed{
+  \Lap_E^2\; G_{\Box^2}^E(x_E) = \delta^4(x_E)
+  \qquad\Longrightarrow\qquad
+  G_{\Box^2}^E(x_E) = -\frac{1}{8\pi^2}\,
+    \log\frac{|x_E|^2}{\ell^2}\,,}
+\end{equation}
+where $\ell$ is an infrared reference scale (the 4D biharmonic has a
+logarithmic zero mode).  This is $O(4)$-invariant and smooth away
+from the origin.
+
+\subsection{Spatial biharmonic Green's function}
+
+The operator $\nabla^4$ acts only on the three spatial coordinates,
+so its Green's function is instantaneous in Euclidean time:
+\begin{equation}\label{eq:GE-splap4}
+  \boxed{
+  \nabla^4\; G_{\nabla^4}^E(\tau, \mathbf{x})
+  = \delta(\tau)\,\delta^3(\mathbf{x})
+  \qquad\Longrightarrow\qquad
+  G_{\nabla^4}^E(\tau,\mathbf{x})
+  = -\frac{|\mathbf{x}|}{8\pi}\;\delta(\tau)\,.}
+\end{equation}
+This is the 3D biharmonic Green's function
+($\nabla^4 G = \delta^3$ in $\mathbb{R}^3$ gives
+$G(r) = -r/(8\pi)$) times a delta function in Euclidean time.
+
+\subsection{Mixed Green's function}
+
+The mixed operator $(-\nabla^2)(-\Lap_E)$ factorises into a
+spatial and a full Laplacian, but the factors share the spatial
+coordinates.  The Green's function is obtained by integrating out
+the temporal Fourier mode first:
+\begin{equation}\label{eq:GE-mix}
+  \boxed{
+  G_{\nabla^2\Box}^E(\tau, \mathbf{x})
+  = \frac{1}{4\pi^2}\int_0^\infty
+    \frac{e^{-\kappa|\tau|}\,\sin(\kappa\,|\mathbf{x}|)}
+         {\kappa^2\,|\mathbf{x}|}\;
+    \frac{\dd\kappa}{\pi}\,,}
+\end{equation}
+where the $\kappa$~integral runs over the magnitude of the spatial
+momentum.  At equal times ($\tau = 0$):
+\begin{equation}\label{eq:GE-mix-et}
+  G_{\nabla^2\Box}^E(0, \mathbf{x})
+  = \frac{1}{4\pi^2}\int_0^\infty
+    \frac{\sin(\kappa\,|\mathbf{x}|)}
+         {\kappa^2\,|\mathbf{x}|}\;
+    \frac{\dd\kappa}{\pi}
+  = \frac{1}{4\pi^2\,|\mathbf{x}|}\cdot\frac{1}{2}
+  = \frac{1}{8\pi^2\,|\mathbf{x}|}\,.
+\end{equation}
+
+For large Euclidean separation $|x_E| \gg \ell$, the mixed Green's
+function approaches the biharmonic one up to anisotropic corrections:
+$G_{\nabla^2\Box}^E(x_E) \sim -\frac{1}{8\pi^2}\log(|x_E|/\ell)
++ \mathcal{O}(1)$.
+
+%% ======================================================================
+\section{Equal-time spatial correlators}
+\label{sec:equal-time}
+
+The most directly observable quantities for a classical stochastic metric
+are the equal-time spatial correlation functions
+$C(\mathbf{r}) = \langle h(t,\mathbf{x})\, h(t,\mathbf{x}+\mathbf{r})\rangle$.
+These are obtained by evaluating the Green's functions at $\tau = 0$.
+
+\subsection{Equal-time power spectra}
+
+In Fourier space (spatial momentum $\mathbf{k}$, integrating over
+frequency), the equal-time power spectra for each sector are:
+
+\begin{proposition}[Equal-time power spectra]\label{prop:power}
+In the Euclidean formulation, integrating
+$\int\!\frac{\dd\omega_E}{2\pi}$ over the Euclidean frequency gives
+the equal-time spectral densities
+\begin{align}
+  P_\TT(k) &= \frac{1}{\beta\, k^3}\,,
+    \label{eq:P-TT}\\[4pt]
+  P_V(k) &= \frac{1}{\beta\, k^3}\,,
+    \label{eq:P-V}\\[4pt]
+  P_{\psi\psi}(k) &= \frac{A}{4\beta B}\cdot\frac{1}{k^3}\,,
+    \label{eq:P-psi}
+\end{align}
+per polarisation, where $k = |\mathbf{k}|$.
+\end{proposition}
+
+\begin{proof}
+For the tensor sector, the Euclidean propagator is
+$(4/\beta)\,(\omega_E^2 + k^2)^{-2}$.  Integrating:
+$\int \frac{\dd\omega_E}{2\pi}\,\frac{4}{\beta(\omega_E^2+k^2)^2}
+= \frac{4}{\beta}\cdot\frac{1}{4k^3} = \frac{1}{\beta k^3}$.
+The vector and scalar follow analogously, using
+$\int\frac{\dd\omega_E}{2\pi}\,(\omega_E^2+k^2)^{-1} = \frac{1}{2k}$
+for the $1/(k^2 p_E^2)$ poles.
+\end{proof}
+
+\begin{remark}[Scale-invariant spectrum]
+All sectors share the same spectral shape $P(k) \propto k^{-3}$.
+The equal-time variance diverges logarithmically:
+\begin{equation}
+  \langle h^2 \rangle
+  \propto \int \frac{\dd^3 k}{(2\pi)^3}\;P(k)
+  = \frac{1}{2\pi^2}\int_0^\infty \frac{\dd k}{k}
+  = \frac{1}{2\pi^2}\,\log\frac{k_{\max}}{k_{\min}}\,.
+\end{equation}
+This is the hallmark of a marginally scale-invariant stochastic field
+in three spatial dimensions, analogous to a Harrison--Zel'dovich
+spectrum.  The logarithmic divergence is cut off by the physical
+UV and IR scales of the problem.
+\end{remark}
+
+\subsection{Equal-time spatial correlators}
+
+From the power spectra, the 3D Fourier transforms give the
+equal-time spatial correlation functions.  For the propagating
+(non-instantaneous) contributions:
+
+\begin{proposition}[Equal-time correlators]\label{prop:et}
+The equal-time spatial correlators arising from the frequency-integrated
+$1/p_E^4$ and $1/(k^2 p_E^2)$ poles are both logarithmic in the
+spatial separation $r = |\mathbf{r}|$:
+\begin{equation}\label{eq:et-log}
+  \int\frac{\dd^3k}{(2\pi)^3}\;\frac{e^{i\mathbf{k}\cdot\mathbf{r}}}{k^3}
+  = -\frac{1}{2\pi^2}\,\log(\mu\, r) + \text{const}\,,
+\end{equation}
+where $\mu$ is an infrared cutoff.
+\end{proposition}
+
+Combining with the instantaneous $G_{\nabla^4}$ contribution from
+\cref{eq:GE-splap4}, the full equal-time scalar correlator is:
+\begin{align}
+  \langle\Phi(\mathbf{x})\,\Phi(\mathbf{x}+\mathbf{r})\rangle
+  \big|_{t=t'}
+  &= \frac{3}{16\pi\beta}\;r\;\delta(0)
+   + \frac{1}{2\pi^2\beta}\;\log(\mu r)
+   + \frac{A}{8\pi^2\beta B}\;\log(\mu r)
+   + \text{const}\,,
+  \label{eq:et-PhiPhi}
+\end{align}
+where the $\delta(0)$ in the first term reflects the white-noise
+character of the instantaneous contribution and must be regularised
+by the physical time resolution of the problem.
+
+%% ======================================================================
+\section{Special limits}
+\label{sec:limits}
+
+\subsection{Conformal point: $\beta = 3\alpha$ \texorpdfstring{$(B=0)$}{(B=0)}}
+
+The action becomes $S = -3\alpha\,C_{\mu\nu\rho\sigma}C^{\mu\nu\rho\sigma}$
+(linearised Weyl-squared).  Conformal symmetry eliminates the scalar
+degree of freedom: $\det\mathcal{M}_S = 0$, and $\langle\psi\psi\rangle$
+diverges.  Only the tensor and vector correlators survive, with the
+\emph{same} Green's function structure as the general case.
+
+\subsection{Trace-decoupling: $\beta = 2\alpha$ \texorpdfstring{$(A=0)$}{(A=0)}}
+
+The $G_{\Box^2}$ contribution drops out of all scalar correlators.
+In particular $\langle\psi\psi\rangle = 0$: the conformal factor
+has no fluctuations.  Only the mixed and instantaneous terms remain
+in $\langle\Phi\Phi\rangle$ and $\langle\Phi\psi\rangle$.
+
+\subsection{Pure $R^2$: $\beta = 0$}
+
+The tensor and vector kinetic operators vanish:
+$\mathcal{M}_\TT = \mathcal{M}_V = 0$.
+These modes are not damped by the noise and do not acquire
+well-defined correlation functions.  The scalar determinant also
+vanishes, reflecting the enhanced (conformal) gauge symmetry.
+
+\subsection{Pure $R_{\mu\nu}R^{\mu\nu}$: $\alpha = 0$}
+
+With $A = B = -\beta$:
+\begin{equation}
+  \langle\psi\psi\rangle\big|_{\alpha=0}
+  = -\frac{1}{4\beta^2}\;G_{\Box^2}(x-y)\,.
+\end{equation}
+All correlators scale as $1/\beta$ or $1/\beta^2$.  The scalar sector
+has the simplest structure, with $\Phi$ and $\psi$ entering
+symmetrically.
+
+%% ======================================================================
+\section{Summary}
+\label{sec:summary}
+
+For the Onsager--Machlup action
+$S = \alpha\,R^2 - \beta\,R_{\mu\nu}R^{\mu\nu}$
+of a classical stochastic metric linearised around flat space,
+the correlation functions are:
+
+\medskip
+\noindent\textbf{Kinetic operators} (position space):
+\begin{equation*}
+  \mathcal{M}_\TT = -\frac{\beta}{4}\,\Box^2\,,\qquad
+  \mathcal{M}_V = \frac{\beta}{2}\,\nabla^2\Box\,,\qquad
+  \mathcal{M}_S = \text{eq.~\eqref{eq:scalar-M}}\,.
+\end{equation*}
+
+\noindent\textbf{Tensor} (2~d.o.f.):
+\begin{equation*}
+  \bigl\langle h^\TT_{ij}(x)\, h^\TT_{kl}(y)\bigr\rangle
+  = -\frac{2}{\beta}\;\Pi^\TT_{ijkl}\;G_{\Box^2}(x-y)
+\end{equation*}
+
+\noindent\textbf{Vector} (2~d.o.f.):
+\begin{equation*}
+  \bigl\langle V_i(x)\, V_j(y)\bigr\rangle
+  = -\frac{1}{\beta}\;P^\mathrm{T}_{ij}\;G_{\nabla^2\Box}(x-y)
+\end{equation*}
+
+\noindent\textbf{Scalar} (2~coupled d.o.f., $A = 2\alpha-\beta$,
+$B = 3\alpha-\beta$):
+\begin{equation*}
+  \begin{aligned}
+  \langle\Phi\Phi\rangle
+  &= -\tfrac{3}{2\beta}\,G_{\nabla^4}
+   - \tfrac{1}{\beta}\,G_{\nabla^2\Box}
+   - \tfrac{A}{4\beta B}\,G_{\Box^2}\,,\\[4pt]
+  \langle\Phi\psi\rangle
+  &= \tfrac{1}{2\beta}\,G_{\nabla^2\Box}
+   + \tfrac{A}{4\beta B}\,G_{\Box^2}\,,\\[4pt]
+  \langle\psi\psi\rangle
+  &= -\tfrac{A}{4\beta B}\,G_{\Box^2}\,,
+  \end{aligned}
+\end{equation*}
+where all Green's functions are evaluated at $x-y$.
+
+\medskip
+\noindent\textbf{Euclidean Green's functions} (4D):
+\begin{equation*}
+  G_{\Box^2}^E = -\frac{\log(|x_E|^2/\ell^2)}{8\pi^2}\,,\qquad
+  G_{\nabla^4}^E = -\frac{|\mathbf{x}|}{8\pi}\,\delta(\tau)\,,\qquad
+  G_{\nabla^2\Box}^E(0,\mathbf{x}) = \frac{1}{8\pi^2\,|\mathbf{x}|}\,.
+\end{equation*}
+
+\noindent\textbf{Equal-time power spectrum} (all sectors):
+$P(k) \propto k^{-3}$ --- a marginally scale-invariant, logarithmically
+correlated classical metric.
+
+\end{document}

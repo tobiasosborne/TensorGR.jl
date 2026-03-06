@@ -9,3 +9,13 @@
 *.so
 *.dylib
 .beads/
+
+# Reports (LaTeX build artifacts)
+reports/*.aux
+reports/*.log
+reports/*.out
+reports/*.pdf
+reports/*.synctex.gz
+reports/*.fls
+reports/*.fdb_latexmk
+reports/*.toc
