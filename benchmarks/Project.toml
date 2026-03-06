@@ -1,0 +1,4 @@
+[deps]
+TensorGR = "7336a8e7-6d30-4255-8f1d-f4d86d88ac00"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
