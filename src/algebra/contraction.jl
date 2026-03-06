@@ -109,7 +109,7 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
 
         for (mi, midx) in enumerate(midxs)
             for (ti, tidx) in enumerate(fj.indices)
-                if midx.name == tidx.name && midx.position != tidx.position
+                if midx.name == tidx.name && midx.position != tidx.position && midx.vbundle == tidx.vbundle
                     # Found contraction: metric index midx pairs with fj index tidx
                     other_midx = midxs[3 - mi]
 
@@ -123,11 +123,11 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
                         other_fidx = fj.indices[3 - ti]
                         delta_name = _find_delta(reg, get_tensor(reg, metric.name).manifold)
                         new_tensor = Tensor(delta_name,
-                            [other_midx, TIndex(other_fidx.name, other_fidx.position)])
+                            [other_midx, TIndex(other_fidx.name, other_fidx.position, other_fidx.vbundle)])
                     else
                         # g^{ab} T_{bc} → T^a_c  (raise/lower index)
                         new_indices = copy(fj.indices)
-                        new_indices[ti] = TIndex(other_midx.name, other_midx.position)
+                        new_indices[ti] = TIndex(other_midx.name, other_midx.position, other_midx.vbundle)
                         new_tensor = Tensor(fj.name, new_indices)
                     end
 
@@ -172,11 +172,11 @@ function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)
 
         for (di, didx) in enumerate(didxs)
             for (ti, tidx) in enumerate(fj.indices)
-                if didx.name == tidx.name && didx.position != tidx.position
+                if didx.name == tidx.name && didx.position != tidx.position && didx.vbundle == tidx.vbundle
                     # The other delta index replaces the contracted index
                     other_didx = didxs[3 - di]
                     new_indices = copy(fj.indices)
-                    new_indices[ti] = TIndex(other_didx.name, tidx.position)
+                    new_indices[ti] = TIndex(other_didx.name, tidx.position, tidx.vbundle)
                     new_tensor = Tensor(fj.name, new_indices)
 
                     new_factors = TensorExpr[]
@@ -196,7 +196,7 @@ function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)
     end
 
     # Self-trace: δ^a_a → dimension
-    if didxs[1].name == didxs[2].name && didxs[1].position != didxs[2].position
+    if didxs[1].name == didxs[2].name && didxs[1].position != didxs[2].position && didxs[1].vbundle == didxs[2].vbundle
         mp = get_manifold(reg, get_tensor(reg, delta.name).manifold)
         dim = mp.dim
         new_factors = TensorExpr[f for (k, f) in enumerate(p.factors) if k != delta_idx]

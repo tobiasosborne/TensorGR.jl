@@ -84,10 +84,11 @@ export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar
 export TIndex, IndexPosition, Up, Down, up, down
 
 # Exports: Registry
-export TensorRegistry, TensorProperties, ManifoldProperties
-export has_manifold, has_tensor, get_manifold, get_tensor
+export TensorRegistry, TensorProperties, ManifoldProperties, VBundleProperties
+export has_manifold, has_tensor, has_vbundle, get_manifold, get_tensor, get_vbundle
 export register_manifold!, register_tensor!, register_rule!, get_rules
 export unregister_tensor!, unregister_manifold!, unregister_covd!
+export define_vbundle!
 export set_vanishing!
 export current_registry, with_registry
 

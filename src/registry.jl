@@ -1,4 +1,16 @@
 """
+    VBundleProperties(name, manifold, dim, indices)
+
+Properties of a vector bundle: name, base manifold, fiber dimension, and index alphabet.
+"""
+struct VBundleProperties
+    name::Symbol
+    manifold::Symbol
+    dim::Int
+    indices::Vector{Symbol}
+end
+
+"""
     ManifoldProperties(name, dim, metric, derivative, indices)
 
 Properties of a manifold: dimension, associated metric/derivative symbols, and index alphabet.
@@ -43,12 +55,14 @@ mutable struct TensorRegistry
     manifolds::Dict{Symbol, ManifoldProperties}
     tensors::Dict{Symbol, TensorProperties}
     rules::Vector{Any}  # Vector{RewriteRule}, Any to avoid forward ref
+    vbundles::Dict{Symbol, VBundleProperties}
 end
 
 TensorRegistry() = TensorRegistry(
     Dict{Symbol,ManifoldProperties}(),
     Dict{Symbol,TensorProperties}(),
-    Any[]
+    Any[],
+    Dict{Symbol,VBundleProperties}()
 )
 
 has_manifold(reg::TensorRegistry, name::Symbol) = haskey(reg.manifolds, name)
@@ -62,9 +76,32 @@ function get_tensor(reg::TensorRegistry, name::Symbol)
     reg.tensors[name]
 end
 
+has_vbundle(reg::TensorRegistry, name::Symbol) = haskey(reg.vbundles, name)
+
+function get_vbundle(reg::TensorRegistry, name::Symbol)
+    reg.vbundles[name]
+end
+
+"""
+    define_vbundle!(reg, name; manifold, dim, indices)
+
+Register a vector bundle on a manifold with given fiber dimension and index alphabet.
+"""
+function define_vbundle!(reg::TensorRegistry, name::Symbol;
+                         manifold::Symbol, dim::Int,
+                         indices::Vector{Symbol}=Symbol[])
+    has_vbundle(reg, name) && error("VBundle $name already registered")
+    has_manifold(reg, manifold) || error("Manifold $manifold not registered")
+    vb = VBundleProperties(name, manifold, dim, indices)
+    reg.vbundles[name] = vb
+    vb
+end
+
 function register_manifold!(reg::TensorRegistry, mp::ManifoldProperties)
     has_manifold(reg, mp.name) && error("Manifold $(mp.name) already registered")
     reg.manifolds[mp.name] = mp
+    # Auto-register the tangent bundle
+    reg.vbundles[:Tangent] = VBundleProperties(:Tangent, mp.name, mp.dim, mp.indices)
     mp
 end
 

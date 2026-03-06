@@ -4,20 +4,25 @@ Index position: Up (contravariant) or Down (covariant).
 @enum IndexPosition Up Down
 
 """
-    TIndex(name, position)
+    TIndex(name, position, vbundle=:Tangent)
 
-A tensor index with a symbolic name and position (Up or Down).
+A tensor index with a symbolic name, position (Up or Down), and vector bundle.
 """
 struct TIndex
     name::Symbol
     position::IndexPosition
+    vbundle::Symbol
+    TIndex(name::Symbol, position::IndexPosition, vbundle::Symbol=:Tangent) =
+        new(name, position, vbundle)
 end
 
 up(s::Symbol) = TIndex(s, Up)
 down(s::Symbol) = TIndex(s, Down)
+up(s::Symbol, vb::Symbol) = TIndex(s, Up, vb)
+down(s::Symbol, vb::Symbol) = TIndex(s, Down, vb)
 
-Base.:(==)(a::TIndex, b::TIndex) = a.name == b.name && a.position == b.position
-Base.hash(a::TIndex, h::UInt) = hash(a.position, hash(a.name, h))
+Base.:(==)(a::TIndex, b::TIndex) = a.name == b.name && a.position == b.position && a.vbundle == b.vbundle
+Base.hash(a::TIndex, h::UInt) = hash(a.vbundle, hash(a.position, hash(a.name, h)))
 
 """
 Abstract supertype for all tensor expressions.

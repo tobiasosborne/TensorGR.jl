@@ -46,4 +46,6 @@ using TensorGR
     include("test_symmetrize.jl")
     # New features (streams A-K)
     include("test_new_features.jl")
+    # VBundle support
+    include("test_vbundle.jl")
 end

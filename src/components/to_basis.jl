@@ -15,7 +15,7 @@ The resulting expression encodes the component number in the index name as
 function _replace_index(expr::Tensor, idx_name::Symbol, component::Int)
     new_indices = map(expr.indices) do idx
         if idx.name == idx_name
-            TIndex(Symbol("_", component), idx.position)
+            TIndex(Symbol("_", component), idx.position, idx.vbundle)
         else
             idx
         end
@@ -33,7 +33,7 @@ end
 
 function _replace_index(expr::TDeriv, idx_name::Symbol, component::Int)
     new_idx = expr.index.name == idx_name ?
-        TIndex(Symbol("_", component), expr.index.position) : expr.index
+        TIndex(Symbol("_", component), expr.index.position, expr.index.vbundle) : expr.index
     TDeriv(new_idx, _replace_index(expr.arg, idx_name, component))
 end
 

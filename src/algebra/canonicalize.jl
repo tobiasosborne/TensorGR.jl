@@ -243,8 +243,8 @@ function _canonicalize_product(p::TProduct)
     for slot in 1:nslots
         cname = Int(cperm_inv.data[slot])
         sym = name_to_sym[cname]
-        # Position (Up/Down) is preserved from the original slot
-        new_all_indices[slot] = TIndex(sym, all_indices[slot].position)
+        # Position (Up/Down) and vbundle are preserved from the original slot
+        new_all_indices[slot] = TIndex(sym, all_indices[slot].position, all_indices[slot].vbundle)
     end
 
     # Explode back into TDeriv chains

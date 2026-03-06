@@ -1,6 +1,6 @@
 name = "TensorGR"
 uuid = "7336a8e7-6d30-4255-8f1d-f4d86d88ac00"
-license = "GPL-2.0-or-later"
+license = "Apache-2.0"
 authors = ["Tobias"]
 version = "0.1.0"
 

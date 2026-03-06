@@ -59,8 +59,8 @@ function curvature_form(christoffel::Symbol, a::TIndex, b::TIndex,
     c = fresh_index(used)
     push!(used, c)
 
-    omega_ac = connection_form(christoffel, a, TIndex(c, b.position), form_idx1)
-    omega_cb = connection_form(christoffel, TIndex(c, a.position), b, form_idx2)
+    omega_ac = connection_form(christoffel, a, TIndex(c, b.position, b.vbundle), form_idx1)
+    omega_cb = connection_form(christoffel, TIndex(c, a.position, a.vbundle), b, form_idx2)
 
     # wedge of two 1-forms (p=1, q=1)
     wedge_term = wedge(omega_ac, omega_cb, 1, 1)
@@ -104,10 +104,10 @@ function cartan_first_structure(torsion::Symbol, connection::Symbol,
     push!(used, b)
 
     # Connection 1-form omega^a_b with form leg = form_idx1
-    omega_ab = connection_form(connection, a, TIndex(b, Down), form_idx1)
+    omega_ab = connection_form(connection, a, TIndex(b, Down, a.vbundle), form_idx1)
 
     # Coframe 1-form theta^b with form leg = form_idx2
-    theta_b = Tensor(coframe, [TIndex(b, Up), form_idx2])
+    theta_b = Tensor(coframe, [TIndex(b, Up, a.vbundle), form_idx2])
 
     # wedge of two 1-forms
     wedge_term = wedge(omega_ab, theta_b, 1, 1)

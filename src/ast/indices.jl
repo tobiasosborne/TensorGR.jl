@@ -28,29 +28,26 @@ A dummy index appears as a pair (one Up, one Down, same name).
 """
 function free_indices(expr::TensorExpr)
     all_idxs = indices(expr)
-    # Count each (name, position) pair. An index is dummy if the same name
+    # Group by (name, vbundle). An index is dummy if the same (name, vbundle)
     # appears with both Up and Down positions.
-    name_counts = Dict{Symbol, Vector{TIndex}}()
+    key_counts = Dict{Tuple{Symbol,Symbol}, Vector{TIndex}}()
     for idx in all_idxs
-        push!(get!(Vector{TIndex}, name_counts, idx.name), idx)
+        push!(get!(Vector{TIndex}, key_counts, (idx.name, idx.vbundle)), idx)
     end
 
     free = TIndex[]
-    for (name, idxs) in name_counts
+    for ((name, vb), idxs) in key_counts
         has_up = any(i -> i.position == Up, idxs)
         has_down = any(i -> i.position == Down, idxs)
         if has_up && has_down
-            # Dummy — skip paired indices, keep any unpaired
             up_count = count(i -> i.position == Up, idxs)
             down_count = count(i -> i.position == Down, idxs)
-            # Standard case: one up, one down → fully dummy
-            # If counts differ, the extras are free
             paired = min(up_count, down_count)
             for _ in 1:(up_count - paired)
-                push!(free, TIndex(name, Up))
+                push!(free, TIndex(name, Up, vb))
             end
             for _ in 1:(down_count - paired)
-                push!(free, TIndex(name, Down))
+                push!(free, TIndex(name, Down, vb))
             end
         else
             append!(free, idxs)
@@ -66,13 +63,13 @@ Return pairs of contracted indices (one Up, one Down, same name).
 """
 function dummy_pairs(expr::TensorExpr)
     all_idxs = indices(expr)
-    name_groups = Dict{Symbol, Vector{TIndex}}()
+    key_groups = Dict{Tuple{Symbol,Symbol}, Vector{TIndex}}()
     for idx in all_idxs
-        push!(get!(Vector{TIndex}, name_groups, idx.name), idx)
+        push!(get!(Vector{TIndex}, key_groups, (idx.name, idx.vbundle)), idx)
     end
 
     pairs = Tuple{TIndex, TIndex}[]
-    for (name, idxs) in name_groups
+    for ((name, vb), idxs) in key_groups
         ups = filter(i -> i.position == Up, idxs)
         downs = filter(i -> i.position == Down, idxs)
         for i in 1:min(length(ups), length(downs))
@@ -110,7 +107,7 @@ Rename all occurrences of index name `old` to `new` (both Up and Down).
 """
 function rename_dummy(expr::Tensor, old::Symbol, new::Symbol)
     new_indices = map(expr.indices) do idx
-        idx.name == old ? TIndex(new, idx.position) : idx
+        idx.name == old ? TIndex(new, idx.position, idx.vbundle) : idx
     end
     Tensor(expr.name, new_indices)
 end
@@ -124,7 +121,7 @@ function rename_dummy(expr::TSum, old::Symbol, new::Symbol)
 end
 
 function rename_dummy(expr::TDeriv, old::Symbol, new::Symbol)
-    new_idx = expr.index.name == old ? TIndex(new, expr.index.position) : expr.index
+    new_idx = expr.index.name == old ? TIndex(new, expr.index.position, expr.index.vbundle) : expr.index
     TDeriv(new_idx, rename_dummy(expr.arg, old, new))
 end
 
@@ -210,7 +207,7 @@ end
 
 function _replace_index_name(t::Tensor, old::Symbol, new::Symbol)
     new_indices = map(t.indices) do idx
-        idx.name == old ? TIndex(new, idx.position) : idx
+        idx.name == old ? TIndex(new, idx.position, idx.vbundle) : idx
     end
     Tensor(t.name, new_indices)
 end
@@ -224,7 +221,7 @@ function _replace_index_name(s::TSum, old::Symbol, new::Symbol)
 end
 
 function _replace_index_name(d::TDeriv, old::Symbol, new::Symbol)
-    new_idx = d.index.name == old ? TIndex(new, d.index.position) : d.index
+    new_idx = d.index.name == old ? TIndex(new, d.index.position, d.index.vbundle) : d.index
     TDeriv(new_idx, _replace_index_name(d.arg, old, new))
 end
 

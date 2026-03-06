@@ -58,7 +58,7 @@ Swaps Up↔Down on all indices (Hermitian conjugation).
 For real tensors, this is the identity.
 """
 function dagger(t::Tensor)
-    new_indices = [TIndex(idx.name, idx.position == Up ? Down : Up) for idx in t.indices]
+    new_indices = [TIndex(idx.name, idx.position == Up ? Down : Up, idx.vbundle) for idx in t.indices]
     Tensor(Symbol(t.name, :_dag), new_indices)
 end
 dagger(s::TScalar) = s  # scalars are assumed real
@@ -70,7 +70,7 @@ function dagger(s::TSum)
     tsum(TensorExpr[dagger(t) for t in s.terms])
 end
 function dagger(d::TDeriv)
-    TDeriv(TIndex(d.index.name, d.index.position == Up ? Down : Up), dagger(d.arg))
+    TDeriv(TIndex(d.index.name, d.index.position == Up ? Down : Up, d.index.vbundle), dagger(d.arg))
 end
 
 """

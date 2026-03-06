@@ -98,7 +98,7 @@ function is_well_formed(expr::TProduct)
     for (name, idxs) in name_groups
         up_count = count(i -> i.position == Up, idxs)
         down_count = count(i -> i.position == Down, idxs)
-        # Each name should appear at most once as Up and once as Down
+            # Each (name, vbundle) should appear at most once as Up and once as Down
         (up_count <= 1 && down_count <= 1) || return false
     end
     true
