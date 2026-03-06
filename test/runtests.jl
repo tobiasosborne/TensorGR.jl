@@ -50,4 +50,8 @@ using TensorGR
     include("test_vbundle.jl")
     # LaTeX parser
     include("test_latex_parser.jl")
+    # 3+1 Foliation
+    include("test_foliation.jl")
+    # CAS integration (Symbolics.jl)
+    include("test_cas_integration.jl")
 end

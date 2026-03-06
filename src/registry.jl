@@ -56,13 +56,15 @@ mutable struct TensorRegistry
     tensors::Dict{Symbol, TensorProperties}
     rules::Vector{Any}  # Vector{RewriteRule}, Any to avoid forward ref
     vbundles::Dict{Symbol, VBundleProperties}
+    foliations::Dict{Symbol, Any}  # Dict{Symbol, FoliationProperties}, Any to avoid forward ref
 end
 
 TensorRegistry() = TensorRegistry(
     Dict{Symbol,ManifoldProperties}(),
     Dict{Symbol,TensorProperties}(),
     Any[],
-    Dict{Symbol,VBundleProperties}()
+    Dict{Symbol,VBundleProperties}(),
+    Dict{Symbol,Any}()
 )
 
 has_manifold(reg::TensorRegistry, name::Symbol) = haskey(reg.manifolds, name)

@@ -5,14 +5,23 @@
 # gravity, decompose into SVT sectors, and extract two-point functions.
 #
 # Action:
-#   I = ∫ d⁴x [ (1/4) L_{μν} L^{μν} - β (∂_μ∂_ν h^{μν} - □h)² ]
+#   I = integral d^4x [ (1/4) L_{mu nu} L^{mu nu} - beta (d_mu d_nu h^{mu nu} - box h)^2 ]
 #
-# where L_{μν} is the linearized Lichnerowicz operator.
+# where L_{mu nu} is the linearized Lichnerowicz operator.
+#
+# This example demonstrates the full pipeline:
+# 1. Perturbation engine -> linearized Ricci
+# 2. 3+1 foliation -> split spacetime indices
+# 3. SVT decomposition -> Bardeen gauge fields
+# 4. Symbolic quadratic form -> Symbolics.jl CAS
+# 5. Propagator extraction -> symbolic inverse
 # ============================================================================
 
 using TensorGR
 
-# ─── Part 1: Build the linearized Einstein operator symbolically ────
+# --- Part 1: Build the linearized Einstein operator symbolically ---
+
+println("=== Part 1: Linearized curvature from perturbation engine ===\n")
 
 reg = TensorRegistry()
 with_registry(reg) do
@@ -20,296 +29,232 @@ with_registry(reg) do
     define_curvature_tensors!(reg, :M4, :g)
     @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
 
-    println("=== Part 1: Linearized curvature from perturbation engine ===\n")
-
-    # δR_{ab} on flat background via the xPert engine
+    # delta R_{ab} on flat background via the xPert engine
     mp = define_metric_perturbation!(reg, :g, :h)
-    δRic_ab = δricci(mp, down(:a), down(:b), 1)
+    delta_Ric_ab = δricci(mp, down(:a), down(:b), 1)
 
-    println("δR_{ab} = ", to_unicode(δRic_ab))
+    println("delta R_{ab} = ", to_unicode(delta_Ric_ab))
     println()
 
-    # This is exactly (1/2) of the Lichnerowicz operator:
-    # L_{ab} = ∂^c∂_a h_{cb} + ∂^c∂_b h_{ca} - ∂_a∂_b h - □h_{ab}
-    # δR_{ab} = (1/2) L_{ab}
-
-    # δR (Ricci scalar perturbation)
-    δR = δricci_scalar(mp, 1)
-    println("δR = ", to_unicode(δR))
+    # delta R (Ricci scalar perturbation)
+    delta_R = δricci_scalar(mp, 1)
+    println("delta R = ", to_unicode(delta_R))
     println()
 
-    # The linearized Einstein tensor:
-    # G^(1)_{ab} = δR_{ab} - (1/2) η_{ab} δR
-    δG_ab = δRic_ab - (1//2) * tex"g_{ab}" * δR
-    println("δG_{ab} = δR_{ab} - (1/2)η_{ab}δR:")
-    println("  ", to_unicode(δG_ab))
-    println()
-
-    # Also compute δΓ for completeness
-    δΓ = δchristoffel(mp, up(:a), down(:b), down(:c), 1)
-    println("δΓ^a_{bc} = ", to_unicode(δΓ))
+    # delta Gamma for completeness
+    delta_Gamma = δchristoffel(mp, up(:a), down(:b), down(:c), 1)
+    println("delta Gamma^a_{bc} = ", to_unicode(delta_Gamma))
 end
 
-# ─── Part 2: Build the action quadratic form in Fourier space ───────
+# --- Part 2: 3+1 Foliation and SVT Decomposition ---
 
-println("\n=== Part 2: Fourier-space action for each SVT sector ===\n")
+println("\n=== Part 2: 3+1 foliation and SVT decomposition ===\n")
 
 reg2 = TensorRegistry()
 with_registry(reg2) do
     @manifold M4 dim=4 metric=g
-
-    # The Lichnerowicz operator on flat background has the Fourier-space form:
-    # L_{μν}(p) = p_λ p_μ h^λ_ν + p_λ p_ν h^λ_μ - p_μ p_ν h - p² h_{μν}
-    #
-    # We build L_{μν} as a TensorExpr using the tex"..." parser,
-    # representing Fourier-space momenta as explicit tensors.
-
-    @define_tensor p on=M4 rank=(0,1)   # 4-momentum (covariant)
     @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
 
-    # Build L_{μν} in abstract index notation:
-    # L_{μν} = p_λ p_μ h^λ_ν + p_λ p_ν h^λ_μ - p_μ p_ν h - p² h_{μν}
-    # where h = h^λ_λ and p² = p_λ p^λ
-    #
-    # In the abstract expression, we use dummy indices for contractions.
-
-    term1 = tex"p_e p_a h^e_b"   # ∂_λ ∂_μ h^λ_ν
-    term2 = tex"p_e p_b h^e_a"   # ∂_λ ∂_ν h^λ_μ
-
-    # For the trace h and □h_{μν}, we use separate tensors
-    # (the trace h = h^c_c is a scalar we can represent abstractly)
-    @define_tensor htrace on=M4 rank=(0,0)   # h = h^μ_μ
-    @define_tensor psq on=M4 rank=(0,0)      # p² = p_μ p^μ
-
-    term3 = tex"-p_a p_b" * Tensor(:htrace, TIndex[])    # -∂_μ ∂_ν h
-    term4 = -Tensor(:psq, TIndex[]) * tex"h_{ab}"         # -□h_{μν}
-
-    L_ab = term1 + term2 + term3 + term4
-    println("Lichnerowicz operator L_{ab} (Fourier space):")
-    println("  ", to_unicode(L_ab))
+    # Define 3+1 foliation
+    fol = define_foliation!(reg2, :flat31; manifold=:M4)
+    println("Foliation: temporal=0, spatial=[1,2,3]")
     println()
 
-    # The gauge-fixing scalar: ∂_μ ∂_ν h^{μν} - □h
-    gauge_scalar = tex"p_e p_f h^{ef}" - Tensor(:psq, TIndex[]) * Tensor(:htrace, TIndex[])
-    println("Gauge-fixing scalar ∂_μ∂_ν h^{μν} - □h:")
-    println("  ", to_unicode(gauge_scalar))
+    # Split h_{ab} into 3+1 components
+    h_ab = Tensor(:h, [down(:a), down(:b)])
+    split_expr = split_all_spacetime(h_ab, fol)
+    println("h_{ab} split into $(length(split_expr.terms)) component terms")
     println()
 
-    # ─── Now substitute the SVT decomposition ───
-
-    println("--- SVT decomposition in Fourier space ---\n")
-    println("Substituting: h_{00} = -2Φ, h_{0i} = V_i, h_{ij} = 2ψδ_{ij} + h^TT_{ij}")
-    println("(V_i transverse, h^TT traceless-transverse)\n")
-
-    # In Fourier space with 3-momentum k and frequency ω:
-    # The key contractions evaluate to explicit functions of (ω², k², Φ, ψ).
-    # We compute these by substituting the SVT ansatz into each term.
-
-    # ── Tensor sector ──
-    # h^TT is transverse-traceless: k^i h^TT_{ij} = 0, h^TT_{ii} = 0
-    # So only L_{ij} survives, and L_{ij}[TT] = -□ h^TT_{ij} = p² h^TT_{ij}
-    # Therefore:
-    #   (1/4) L_{μν}L^{μν} = (1/4) p⁴ h^TT_{ij} h^TT_{ij}
-    #   gauge term = 0  (both ∂_μ∂_ν h^{μν} and □h vanish for TT)
-
-    println("TENSOR sector:")
-    println("  L_{ij}[TT] = p² h^TT_{ij}  (only □ survives for TT)")
-    println("  L_{0μ}[TT] = 0")
-
-    M_TT = :(p^4 / 4)
-    println("  Kinetic coefficient: M_TT = p⁴/4")
+    # Apply SVT substitution in Bardeen gauge
+    println("Bardeen gauge: h_{00}=2Phi, h_{0i}=V_i, h_{ij}=2psi delta_{ij}+h^TT_{ij}")
+    substituted = apply_svt(split_expr, :h, fol; gauge=:bardeen)
     println()
 
-    # ── Vector sector ──
-    # h_{0i} = V_i with k^i V_i = 0, h_{ij}[V] = 0, h_{00}[V] = 0
-    # h[V] = 0, so gauge term = 0
-    #
-    # L_{0i}[V] = p_λ p_0 h^λ_i + p_λ p_i h^λ_0 - p_0 p_i h - p² h_{0i}
-    #           = p_0² V_i + p_i(p_j V^j) - 0 - p² V_i
-    # In Fourier: p_0 = ω, p_i = k_i, p² = ω²-k²
-    # p_0² V_i = -ω² V_i (in Fourier with our sign), and p_i(p_j V^j) = 0 (transverse)
-    # Actually we keep the Lorentzian signs abstract:
-    # L_{0i} = (ω² + p²)V_i ... no. Let me compute directly.
-    #
-    # With p_λ p_0 h^λ_i: this contracts to p_0 p_0 h^0_i + p_j p_0 h^j_i
-    #   = ω² V_i + 0 = ω² V_i  (h^j_i=0 for vector sector)
-    # With p_λ p_i h^λ_0: = p_j p_i V^j = k_i(k·V) = 0 (transverse)
-    # With -p² V_i: adds -p² V_i
-    # Total: L_{0i} = (ω² - p²) V_i = k² V_i  (wait, check sign)
-    # p² = ω² - k², so ω² - p² = k²
-    # L_{0i} = k² V_i   ... but with Lorentzian signature we need -(ω²) for temporal.
-    # Let's track: in (+---) the d'Alembertian □ = ∂_t² - ∇² → -(ω²-k²) = -p²
-    # Hmm, for (-+++) we get □ → -(-ω²+k²) = ω²-k² = p²
-    # Either way the physical result for L_{0i} is proportional to k².
-    #
-    # L_{ij}[V] = p_0 p_i V_j + p_0 p_j V_i (from the ∂_λ∂_i h^λ_j terms with λ=0)
-    #           = ω(k_i V_j + k_j V_i)
-    #
-    # L_{μν}L^{μν}[V]:
-    #   L_{0i}L^{0i} = k⁴ V·V  (with appropriate metric factors)
-    #   L_{ij}L^{ij} = ω²(k_iV_j+k_jV_i)(k^iV^j+k^jV^i)
-    #                = 2ω²k²(V·V)  (using k·V=0)
-    #   Total = 2k²(k²+ω²)(V·V) ... actually (k⁴ + ω²k²... let me just give the answer)
-    #   = 2k²p² V·V  (combining correctly with Lorentz signature)
-
-    M_V = :(k^2 * p^2 / 2)
-    println("VECTOR sector:")
-    println("  L_{0i}[V] = k² V_i")
-    println("  L_{ij}[V] = ω(k_i V_j + k_j V_i)")
-    println("  (1/4)L_{μν}L^{μν}[V] = (1/2)k²p² V·V")
-    println("  Gauge term = 0 (transversality)")
-    println("  Kinetic coefficient: M_V = k²p²/2")
+    # Collect by sector
+    sectors = collect_sectors(substituted)
+    for (sector, expr) in sort(collect(sectors), by=first)
+        field_names = TensorGR._extract_field_names(expr)
+        println("  $sector sector: fields = $field_names")
+    end
     println()
 
-    # ── Scalar sector ──
-    # h_{00} = -2Φ, h_{ij} = 2ψ δ_{ij}, h = 2Φ + 6ψ
-    # This is a 2×2 system in (Φ, ψ).
+    # Full pipeline: foliate_and_decompose
+    println("--- End-to-end foliate_and_decompose ---")
+    sectors2 = foliate_and_decompose(h_ab, :h; foliation=fol)
+    for (sector, _) in sort(collect(sectors2), by=first)
+        println("  $sector sector present")
+    end
+end
 
-    println("SCALAR sector (Φ, ψ coupled):")
-    println("  h_{00} = -2Φ, h_{ij} = 2ψδ_{ij}, h = 2Φ+6ψ")
+# --- Part 3: Fourier-space quadratic form with Symbolics.jl ---
+
+println("\n=== Part 3: Fourier-space action for each SVT sector ===\n")
+
+# Try to load Symbolics for the CAS part
+symbolics_available = try
+    @eval using Symbolics
+    true
+catch
+    println("Symbolics.jl not available; skipping CAS section")
+    false
+end
+
+if symbolics_available
+    @eval begin
+        @variables k_var omega_var beta_var
+
+        # --- Tensor sector ---
+        # h^TT is transverse-traceless: k^i h^TT_{ij} = 0, h^TT_{ii} = 0
+        # L_{ij}[TT] = -box h^TT_{ij} = p^2 h^TT_{ij}
+        # (1/4) L_{mu nu} L^{mu nu}[TT] = p^4/4 * h^TT * h^TT
+
+        p_sq = omega_var^2 - k_var^2  # p^2 = omega^2 - k^2
+        M_TT = p_sq^2 / 4
+        println("TENSOR sector:")
+        println("  L_{ij}[TT] = p^2 h^TT_{ij}")
+        println("  Kinetic: M_TT = p^4/4 = ", M_TT)
+        println("  Propagator: 4/p^4")
+        println()
+
+        # Build TT projector symbolically
+        P_TT = tt_projector(down(:i), down(:j), down(:k), down(:l))
+        println("  Pi^TT_{ijkl} = ", to_unicode(P_TT))
+        println()
+
+        # --- Vector sector ---
+        # h_{0i} = V_i with k^i V_i = 0, gauge term = 0
+        M_V = k_var^2 * p_sq / 2
+        println("VECTOR sector:")
+        println("  L_{0i}[V] = k^2 V_i")
+        println("  Kinetic: M_V = k^2 p^2/2 = ", M_V)
+        println("  Propagator: 2/(k^2 p^2) P^T_{ij}")
+        println()
+
+        P_T = transverse_projector(down(:i), down(:j))
+        println("  P^T_{ij} = ", to_unicode(P_T))
+        println()
+
+        # --- Scalar sector (Phi, psi coupled) ---
+        println("SCALAR sector (Phi, psi coupled):")
+        println("  h_{00} = -2Phi, h_{ij} = 2psi delta_{ij}, h = 2Phi+6psi")
+        println()
+
+        # Quadratic form entries (derived from Lichnerowicz + gauge-fixing)
+        # (1/4) L_{mu nu} L^{mu nu}[scalar]:
+        M_PP_lich = 2k_var^4
+        M_Pp_lich = -4k_var^2 * omega_var^2
+        M_pp_lich = 2k_var^4 - 4k_var^2 * omega_var^2 + 12omega_var^4
+
+        # Gauge-fixing: -beta (d_mu d_nu h^{mu nu} - box h)^2
+        gauge_scalar = -2k_var^2  # coefficient of Phi in the gauge scalar
+        # Full gauge scalar: -2k^2 Phi + 2(3omega^2-4k^2) psi
+        gauge_Phi = -2k_var^2
+        gauge_psi = 2 * (3omega_var^2 - 4k_var^2)
+
+        # -beta * (gauge)^2 adds to the quadratic form:
+        M_PP_gauge = -beta_var * gauge_Phi^2
+        M_Pp_gauge = -beta_var * gauge_Phi * gauge_psi  # factor of 2 for symmetry already in
+        M_pp_gauge = -beta_var * gauge_psi^2
+
+        # Total scalar kinetic matrix
+        M_PP = M_PP_lich + M_PP_gauge
+        M_Pp = M_Pp_lich + M_Pp_gauge
+        M_pp = M_pp_lich + M_pp_gauge
+
+        println("  M_{PhiPhi} = ", Symbolics.simplify(M_PP))
+        println("  M_{Phipsi} = ", Symbolics.simplify(M_Pp))
+        println("  M_{psipsi} = ", Symbolics.simplify(M_pp))
+        println()
+
+        # Build symbolic QuadraticForm
+        entries_scalar = Dict(
+            (:Phi, :Phi) => M_PP,
+            (:Phi, :psi) => M_Pp,
+            (:psi, :psi) => M_pp
+        )
+        qf = symbolic_quadratic_form(entries_scalar, [:Phi, :psi];
+                                      variables=[:k_var, :omega_var, :beta_var])
+
+        # --- Part 4: Propagators ---
+
+        println("=== Part 4: Two-point functions (propagators = M^{-1}) ===\n")
+
+        det_expr = determinant(qf)
+        det_simplified = Symbolics.simplify(det_expr)
+        println("  det(M) = ", det_simplified)
+        println()
+
+        prop = propagator(qf)
+        println("  Scalar propagator matrix:")
+        for i in 1:2, j in i:2
+            entry = Symbolics.simplify(prop.matrix[i, j])
+            println("    G[$(qf.fields[i]),$(qf.fields[j])] = ", entry)
+        end
+        println()
+
+        # --- Numerical cross-checks ---
+
+        println("--- Numerical cross-check: beta=1, omega=2, k=1 ---")
+        vars = Dict(:beta_var => 1.0, :omega_var => 2.0, :k_var => 1.0)
+
+        m11 = sym_eval(M_PP, vars)
+        m12 = sym_eval(M_Pp, vars)
+        m22 = sym_eval(M_pp, vars)
+        d = m11 * m22 - m12^2
+
+        println("  M_{PhiPhi}=$(m11), M_{Phipsi}=$(m12), M_{psipsi}=$(m22)")
+        println("  det = $(d)")
+        println("  G_{PhiPhi} = $(m22/d)")
+        println("  G_{Phipsi} = $(-m12/d)")
+        println("  G_{psipsi} = $(m11/d)")
+        println()
+
+        # Conformal point beta=1/3
+        println("--- Conformal point beta=1/3 ---")
+        vars_conf = Dict(:beta_var => 1.0/3.0, :omega_var => 2.0, :k_var => 1.0)
+        det_conf = sym_eval(det_expr, vars_conf)
+        println("  det(M) at beta=1/3 = $(det_conf)")
+
+        # Tensor sector propagator check
+        m_tt = sym_eval(M_TT, vars)
+        println("  M_TT at omega=2,k=1: $(m_tt) (p^4/4 = $(3.0^2/4))")
+        m_v = sym_eval(M_V, vars)
+        println("  M_V at omega=2,k=1: $(m_v) (k^2 p^2/2 = $(1.0*3.0/2))")
+    end
+else
+    println("Skipping Symbolics-based analysis.")
     println()
 
-    # Compute L_{00}, L_{ij} for the scalar sector:
-    # L_{00} = 2∂_i∂_0 h^i_0 - ∂_0²h - □h_{00}
-    #        = 0 + ω²(2Φ+6ψ) + p²(-2Φ)         ... careful with signs
-    # Let's just state: in Fourier with p²=ω²-k²,
-    #   L_{00} = -2k²Φ + 6ω²ψ
-    #   L_{ij} = 2k_ik_j(Φ+ψ) + 2p²ψ δ_{ij}
-
-    # L_{μν}L^{μν} for scalars (computed by contracting):
-    # L_{00}² = 4k⁴Φ² - 24k²ω²Φψ + 36ω⁴ψ²
-    # L_{ij}L^{ij} = 4k⁴(Φ+ψ)² + 8k²p²ψ(Φ+ψ) + 12p⁴ψ²
-
-    # Build the symbolic 2×2 kinetic matrix
-    # I_scalar = Φ_I M_{IJ} Φ_J  where Φ = (Φ, ψ)
-
-    # (1/4)(L_{00}² + L_{ij}L^{ij}):
-    # = k⁴Φ² - 6k²ω²Φψ + 9ω⁴ψ²             (from L_{00}²/4)
-    # + k⁴(Φ+ψ)² + 2k²p²ψ(Φ+ψ) + 3p⁴ψ²     (from L_{ij}L^{ij}/4)
-    # = k⁴Φ² - 6k²ω²Φψ + 9ω⁴ψ²
-    #   + k⁴Φ² + 2k⁴Φψ + k⁴ψ² + 2k²p²Φψ + 2k²p²ψ² + 3p⁴ψ²
-    # = 2k⁴Φ²
-    #   + (2k⁴ - 6k²ω² + 2k²p²)Φψ
-    #   + (k⁴ + 2k²p² + 9ω⁴ + 3p⁴)ψ²
-    #
-    # Simplify using p² = ω²-k²:
-    #   2k⁴ - 6k²ω² + 2k²(ω²-k²) = -4k²ω²
-    #   k⁴ + 2k²(ω²-k²) + 9ω⁴ + 3(ω²-k²)² = 12ω⁴ - 4k²ω² + 2k⁴
-
-    # So (1/4)L_{μν}L^{μν} = 2k⁴Φ² - 4k²ω²Φψ + (2k⁴-4k²ω²+12ω⁴)ψ²
-
-    println("  (1/4)L_{μν}L^{μν}[scalar] =")
-    println("    2k⁴ Φ² - 4k²ω² Φψ + (2k⁴ - 4k²ω² + 12ω⁴) ψ²")
-    println()
-
-    # Gauge-fixing: ∂_μ∂_ν h^{μν} - □h = -2k²Φ + 2(3ω²-4k²)ψ  (from direct substitution)
-    # -β(...)² adds to the quadratic form:
-
-    println("  Gauge scalar = -2k²Φ + 2(3ω²-4k²)ψ")
-    println("  -β(gauge)²  = -4βk⁴Φ² + 8βk²(3ω²-4k²)Φψ - 4β(3ω²-4k²)²ψ²")
-    println()
-
-    # Assemble the full 2×2 matrix M where I_scalar = (Φ ψ) M (Φ ψ)ᵀ
+    # Fallback: Expr-tree based computation (existing approach)
     M_PP = :((2 - 4β) * k^4)
-    M_Pp = :((- 4ω^2 + 8β*(3ω^2 - 4k^2)) * k^2 / 2)  # off-diagonal, symmetrized
+    M_Pp = :((-4ω^2 + 8β*(3ω^2 - 4k^2)) * k^2 / 2)
     M_pp = :(2k^4 - 4k^2*ω^2 + 12ω^4 - 4β*(3ω^2 - 4k^2)^2)
 
-    entries = Dict((:Φ,:Φ) => M_PP, (:Φ,:ψ) => M_Pp, (:ψ,:ψ) => M_pp)
-    qf = quadratic_form(entries, [:Φ, :ψ])
-
+    entries = Dict((:Phi,:Phi) => M_PP, (:Phi,:psi) => M_Pp, (:psi,:psi) => M_pp)
+    qf = quadratic_form(entries, [:Phi, :psi])
     println("  Scalar kinetic matrix M:")
     println(qf)
-    println()
-
-    # ─── Part 3: Propagators ───
-
-    println("=== Part 3: Two-point functions (propagators = M⁻¹) ===\n")
-
-    # Tensor propagator
-    println("TENSOR:  ⟨h^TT_{ij}(p) h^TT_{kl}(-p)⟩ = (4/p⁴) Π^TT_{ijkl}")
-    println()
-
-    # Build TT projector symbolically
-    P_TT = tt_projector(down(:i), down(:j), down(:k), down(:l))
-    println("  Π^TT_{ijkl} = ", to_unicode(P_TT))
-    println()
-
-    # Vector propagator
-    println("VECTOR:  ⟨V_i(p) V_j(-p)⟩ = (2/k²p²) P^T_{ij}")
-    P_T = transverse_projector(down(:i), down(:j))
-    println("  P^T_{ij} = ", to_unicode(P_T))
-    println()
-
-    # Scalar propagator via matrix inversion
-    println("SCALAR:  G_{IJ} = M⁻¹_{IJ}")
-    det_M = determinant(qf)
-    println("  det(M) = M_{ΦΦ}·M_{ψψ} - M_{Φψ}²")
-    println()
-
-    prop = propagator(qf)
-    println("  Propagator matrix:")
-    println(prop)
-    println()
-
-    # ─── Numerical cross-check ───
-
-    println("--- Numerical check: β=1, ω=2, k=1 → p²=3 ---")
-    vars = Dict(:β => 1.0, :ω => 2.0, :k => 1.0)
-    m11 = sym_eval(M_PP, vars)
-    m12 = sym_eval(M_Pp, vars)
-    m22 = sym_eval(M_pp, vars)
-    d = m11*m22 - m12^2
-    println("  M_{ΦΦ}=$(m11), M_{Φψ}=$(m12), M_{ψψ}=$(m22)")
-    println("  det = $(d)")
-    println("  G_{ΦΦ} = $(m22/d)")
-    println("  G_{Φψ} = $(-m12/d)")
-    println("  G_{ψψ} = $(m11/d)")
-    println()
-
-    # ─── Verify Fourier transform of the abstract δR_{ab} ───
-
-    println("--- Fourier transform of abstract δR_{ab} ---")
-    mp2 = define_metric_perturbation!(reg2, :g, :h)
-    δRic = δricci(mp2, down(:a), down(:b), 1)
-    δRic_fourier = to_fourier(δRic)
-    println("  δR_{ab} → Fourier:")
-    println("  ", to_unicode(δRic_fourier))
-    println()
-
-    # ─── Build the de Donder gauge condition as TensorExpr ───
-    println("--- De Donder (harmonic) gauge condition ---")
-    # ∂_μ h^μ_ν - (1/2)∂_ν h = 0
-    # In abstract form:
-    deDonder = tex"\partial^c h_{cb}" - (1//2) * TDeriv(down(:b), Tensor(:htrace, TIndex[]))
-    println("  ∂^μ h_{μν} - (1/2)∂_ν h = ", to_unicode(deDonder))
-    deDonder_fourier = to_fourier(deDonder)
-    println("  Fourier: ", to_unicode(deDonder_fourier))
-    println()
-
-    # ─── IBP demonstration on a simple fourth-derivative term ───
-    println("--- IBP: moving derivatives in ∂_a∂_b(h_{cd}) · ∂^a∂^b(h^{cd}) ---")
-    @define_tensor T on=M4 rank=(0,2) symmetry=Symmetric(1,2)
-    term_with_derivs = TDeriv(down(:a), TDeriv(down(:b), tex"h_{cd}")) *
-                       TDeriv(up(:a), TDeriv(up(:b), tex"T^{cd}"))
-    println("  Before IBP: ", to_unicode(term_with_derivs))
-    ibp_result = ibp_product(TProduct(1//1, TensorExpr[
-        TDeriv(down(:a), TDeriv(down(:b), tex"h_{cd}")),
-        TDeriv(up(:a), TDeriv(up(:b), tex"T^{cd}"))
-    ]), :h)
-    println("  After IBP:  ", to_unicode(ibp_result))
-    println()
-
-    println("=== Summary ===")
-    println()
-    println("The Onsager-Machlup action for postquantum gravity decomposes as:")
-    println()
-    println("  I = I_tensor + I_vector + I_scalar")
-    println()
-    println("  I_tensor = (p⁴/4) h^TT_{ij} h^TT_{ij}")
-    println("  I_vector = (k²p²/2) V_i V_i")
-    println("  I_scalar = Φ_I M_{IJ}(ω,k,β) Φ_J")
-    println()
-    println("The 1/p⁴ tensor propagator (vs 1/p² in GR) reflects the")
-    println("fourth-derivative nature: improved UV behavior at the cost of")
-    println("additional degrees of freedom handled by the stochastic framework.")
 end
+
+# --- Summary ---
+
+println("\n=== Summary ===\n")
+println("The Onsager-Machlup action for postquantum gravity decomposes as:")
+println()
+println("  I = I_tensor + I_vector + I_scalar")
+println()
+println("  I_tensor = (p^4/4) h^TT_{ij} h^TT_{ij}")
+println("  I_vector = (k^2 p^2/2) V_i V_i")
+println("  I_scalar = Phi_I M_{IJ}(omega,k,beta) Phi_J")
+println()
+println("Pipeline used:")
+println("  1. delta R_{ab} from perturbation engine (xPert)")
+println("  2. 3+1 foliation: split mu -> (0, i)")
+println("  3. SVT decomposition: Bardeen gauge (Phi, psi, V_i, h^TT_{ij})")
+println("  4. Symbolic quadratic form (Symbolics.jl CAS)")
+println("  5. Propagators via symbolic matrix inversion")
+println()
+println("The 1/p^4 tensor propagator (vs 1/p^2 in GR) reflects the")
+println("fourth-derivative nature: improved UV behavior at the cost of")
+println("additional degrees of freedom handled by the stochastic framework.")

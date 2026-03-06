@@ -59,8 +59,18 @@ include("svt/fourier.jl")
 include("svt/decompose.jl")
 include("svt/projectors.jl")
 
+# Layer 4: 3+1 foliation
+include("foliation/foliation.jl")
+include("foliation/decompose.jl")
+include("foliation/svt_rules.jl")
+include("foliation/constraints.jl")
+include("foliation/sectors.jl")
+
 # Layer 4: Quadratic action
 include("action/quadratic_action.jl")
+
+# Layer 4: CAS integration hooks (after QuadraticForm is defined)
+include("scalar/simplify_cas.jl")
 
 # Layer 4.5: Curvature conversions + Exterior calculus
 include("gr/conversions.jl")
@@ -169,9 +179,22 @@ export to_fourier, FourierConvention
 export transverse_projector, tt_projector
 export SVTFields, svt_substitute
 
+# Exports: 3+1 foliation
+export FoliationProperties, define_foliation!, get_foliation, has_foliation
+export classify_component, all_components
+export split_spacetime, split_all_spacetime
+export svt_rules_bardeen, svt_rules_full, apply_svt, SVTSubstitution
+export svt_constraint_rules, lorentzian_contract
+export collect_sectors
+export foliate_and_decompose
+
 # Exports: Quadratic action
 export QuadraticForm, quadratic_form, propagator, determinant
 export sym_det, sym_inv, sym_eval
+
+# Exports: CAS integration
+export simplify_scalar, simplify_quadratic_form
+export symbolic_quadratic_form, to_fourier_symbolic
 
 # Exports: Curvature conversions
 export riemann_to_weyl, weyl_to_riemann
