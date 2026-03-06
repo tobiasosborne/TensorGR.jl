@@ -68,6 +68,7 @@ include("foliation/sectors.jl")
 
 # Layer 4: Quadratic action
 include("action/quadratic_action.jl")
+include("action/extract_quadratic.jl")
 
 # Layer 4: CAS integration hooks (after QuadraticForm is defined)
 include("scalar/simplify_cas.jl")
@@ -101,6 +102,7 @@ export TensorRegistry, TensorProperties, ManifoldProperties, VBundleProperties
 export has_manifold, has_tensor, has_vbundle, get_manifold, get_tensor, get_vbundle
 export register_manifold!, register_tensor!, register_rule!, get_rules
 export unregister_tensor!, unregister_manifold!, unregister_covd!
+export tex_alias!
 export define_vbundle!
 export set_vanishing!
 export current_registry, with_registry
@@ -189,7 +191,7 @@ export collect_sectors
 export foliate_and_decompose
 
 # Exports: Quadratic action
-export QuadraticForm, quadratic_form, propagator, determinant
+export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic_form
 export sym_det, sym_inv, sym_eval
 
 # Exports: CAS integration

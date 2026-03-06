@@ -1,5 +1,6 @@
 using TensorGR: QuadraticForm, quadratic_form, propagator, determinant,
-                sym_det, sym_inv, sym_eval, ibp_product, all_contractions
+                sym_det, sym_inv, sym_eval, ibp_product, all_contractions,
+                extract_quadratic_form
 
 @testset "Symbolic determinant 2×2" begin
     # Numeric
@@ -88,6 +89,54 @@ end
         # Without symmetry: 3 matchings from 4 slots, all distinct
         # T^{ab}T_{ab}, T^a_a T^b_b, T^{ab}T_{ba}
         @test length(results) == 3
+    end
+end
+
+@testset "extract_quadratic_form: kinetic term" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(name=:Φ, manifold=:M4, rank=(0,0), symmetries=Any[]))
+
+    with_registry(reg) do
+        Φ = Tensor(:Φ, TIndex[])
+        # L = ∂_a Φ ∂^a Φ → M[Φ,Φ] = p² (4-momentum squared)
+        L = TDeriv(down(:a), Φ) * TDeriv(up(:a), Φ)
+        qf = extract_quadratic_form(L, [:Φ])
+        @test qf.fields == [:Φ]
+        @test qf.matrix[1, 1] == :p²
+    end
+end
+
+@testset "extract_quadratic_form: two-field bilinear" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(name=:Φ, manifold=:M4, rank=(0,0), symmetries=Any[]))
+    register_tensor!(reg, TensorProperties(name=:ψ, manifold=:M4, rank=(0,0), symmetries=Any[]))
+
+    with_registry(reg) do
+        Φ = Tensor(:Φ, TIndex[])
+        ψ = Tensor(:ψ, TIndex[])
+        # L = ∂_a Φ ∂^a Φ + 2 Φ ψ
+        L = TDeriv(down(:a), Φ) * TDeriv(up(:a), Φ) + tproduct(2 // 1, TensorExpr[Φ, ψ])
+        qf = extract_quadratic_form(L, [:Φ, :ψ])
+        @test qf.fields == [:Φ, :ψ]
+        @test qf.matrix[1, 1] == :p²      # Φ-Φ entry
+        @test qf.matrix[1, 2] == 2 // 1   # Φ-ψ entry
+        @test qf.matrix[2, 2] == 0        # ψ-ψ entry (no ψ² term)
+    end
+end
+
+@testset "extract_quadratic_form: mass term" begin
+    reg = TensorRegistry()
+    register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f]))
+    register_tensor!(reg, TensorProperties(name=:Φ, manifold=:M4, rank=(0,0), symmetries=Any[]))
+
+    with_registry(reg) do
+        Φ = Tensor(:Φ, TIndex[])
+        # L = Φ * Φ (mass term)
+        L = Φ * Φ
+        qf = extract_quadratic_form(L, [:Φ])
+        @test qf.matrix[1, 1] == 1
     end
 end
 

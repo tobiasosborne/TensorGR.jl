@@ -226,4 +226,42 @@
         s = tex"-3"
         @test s == TScalar(-3 // 1)
     end
+
+    @testset "Registry tex aliases" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+
+            # R_{abcd} → Riem (rank 4 alias)
+            t = tex"R_{abcd}"
+            @test t.name == :Riem
+            @test t.indices == [down(:a), down(:b), down(:c), down(:d)]
+
+            # R_{ab} → Ric (rank 2 alias)
+            t2 = tex"R_{ab}"
+            @test t2.name == :Ric
+
+            # R (rank 0) → RicScalar
+            t3 = tex"R"
+            @test t3.name == :RicScalar
+            @test isempty(t3.indices)
+
+            # G_{ab} → Ein
+            t4 = tex"G_{ab}"
+            @test t4.name == :Ein
+
+            # C_{abcd} → Weyl
+            t5 = tex"C_{abcd}"
+            @test t5.name == :Weyl
+
+            # Unaliased name passes through
+            t6 = tex"T_{ab}"
+            @test t6.name == :T
+        end
+
+        # Without registry: graceful fallback
+        t7 = parse_tex("R_{abcd}")
+        @test t7.name == :R
+    end
 end

@@ -389,7 +389,19 @@ function _parse_tensor(p::_TexParser)
         end
     end
 
+    # Apply registry alias if available
+    name = _resolve_tex_alias(name, length(indices))
+
     Tensor(name, indices)
+end
+
+"""Resolve a tex name via registry aliases: (name, rank) first, then (name, -1) fallback."""
+function _resolve_tex_alias(name::Symbol, rank::Int)
+    reg = try current_registry() catch; return name end
+    aliases = reg.tex_aliases
+    haskey(aliases, (name, rank)) && return aliases[(name, rank)]
+    haskey(aliases, (name, -1)) && return aliases[(name, -1)]
+    name
 end
 
 function _parse_index_group(p::_TexParser, pos::IndexPosition)

@@ -57,6 +57,7 @@ mutable struct TensorRegistry
     rules::Vector{Any}  # Vector{RewriteRule}, Any to avoid forward ref
     vbundles::Dict{Symbol, VBundleProperties}
     foliations::Dict{Symbol, Any}  # Dict{Symbol, FoliationProperties}, Any to avoid forward ref
+    tex_aliases::Dict{Tuple{Symbol,Int}, Symbol}  # (tex_name, rank) => tensor_name; rank=-1 for any
 end
 
 TensorRegistry() = TensorRegistry(
@@ -64,7 +65,8 @@ TensorRegistry() = TensorRegistry(
     Dict{Symbol,TensorProperties}(),
     Any[],
     Dict{Symbol,VBundleProperties}(),
-    Dict{Symbol,Any}()
+    Dict{Symbol,Any}(),
+    Dict{Tuple{Symbol,Int}, Symbol}()
 )
 
 has_manifold(reg::TensorRegistry, name::Symbol) = haskey(reg.manifolds, name)
@@ -150,6 +152,16 @@ function unregister_tensor!(reg::TensorRegistry, name::Symbol)
     end
     delete!(reg.tensors, name)
     nothing
+end
+
+"""
+    tex_alias!(reg, tex_name, tensor_name; rank=-1)
+
+Register a LaTeX parser alias: `tex"tex_name_{...}"` with `rank` indices maps to `tensor_name`.
+Use `rank=-1` for a catch-all alias regardless of index count.
+"""
+function tex_alias!(reg::TensorRegistry, tex_name::Symbol, tensor_name::Symbol; rank::Int=-1)
+    reg.tex_aliases[(tex_name, rank)] = tensor_name
 end
 
 """

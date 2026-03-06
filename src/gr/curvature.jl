@@ -54,6 +54,14 @@ function define_curvature_tensors!(reg::TensorRegistry, manifold::Symbol, metric
         symmetries=Any[Symmetric(1, 2)],
         options=Dict{Symbol,Any}()))
 
+    # Register standard LaTeX aliases for the tex"..." parser
+    tex_alias!(reg, :R, :Riem; rank=4)
+    tex_alias!(reg, :R, :Ric; rank=2)
+    tex_alias!(reg, :R, :RicScalar; rank=0)
+    tex_alias!(reg, :G, :Ein; rank=2)
+    tex_alias!(reg, :C, :Weyl; rank=4)
+    tex_alias!(reg, :S, :Sch; rank=2)
+
     nothing
 end
 
