@@ -4,9 +4,11 @@ using Libdl
 const _libxperm_path = joinpath(@__DIR__, "..", "..", "deps", "libxperm." * Libdl.dlext)
 const _libxperm = Ref{Ptr{Cvoid}}(C_NULL)
 
+const _lib_lock = ReentrantLock()
 function _ensure_lib_loaded()
-    if _libxperm[] == C_NULL
-        _libxperm[] = Libdl.dlopen(_libxperm_path)
+    _libxperm[] != C_NULL && return _libxperm[]
+    lock(_lib_lock) do
+        _libxperm[] == C_NULL && (_libxperm[] = Libdl.dlopen(_libxperm_path))
     end
     _libxperm[]
 end

@@ -110,8 +110,70 @@ _split_scalar(expr::TScalar) = (expr.val isa Rational ? expr.val : 1 // 1, TScal
 _split_scalar(expr::TDeriv) = (1 // 1, expr)
 _split_scalar(expr::TSum) = (1 // 1, expr)
 
+# ── Parallel helpers ─────────────────────────────────────────────────────────
+
+const PARALLEL_THRESHOLD = 20
+
 """
-    simplify(expr; registry=current_registry(), maxiter=20) -> TensorExpr
+    _pmap_over_tsum(f, expr::TSum)
+
+Apply `f` to each term of a TSum in parallel (via `Threads.@spawn`), reassembling
+with `tsum`. Falls back to serial `f(expr)` when the term count is below
+`PARALLEL_THRESHOLD` or only one thread is available.
+"""
+function _pmap_over_tsum(f, expr::TSum)
+    n = length(expr.terms)
+    if n < PARALLEL_THRESHOLD || Threads.nthreads() == 1
+        return f(expr)
+    end
+    reg = current_registry()
+    results = Vector{TensorExpr}(undef, n)
+    @sync for i in 1:n
+        let i=i
+            Threads.@spawn begin
+                with_registry(reg) do
+                    results[i] = f(expr.terms[i])
+                end
+            end
+        end
+    end
+    tsum(results)
+end
+_pmap_over_tsum(f, expr::TensorExpr) = f(expr)
+
+"""
+    _collect_terms_parallel(expr::TSum)
+
+Two-phase parallel collect_terms: parallel canonicalize + serial Dict merge.
+"""
+function _collect_terms_parallel(expr::TSum)
+    n = length(expr.terms)
+    reg = current_registry()
+    # Phase 1: parallel canonicalize
+    pairs = Vector{Tuple{Rational{Int}, TensorExpr}}(undef, n)
+    @sync for i in 1:n
+        let i=i
+            Threads.@spawn begin
+                with_registry(reg) do
+                    scalar, core = _split_scalar(expr.terms[i])
+                    pairs[i] = (scalar, _normalize_dummies(canonicalize(core)))
+                end
+            end
+        end
+    end
+    # Phase 2: serial Dict merge
+    buckets = Dict{TensorExpr, Rational{Int}}()
+    for (scalar, core) in pairs
+        buckets[core] = get(buckets, core, 0 // 1) + scalar
+    end
+    terms = TensorExpr[tproduct(c, TensorExpr[k]) for (k, c) in buckets if c != 0]
+    tsum(terms)
+end
+
+# ── Main simplify pipeline ──────────────────────────────────────────────────
+
+"""
+    simplify(expr; registry=current_registry(), maxiter=20, parallel=false) -> TensorExpr
 
 Full simplification pipeline applied to fixed point:
 1. expand_products — distribute * over +
@@ -127,21 +189,25 @@ stabilizes or `maxiter` is reached.
 
 Pass `commute_covds_name=:∇` to include covariant derivative commutation
 in the simplify loop (off by default).
+
+Pass `parallel=true` to parallelize TSum operations across threads.
 """
 function simplify(expr::TensorExpr;
                   registry::TensorRegistry=current_registry(),
                   maxiter::Int=20,
-                  commute_covds_name::Union{Symbol,Nothing}=nothing)
+                  commute_covds_name::Union{Symbol,Nothing}=nothing,
+                  parallel::Bool=false)
     with_registry(registry) do
-        _simplify_fixpoint(expr, registry, maxiter, commute_covds_name)
+        _simplify_fixpoint(expr, registry, maxiter, commute_covds_name, parallel)
     end
 end
 
 function _simplify_fixpoint(expr::TensorExpr, reg::TensorRegistry, maxiter::Int,
-                            covd_name::Union{Symbol,Nothing}=nothing)
+                            covd_name::Union{Symbol,Nothing}=nothing,
+                            parallel::Bool=false)
     current = expr
     for _ in 1:maxiter
-        next = _simplify_one_pass(current, reg, covd_name)
+        next = _simplify_one_pass(current, reg, covd_name, parallel)
         next == current && return current
         current = next
     end
@@ -149,19 +215,36 @@ function _simplify_fixpoint(expr::TensorExpr, reg::TensorRegistry, maxiter::Int,
 end
 
 function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
-                            covd_name::Union{Symbol,Nothing}=nothing)
-    result = expand_products(expr)
-    result = contract_metrics(result)
-    result = contract_curvature(result)
-    result = canonicalize(result)
-
-    if covd_name !== nothing
-        result = commute_covds(result, covd_name; registry=reg)
+                            covd_name::Union{Symbol,Nothing}=nothing,
+                            parallel::Bool=false)
+    if parallel
+        result = _pmap_over_tsum(expand_products, expr)
+        result = _pmap_over_tsum(contract_metrics, result)
+        result = _pmap_over_tsum(contract_curvature, result)
+        result = _pmap_over_tsum(canonicalize, result)
+    else
+        result = expand_products(expr)
+        result = contract_metrics(result)
         result = contract_curvature(result)
         result = canonicalize(result)
     end
 
-    result = collect_terms(result)
+    if covd_name !== nothing
+        result = commute_covds(result, covd_name; registry=reg)
+        if parallel
+            result = _pmap_over_tsum(contract_curvature, result)
+            result = _pmap_over_tsum(canonicalize, result)
+        else
+            result = contract_curvature(result)
+            result = canonicalize(result)
+        end
+    end
+
+    if parallel && result isa TSum && length(result.terms) >= PARALLEL_THRESHOLD
+        result = _collect_terms_parallel(result)
+    else
+        result = collect_terms(result)
+    end
 
     rules = get_rules(reg)
     if !isempty(rules)

@@ -209,27 +209,34 @@ function set_vanishing!(reg::TensorRegistry, name::Symbol)
     nothing
 end
 
-# Global registry with context-based scoping
+# Global registry with task-local scoping (thread-safe)
 const _GLOBAL_REGISTRY = TensorRegistry()
-const _REGISTRY_STACK = TensorRegistry[_GLOBAL_REGISTRY]
 
 """
     current_registry()
 
-Return the currently active TensorRegistry (top of the context stack).
+Return the currently active TensorRegistry (top of the task-local stack).
+Falls back to `_GLOBAL_REGISTRY` if no stack exists for the current task.
 """
-current_registry() = _REGISTRY_STACK[end]
+function current_registry()
+    stack = get(task_local_storage(), :_tgr_reg_stack, nothing)
+    stack !== nothing && !isempty(stack) ? stack[end] : _GLOBAL_REGISTRY
+end
 
 """
     with_registry(f, reg::TensorRegistry)
 
 Execute `f` with `reg` as the active registry, then restore the previous one.
+Each task maintains its own registry stack via `task_local_storage`.
 """
 function with_registry(f, reg::TensorRegistry)
-    push!(_REGISTRY_STACK, reg)
+    stack = get!(task_local_storage(), :_tgr_reg_stack) do
+        TensorRegistry[]
+    end
+    push!(stack, reg)
     try
         f()
     finally
-        pop!(_REGISTRY_STACK)
+        pop!(stack)
     end
 end
