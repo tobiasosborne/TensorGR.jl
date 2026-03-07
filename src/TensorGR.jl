@@ -56,6 +56,7 @@ include("perturbation/expand.jl")
 include("perturbation/gauge.jl")
 include("perturbation/variation.jl")
 include("perturbation/backgrounds.jl")
+include("perturbation/isaacson.jl")
 
 # Layer 4: SVT decomposition
 include("svt/fourier.jl")
@@ -90,6 +91,9 @@ include("components/ctensor.jl")
 include("components/metric_compute.jl")
 include("components/values.jl")
 include("components/to_basis.jl")
+
+# Layer 5.5: Worldline / PN
+include("worldline/worldline.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -183,6 +187,7 @@ export δchristoffel, δriemann, δricci, δricci_scalar, expand_perturbation
 export define_tensor_perturbation!, perturbation_order, background_solution!
 export gauge_transformation
 export maximally_symmetric_background!, cosmological_background!, vacuum_background!
+export isaacson_average
 export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
 
@@ -241,6 +246,9 @@ export to_basis, component_array, to_ctensor
 # Exports: Macros
 export @tensor
 export @manifold, @define_tensor, @covd
+
+# Exports: Worldline / PN
+export Worldline, define_worldline!, pn_order, truncate_pn
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
