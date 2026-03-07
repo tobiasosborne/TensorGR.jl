@@ -46,6 +46,7 @@ include("gr/sort_covds.jl")
 include("gr/box.jl")
 include("gr/lie.jl")
 include("gr/killing.jl")
+include("gr/hypersurface.jl")
 
 # Layer 4: Perturbation theory
 include("perturbation/partitions.jl")
@@ -151,6 +152,7 @@ export define_scalar_function!, scalar_function_derivative
 
 # Exports: GR
 export define_curvature_tensors!, einstein_expr, ricci_from_riemann
+export cotton_expr, tensor_norm
 export bianchi_rules
 export define_killing!
 export CovDProperties, define_covd!, get_covd
@@ -160,6 +162,8 @@ export commute_covds
 export sort_covds_to_box, sort_covds_to_div, symmetrize_covds
 export box, grad_squared, covd_chain, covd_product
 export lie_derivative, lie_bracket, lie_to_covd
+export HypersurfaceProperties, define_hypersurface!
+export extrinsic_curvature_expr, induced_metric_expr, projector_expr
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det
@@ -221,6 +225,7 @@ export pontryagin_density, euler_density, chern_simons_action
 export define_form!, form_degree
 export wedge, exterior_d, interior_product, hodge_dual
 export codifferential, cartan_lie_d
+export wedge_power
 export connection_form, curvature_form
 export cartan_first_structure, cartan_second_structure
 

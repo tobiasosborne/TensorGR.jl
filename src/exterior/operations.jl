@@ -164,3 +164,19 @@ function hodge_dual(α::Tensor, epsilon::Symbol, degree::Int, dim::Int)
     coeff = 1 // factorial(degree)
     tproduct(coeff, TensorExpr[ε, α_renamed])
 end
+
+"""
+    wedge_power(α::Tensor, p::Int, n::Int) -> TensorExpr
+
+Compute the n-fold wedge product α ∧ α ∧ ... ∧ α (n times).
+`p` is the degree of the form α. Returns a (n*p)-form.
+"""
+function wedge_power(α::Tensor, p::Int, n::Int)
+    n <= 0 && return TScalar(1 // 1)
+    n == 1 && return α
+    result = α
+    for i in 2:n
+        result = wedge(result, α, (i - 1) * p, p)
+    end
+    result
+end

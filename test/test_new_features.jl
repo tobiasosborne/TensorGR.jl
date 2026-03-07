@@ -583,6 +583,71 @@
         @test g2.data[1,1] ≈ 0.25  # g'_11 = J^{-1 a}_1 J^{-1 b}_1 g_{ab} = (1/2)^2
     end
 
+    # ── Cotton tensor (3D) ──
+    @testset "Cotton tensor" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M3 dim=3 metric=g
+            define_curvature_tensors!(reg, :M3, :g)
+            ct = cotton_expr(down(:a), down(:b), :g; epsilon=:εg, dim=3)
+            @test ct isa TProduct
+        end
+    end
+
+    # ── Tensor norm ──
+    @testset "Tensor norm" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            R = Tensor(:Ric, [down(:a), down(:b)])
+            n = tensor_norm(R, :g; registry=reg)
+            @test n isa TProduct
+            @test length(n.factors) == 2
+        end
+    end
+
+    # ── Hypersurface ──
+    @testset "Hypersurface geometry" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=G
+            hs = define_hypersurface!(reg, :Σ; ambient=:M4, metric=:G,
+                                       normal_name=:n, signature=-1)
+            @test hs.dim_surface == 3
+            @test hs.signature == -1
+            @test has_tensor(reg, :n)
+            @test has_tensor(reg, :K)
+            @test has_tensor(reg, :γ)
+
+            # Induced metric: γ_{ab} = G_{ab} + n_a n_b (timelike normal, σ=1)
+            γ = induced_metric_expr(down(:a), down(:b), :G, :n; signature=-1)
+            @test γ isa TSum
+            @test length(γ.terms) == 2
+
+            # Projector: P^a_b = δ^a_b + n^a n_b
+            P = projector_expr(up(:a), down(:b), :n; signature=-1)
+            @test P isa TSum
+        end
+    end
+
+    # ── wedge_power ──
+    @testset "Wedge power" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            register_tensor!(reg, TensorProperties(name=:ω, manifold=:M4, rank=(0,2),
+                symmetries=Any[AntiSymmetric(1,2)]))
+            ω = Tensor(:ω, [down(:a), down(:b)])
+            wp0 = wedge_power(ω, 2, 0)
+            @test wp0 == TScalar(1//1)
+            wp1 = wedge_power(ω, 2, 1)
+            @test wp1 == ω
+            wp2 = wedge_power(ω, 2, 2)
+            @test wp2 isa TProduct
+        end
+    end
+
     # ── Topological densities ──
     @testset "Topological densities" begin
         reg = TensorRegistry()
