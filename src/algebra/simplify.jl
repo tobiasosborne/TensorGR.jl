@@ -12,7 +12,7 @@ Recursively expands until no TSum appears inside any TProduct.
 """
 expand_products(t::Tensor) = t
 expand_products(s::TScalar) = s
-expand_products(d::TDeriv) = TDeriv(d.index, expand_products(d.arg))
+expand_products(d::TDeriv) = TDeriv(d.index, expand_products(d.arg), d.covd)
 
 function expand_products(s::TSum)
     tsum(TensorExpr[expand_products(t) for t in s.terms])
@@ -50,8 +50,8 @@ function collect_terms(expr::TSum)
 
     for term in expr.terms
         scalar, core = _split_scalar(term)
-        # Rename dummies to canonical names for comparison
-        canonical_core = _normalize_dummies(core)
+        # Canonicalize structure, then rename dummies for comparison
+        canonical_core = _normalize_dummies(canonicalize(core))
         buckets[canonical_core] = get(buckets, canonical_core, 0 // 1) + scalar
     end
 
@@ -116,35 +116,51 @@ _split_scalar(expr::TSum) = (1 // 1, expr)
 Full simplification pipeline applied to fixed point:
 1. expand_products — distribute * over +
 2. contract_metrics — eliminate g and δ contractions
-3. canonicalize — canonical index ordering via xperm
-4. collect_terms — combine like terms
-5. apply_rules — registered rewrite rules
+3. contract_curvature — detect Riemann/Ricci traces
+4. canonicalize — canonical index ordering via xperm
+5. commute_covds (optional) — sort covariant derivatives, insert Riemann terms
+6. collect_terms — combine like terms
+7. apply_rules — registered rewrite rules
 
 Each step is applied, then the whole pipeline repeats until the expression
 stabilizes or `maxiter` is reached.
+
+Pass `commute_covds_name=:∇` to include covariant derivative commutation
+in the simplify loop (off by default).
 """
 function simplify(expr::TensorExpr;
                   registry::TensorRegistry=current_registry(),
-                  maxiter::Int=20)
+                  maxiter::Int=20,
+                  commute_covds_name::Union{Symbol,Nothing}=nothing)
     with_registry(registry) do
-        _simplify_fixpoint(expr, registry, maxiter)
+        _simplify_fixpoint(expr, registry, maxiter, commute_covds_name)
     end
 end
 
-function _simplify_fixpoint(expr::TensorExpr, reg::TensorRegistry, maxiter::Int)
+function _simplify_fixpoint(expr::TensorExpr, reg::TensorRegistry, maxiter::Int,
+                            covd_name::Union{Symbol,Nothing}=nothing)
     current = expr
     for _ in 1:maxiter
-        next = _simplify_one_pass(current, reg)
+        next = _simplify_one_pass(current, reg, covd_name)
         next == current && return current
         current = next
     end
     current
 end
 
-function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry)
+function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
+                            covd_name::Union{Symbol,Nothing}=nothing)
     result = expand_products(expr)
     result = contract_metrics(result)
+    result = contract_curvature(result)
     result = canonicalize(result)
+
+    if covd_name !== nothing
+        result = commute_covds(result, covd_name; registry=reg)
+        result = contract_curvature(result)
+        result = canonicalize(result)
+    end
+
     result = collect_terms(result)
 
     rules = get_rules(reg)

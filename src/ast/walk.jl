@@ -35,7 +35,7 @@ end
 
 function walk(f, expr::TDeriv)
     new_arg = walk(f, expr.arg)
-    f(TDeriv(expr.index, new_arg))
+    f(TDeriv(expr.index, new_arg, expr.covd))
 end
 
 """
@@ -70,7 +70,7 @@ function dagger(s::TSum)
     tsum(TensorExpr[dagger(t) for t in s.terms])
 end
 function dagger(d::TDeriv)
-    TDeriv(TIndex(d.index.name, d.index.position == Up ? Down : Up, d.index.vbundle), dagger(d.arg))
+    TDeriv(TIndex(d.index.name, d.index.position == Up ? Down : Up, d.index.vbundle), dagger(d.arg), d.covd)
 end
 
 """

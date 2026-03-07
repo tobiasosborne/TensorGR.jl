@@ -84,7 +84,7 @@ end
 
 function _apply_rules_walk(expr::TDeriv, rules)
     new_arg = _apply_rules_walk(expr.arg, rules)
-    rebuilt = TDeriv(expr.index, new_arg)
+    rebuilt = TDeriv(expr.index, new_arg, expr.covd)
     for r in rules
         _rule_matches(r, rebuilt) && return _rule_apply(r, rebuilt)
     end

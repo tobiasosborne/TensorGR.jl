@@ -38,7 +38,7 @@ function canonicalize(s::TSum)
 end
 
 function canonicalize(d::TDeriv)
-    TDeriv(d.index, canonicalize(d.arg))
+    TDeriv(d.index, canonicalize(d.arg), d.covd)
 end
 
 function canonicalize(p::TProduct)
@@ -59,25 +59,30 @@ struct _ImplodedObject
     tensor_name::Symbol
     deriv_indices::Vector{TIndex}
     tensor_indices::Vector{TIndex}
+    covd::Symbol
 end
+
+_ImplodedObject(name::Symbol, derivs::Vector{TIndex}, indices::Vector{TIndex}) =
+    _ImplodedObject(name, derivs, indices, :partial)
 
 function _all_indices(obj::_ImplodedObject)
     vcat(obj.deriv_indices, obj.tensor_indices)
 end
 
 function _implode(expr::Tensor)
-    _ImplodedObject(expr.name, TIndex[], copy(expr.indices))
+    _ImplodedObject(expr.name, TIndex[], copy(expr.indices), :partial)
 end
 
 function _implode(expr::TDeriv)
     derivs = TIndex[]
     inner = expr
+    covd = expr.covd
     while inner isa TDeriv
         push!(derivs, inner.index)
         inner = inner.arg
     end
     inner isa Tensor || return nothing
-    _ImplodedObject(inner.name, derivs, copy(inner.indices))
+    _ImplodedObject(inner.name, derivs, copy(inner.indices), covd)
 end
 
 _implode(::TScalar) = nothing
@@ -87,7 +92,7 @@ _implode(::TSum) = nothing
 function _explode(obj::_ImplodedObject)
     result = Tensor(obj.tensor_name, obj.tensor_indices)
     for i in length(obj.deriv_indices):-1:1
-        result = TDeriv(obj.deriv_indices[i], result)
+        result = TDeriv(obj.deriv_indices[i], result, obj.covd)
     end
     result
 end

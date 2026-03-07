@@ -158,7 +158,7 @@ end
 
 function _metric_var_walk(d::TDeriv, metric::Symbol, c::TIndex, dd::TIndex)
     # Chain rule through derivatives
-    TDeriv(d.index, _metric_var_walk(d.arg, metric, c, dd))
+    TDeriv(d.index, _metric_var_walk(d.arg, metric, c, dd), d.covd)
 end
 
 """

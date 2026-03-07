@@ -52,7 +52,7 @@ function contract_metrics(s::TSum)
 end
 
 function contract_metrics(d::TDeriv)
-    TDeriv(d.index, contract_metrics(d.arg))
+    TDeriv(d.index, contract_metrics(d.arg), d.covd)
 end
 
 function contract_metrics(p::TProduct)

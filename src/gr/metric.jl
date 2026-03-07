@@ -229,7 +229,7 @@ function _separate_metric_walk(s::TSum, idx::Symbol, metric::Symbol)
 end
 
 function _separate_metric_walk(d::TDeriv, idx::Symbol, metric::Symbol)
-    TDeriv(d.index, _separate_metric_walk(d.arg, idx, metric))
+    TDeriv(d.index, _separate_metric_walk(d.arg, idx, metric), d.covd)
 end
 
 _separate_metric_walk(s::TScalar, ::Symbol, ::Symbol) = s

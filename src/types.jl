@@ -68,17 +68,21 @@ Base.:(==)(a::TSum, b::TSum) = a.terms == b.terms
 Base.hash(a::TSum, h::UInt) = hash(a.terms, hash(:TSum, h))
 
 """
-    TDeriv(index, arg)
+    TDeriv(index, arg, covd=:partial)
 
 A derivative operator applied to a tensor expression.
+The `covd` field identifies which covariant derivative (:partial for ∂).
 """
 struct TDeriv <: TensorExpr
     index::TIndex
     arg::TensorExpr
+    covd::Symbol
 end
 
-Base.:(==)(a::TDeriv, b::TDeriv) = a.index == b.index && a.arg == b.arg
-Base.hash(a::TDeriv, h::UInt) = hash(a.arg, hash(a.index, hash(:TDeriv, h)))
+TDeriv(index::TIndex, arg::TensorExpr) = TDeriv(index, arg, :partial)
+
+Base.:(==)(a::TDeriv, b::TDeriv) = a.index == b.index && a.arg == b.arg && a.covd == b.covd
+Base.hash(a::TDeriv, h::UInt) = hash(a.covd, hash(a.arg, hash(a.index, hash(:TDeriv, h))))
 
 """
     TScalar(val)

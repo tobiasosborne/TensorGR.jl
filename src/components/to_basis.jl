@@ -34,7 +34,7 @@ end
 function _replace_index(expr::TDeriv, idx_name::Symbol, component::Int)
     new_idx = expr.index.name == idx_name ?
         TIndex(Symbol("_", component), expr.index.position, expr.index.vbundle) : expr.index
-    TDeriv(new_idx, _replace_index(expr.arg, idx_name, component))
+    TDeriv(new_idx, _replace_index(expr.arg, idx_name, component), expr.covd)
 end
 
 _replace_index(expr::TScalar, ::Symbol, ::Int) = expr

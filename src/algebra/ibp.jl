@@ -31,7 +31,7 @@ function ibp(d::TDeriv, field::Symbol)
     #
     # The useful case is handled by `ibp_product` which sees the full
     # product structure.
-    TDeriv(d.index, ibp(d.arg, field))
+    TDeriv(d.index, ibp(d.arg, field), d.covd)
 end
 
 """

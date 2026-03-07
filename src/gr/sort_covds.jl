@@ -56,13 +56,13 @@ function _commute_one_pass(expr::TDeriv, covd::Symbol, reg::TensorRegistry)
         if outer_idx.name > inner_idx.name
             # [∇_a, ∇_b] T = ∇_a(∇_b(T)) - ∇_b(∇_a(T))
             # So ∇_a(∇_b(T)) = ∇_b(∇_a(T)) + [∇_a, ∇_b] T
-            swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg))
+            swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd)
             commutator = _commutator_term(outer_idx, inner_idx, inner.arg, covd, reg)
             return swapped + commutator
         end
     end
 
-    TDeriv(expr.index, inner)
+    TDeriv(expr.index, inner, expr.covd)
 end
 
 """
@@ -87,12 +87,12 @@ function _commute_specific_pair(expr::TDeriv, covd::Symbol,
         outer_idx = expr.index
         inner_idx = inner.index
         if outer_idx.name == idx_a && inner_idx.name == idx_b
-            swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg))
+            swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd)
             commutator = _commutator_term(outer_idx, inner_idx, inner.arg, covd, reg)
             return swapped + commutator
         end
     end
-    TDeriv(expr.index, inner)
+    TDeriv(expr.index, inner, expr.covd)
 end
 
 function _commute_specific_pair(expr::TSum, covd::Symbol,
@@ -126,7 +126,7 @@ function sort_covds_to_box(expr::TensorExpr; metric::Symbol=:g)
             inner = node.arg.index
             if outer.name == inner.name && outer.position != inner.position
                 # ∂_a ∂^a T = □T — represent as a scalar-labeled derivative
-                return TDeriv(outer, TDeriv(inner, node.arg.arg))
+                return TDeriv(outer, TDeriv(inner, node.arg.arg, node.arg.covd), node.covd)
             end
         end
         node
@@ -179,12 +179,12 @@ function _symmetrize_covds_walk(expr::TDeriv, covd::Symbol, reg::TensorRegistry)
         outer_idx = expr.index
         inner_idx = inner.index
         # ∂_a(∂_b(T)) = (1/2)(∂_a ∂_b + ∂_b ∂_a)(T) + (1/2)[∂_a, ∂_b](T)
-        sym_part = (1 // 2) * (TDeriv(outer_idx, TDeriv(inner_idx, inner.arg)) +
-                                TDeriv(inner_idx, TDeriv(outer_idx, inner.arg)))
+        sym_part = (1 // 2) * (TDeriv(outer_idx, TDeriv(inner_idx, inner.arg, expr.covd), expr.covd) +
+                                TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd))
         comm_part = (1 // 2) * _commutator_term(outer_idx, inner_idx, inner.arg, covd, reg)
         return sym_part + comm_part
     end
-    TDeriv(expr.index, inner)
+    TDeriv(expr.index, inner, expr.covd)
 end
 
 function _symmetrize_covds_walk(expr::TSum, covd::Symbol, reg::TensorRegistry)

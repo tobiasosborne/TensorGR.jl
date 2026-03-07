@@ -46,7 +46,12 @@ function Base.show(io::IO, s::TSum)
 end
 
 function Base.show(io::IO, d::TDeriv)
-    print(io, "∂[")
+    if d.covd == :partial
+        print(io, "∂")
+    else
+        print(io, d.covd)
+    end
+    print(io, "[")
     show(io, d.index)
     print(io, "](")
     show(io, d.arg)

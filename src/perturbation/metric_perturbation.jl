@@ -118,7 +118,7 @@ end
 
 function _perturb(d::TDeriv, mp::MetricPerturbation, order::Int)
     # Perturbation commutes with partial derivatives (on flat background)
-    TDeriv(d.index, _perturb(d.arg, mp, order))
+    TDeriv(d.index, _perturb(d.arg, mp, order), d.covd)
 end
 
 """

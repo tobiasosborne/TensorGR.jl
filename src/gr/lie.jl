@@ -95,7 +95,7 @@ function _lie_d(v::Tensor, d::TDeriv)
     # Lie derivative of a derivative expression
     # £_v(∂_a T) = ∂_a(£_v T) + (∂_a v^c)(∂_c T) ... complex
     # For simplicity, treat as a generic expression and apply Leibniz
-    TDeriv(d.index, _lie_d(v, d.arg))
+    TDeriv(d.index, _lie_d(v, d.arg), d.covd)
 end
 
 """

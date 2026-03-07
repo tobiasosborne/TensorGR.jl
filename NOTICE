@@ -1,0 +1,13 @@
+TensorGR.jl NOTICE
+
+This product includes xperm.c, a tensor canonicalization library.
+
+  Copyright (C) Jose M. Martin-Garcia 2003-2011
+  Licensed under the GNU General Public License (GPL)
+  Original project: http://www.xAct.es/
+
+The compiled binary artifact libxperm is distributed under the terms of the
+GPL. See deps/xperm.c for the full license text.
+
+The pure-Julia code of TensorGR.jl is licensed under the Apache License 2.0.
+See LICENSE for details.

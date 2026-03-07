@@ -122,7 +122,7 @@ end
 
 function rename_dummy(expr::TDeriv, old::Symbol, new::Symbol)
     new_idx = expr.index.name == old ? TIndex(new, expr.index.position, expr.index.vbundle) : expr.index
-    TDeriv(new_idx, rename_dummy(expr.arg, old, new))
+    TDeriv(new_idx, rename_dummy(expr.arg, old, new), expr.covd)
 end
 
 rename_dummy(expr::TScalar, ::Symbol, ::Symbol) = expr
@@ -222,7 +222,7 @@ end
 
 function _replace_index_name(d::TDeriv, old::Symbol, new::Symbol)
     new_idx = d.index.name == old ? TIndex(new, d.index.position, d.index.vbundle) : d.index
-    TDeriv(new_idx, _replace_index_name(d.arg, old, new))
+    TDeriv(new_idx, _replace_index_name(d.arg, old, new), d.covd)
 end
 
 _replace_index_name(s::TScalar, ::Symbol, ::Symbol) = s

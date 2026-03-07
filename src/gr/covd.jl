@@ -69,16 +69,19 @@ function define_covd!(reg::TensorRegistry, name::Symbol;
     end
 
     # Register metric compatibility rule: ∇_a g_{bc} = 0
+    # Fires for this CovD or for untagged (:partial) derivatives acting on its metric.
+    # When multiple CovDs exist, only the tagged CovD's rule fires for its metric.
     if metric_compatible
+        local _covd_name = name
+        local _metric_name = metric
         register_rule!(reg, RewriteRule(
             function(expr)
                 expr isa TDeriv || return false
-                # Check if this is the named CovD (we use TDeriv with a marker)
+                # Accept this CovD name or untagged :partial (backward compat)
+                (expr.covd == _covd_name || expr.covd == :partial) || return false
                 inner = expr.arg
                 inner isa Tensor || return false
-                inner.name == metric || return false
-                # Check derivative index contracts... actually for metric
-                # compatibility, ANY ∇g = 0 regardless of index structure
+                inner.name == _metric_name || return false
                 true
             end,
             _ -> ZERO
@@ -143,7 +146,7 @@ function _expand_covd(expr::TDeriv, covd::Symbol, reg::TensorRegistry)
 
     # If inner is a product, apply Leibniz rule first via expand_derivatives
     # then recursively expand each CovD
-    TDeriv(expr.index, inner)
+    TDeriv(expr.index, inner, expr.covd)
 end
 
 """
@@ -224,8 +227,8 @@ function _change_covd_walk(expr::TDeriv, from::Symbol, to::Symbol, reg::TensorRe
         Γ1 = from_props.christoffel
         Γ2 = to_props.christoffel
 
-        # Start with ∇₂_a T (keep as TDeriv)
-        result = TDeriv(expr.index, inner)
+        # Start with ∇₂_a T (keep as TDeriv with target CovD)
+        result = TDeriv(expr.index, inner, to)
 
         used = Set{Symbol}()
         push!(used, expr.index.name)
@@ -260,7 +263,7 @@ function _change_covd_walk(expr::TDeriv, from::Symbol, to::Symbol, reg::TensorRe
         return result
     end
 
-    TDeriv(expr.index, inner)
+    TDeriv(expr.index, inner, expr.covd)
 end
 
 """

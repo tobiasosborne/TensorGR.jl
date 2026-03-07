@@ -52,13 +52,13 @@ const CS_ISAACSON_TERMS = 8       # ⟨δ²Ric⟩ bilinear in h
 
 # ── de Sitter (arXiv:1403.3335) ─────────────────────────────────────────────
 const DS_D1RIEM_RAW_TERMS = 6     # δ¹Riem on dS, raw
-const DS_D1RIEM_SIMPLIFIED_TERMS = 12  # δ¹Riem on dS, simplified
+const DS_D1RIEM_SIMPLIFIED_TERMS = 6   # δ¹Riem on dS, simplified (contract_curvature in pipeline)
 
 # ── Galileon (arXiv:0901.1314) ──────────────────────────────────────────────
 const GALILEON_L2_FACTORS = 3     # g^{ab} ∂_a π ∂_b π
 const GALILEON_L4_TERMS = 2       # (□π)² - (∇∇π)²
 const GALILEON_L4_EOM_DERIV_ORDER = 4  # structural (before commutation)
-const GALILEON_L4_EOM_TERMS = 20  # VarD(L₄, π) raw
+const GALILEON_L4_EOM_TERMS = 17  # VarD(L₄, π) simplified (improved collect_terms)
 
 # ── PSALTer (arXiv:2406.09500) ──────────────────────────────────────────────
 const PSALTER_THETA_TERMS = 2     # θ_{μν} = η_{μν} - k_μ k_ν/k²

@@ -49,8 +49,8 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
         @testset "Weyl trace-free on de Sitter" begin
             W = Tensor(:Weyl, [up(:a), down(:b), down(:a), down(:d)])
             W_expanded = to_riemann(W)
-            W_contracted = contract_curvature(W_expanded)
-            W_trace = simplify(W_contracted)
+            # contract_curvature is now part of simplify pipeline
+            W_trace = simplify(W_expanded)
             @test W_trace == TScalar(0 // 1)
         end
 

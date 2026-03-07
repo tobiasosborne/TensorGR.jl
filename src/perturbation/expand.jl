@@ -444,5 +444,5 @@ end
 function _expand_pert(d::TDeriv, mp::MetricPerturbation, order::Int)
     # Perturbation commutes with partial derivatives
     inner = _expand_pert(d.arg, mp, order)
-    inner == ZERO ? ZERO : TDeriv(d.index, inner)
+    inner == ZERO ? ZERO : TDeriv(d.index, inner, d.covd)
 end
