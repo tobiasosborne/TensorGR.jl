@@ -28,14 +28,6 @@ const XPERT_EINSTEIN2_TERMS = 5        # δ²G_{ab} raw
 # Section 6.1: exactly 5 independent contractions of h_{ab} ∂_c ∂_d h_{ef}
 const XTRAS_SPIN2_CONTRACTIONS = 5
 
-# Gauge invariance constraints (Section 6.1, line ~520):
-# C₃ = -C₁ - C₂,  C₄ = -C₂/2,  C₅ = C₂/2
-const XTRAS_GAUGE_CONSTRAINTS = Dict(
-    :C3 => (:C1 => -1, :C2 => -1),
-    :C4 => (:C2 => -1//2,),
-    :C5 => (:C2 => 1//2,),
-)
-
 # all_contractions([h,h]) with no free indices: 2 independent scalars (measured)
 const XTRAS_HH_CONTRACTIONS = 2
 
@@ -43,11 +35,6 @@ const XTRAS_HH_CONTRACTIONS = 2
 const XTRAS_VARD_HBOXH_TERMS = 2
 
 # ── Conformal gravity (arXiv:1310.0819) ──────────────────────────────────────
-# Eq. 12: C_{abcd}C^{abcd} = Riem² - 2 Ric² + (1/3) R²  (up to GB)
-# equivalently: C² = 2 Ric² - (2/3) R² + GB (Weyl identity)
-const WEYL_SQ_RICCI_SQ_COEFF = 2//1
-const WEYL_SQ_SCALAR_SQ_COEFF = -2//3
-
 # Weyl → Riemann expansion: 3 top-level terms (measured)
 const WEYL_EXPANSION_TERMS = 3
 

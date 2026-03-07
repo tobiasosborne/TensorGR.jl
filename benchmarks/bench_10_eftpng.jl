@@ -76,5 +76,20 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             trunc2 = truncate_pn(tsum(TensorExpr[expr_v2, expr_bare]), 2, :vA)
             @test count_terms(trunc2) == 2
         end
+
+        # ── 10.5: Velocity structure ─────────────────────────────────
+        @testset "Velocity PN counting in products" begin
+            wl_A = Worldline(:A; manifold=:M4)
+            define_worldline!(reg, wl_A; metric=:g)
+
+            v_a = Tensor(:vA, [up(:a)])
+            v_b = Tensor(:vA, [up(:b)])
+            g_ab = Tensor(:g, [down(:a), down(:b)])
+
+            # g_{ab} v^a v^b has PN order 2 (two velocities)
+            v_sq = g_ab * v_a * v_b
+            @test v_sq isa TProduct
+            @test pn_order(v_sq, :vA) == 2
+        end
     end
 end

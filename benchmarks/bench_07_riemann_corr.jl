@@ -32,6 +32,10 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             δ1R_simplified = simplify(δ1R)
             @test δ1R_simplified != TScalar(0 // 1)
             @test count_terms(δ1R_simplified) == DS_D1RIEM_SIMPLIFIED_TERMS
+
+            # Background rules fully applied: no bare Ric or RicScalar remain
+            @test !TensorGR._contains_tensor(δ1R_simplified, :Ric)
+            @test !TensorGR._contains_tensor(δ1R_simplified, :RicScalar)
         end
 
         # ── 7.2: Weyl decomposition of linearised Riemann ─────────────

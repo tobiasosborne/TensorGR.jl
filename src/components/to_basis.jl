@@ -202,7 +202,36 @@ end
 
 function _evaluate_component(expr::TScalar, values::Dict, dim::Int)
     v = expr.val
-    v isa Number ? v : error("Cannot evaluate symbolic scalar: $v")
+    v isa Number && return v
+    v isa Symbol && haskey(values, (v, Int[])) && return values[(v, Int[])]
+    v isa Expr && return _eval_scalar_expr(v, values)
+    error("Cannot evaluate symbolic scalar: $v")
+end
+
+"""
+    _eval_scalar_expr(ex::Expr, values::Dict) -> Number
+
+Evaluate a simple arithmetic expression (e.g. `:(1 / k²)`) using the values dict.
+Supports +, -, *, / on numeric literals and symbols looked up via `(name, Int[])`.
+"""
+function _eval_scalar_expr(ex::Expr, values::Dict)
+    if ex.head == :call
+        op = ex.args[1]
+        args = map(ex.args[2:end]) do a
+            a isa Number ? a :
+            a isa Symbol ? (haskey(values, (a, Int[])) ? values[(a, Int[])] :
+                           error("Unknown symbol in scalar expression: $a")) :
+            a isa Expr ? _eval_scalar_expr(a, values) :
+            error("Cannot evaluate scalar sub-expression: $a")
+        end
+        op === :/ && return args[1] / args[2]
+        op === :* && return prod(args)
+        op === :+ && return sum(args)
+        op === :- && return length(args) == 1 ? -args[1] : args[1] - args[2]
+        op === :^ && return args[1]^args[2]
+        error("Unknown operator in scalar expression: $op")
+    end
+    error("Cannot evaluate scalar expression: $ex")
 end
 
 function _evaluate_component(expr::TDeriv, values::Dict, dim::Int)
