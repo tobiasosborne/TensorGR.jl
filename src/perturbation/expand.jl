@@ -311,6 +311,9 @@ function expand_perturbation(expr::TensorExpr, mp::MetricPerturbation, order::In
 end
 
 function _expand_pert(t::Tensor, mp::MetricPerturbation, order::Int)
+    # Order 0 = background value of the tensor (identity in Leibniz rule)
+    order == 0 && return t
+
     if t.name == :Riem
         # Riemann R^a_{bcd} or R_{abcd}: need first index Up
         idxs = t.indices
@@ -352,9 +355,19 @@ function _expand_pert(t::Tensor, mp::MetricPerturbation, order::Int)
         a, b = idxs
         if a.position == Down && b.position == Down
             return δricci(mp, a, b, order)
+        elseif a.position == Up && b.position == Up
+            # Ric^{ab} = g^{ac} g^{bd} Ric_{cd}
+            # Expand via Leibniz: δⁿ(g^{ac} g^{bd} Ric_{cd})
+            used = _collect_used(idxs...)
+            c = fresh_index(used); push!(used, c)
+            d_idx = fresh_index(used); push!(used, d_idx)
+            lowered = tproduct(1 // 1, TensorExpr[
+                Tensor(mp.metric, [a, up(c)]),
+                Tensor(mp.metric, [b, up(d_idx)]),
+                Tensor(:Ric, [down(c), down(d_idx)])])
+            return _expand_pert(lowered, mp, order)
         else
-            # Ric with raised index: Ric^a_b = g^{ac} Ric_{cb}
-            # Expand via Leibniz on the metric contraction
+            # Ric with one raised index: Ric^a_b or Ric_a^b
             used = _collect_used(idxs...)
             if a.position == Up
                 c = fresh_index(used)
