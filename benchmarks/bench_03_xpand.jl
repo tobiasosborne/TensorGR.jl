@@ -22,15 +22,10 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
 
             fol = define_foliation!(reg, :flat31; manifold=:M4)
 
-            # Split h_{ab} into 3+1 components: h_{00}, h_{0i}, h_{ij}
             h_ab = Tensor(:h, [down(:a), down(:b)])
             split_expr = split_all_spacetime(h_ab, fol)
             @test split_expr isa TSum
-            ncomp = count_terms(split_expr)
-            # For a rank-(0,2) symmetric tensor: h_{00}, h_{0i}+h_{i0}, h_{ij}
-            # = 1 + 2 + 1 = 4 basis terms (but h_{0i}=h_{i0} by symmetry)
-            @test ncomp >= 3
-            println("  h_{ab} -> $(ncomp) component terms")
+            @test count_terms(split_expr) == XPAND_SPLIT_HAB_TERMS
         end
     end
 
@@ -47,7 +42,7 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             split_expr = split_all_spacetime(h_ab, fol)
             substituted = apply_svt(split_expr, :h, fol; gauge=:bardeen)
             @test substituted != TScalar(0 // 1)
-            println("  SVT substituted: $(count_terms(substituted)) terms")
+            @test count_terms(substituted) == XPAND_SVT_SUBSTITUTED_TERMS
         end
     end
 
@@ -65,9 +60,7 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             substituted = apply_svt(split_expr, :h, fol; gauge=:bardeen)
             sectors = collect_sectors(substituted)
 
-            sector_names = sort(collect(keys(sectors)))
-            @test length(sectors) >= 2  # at least scalar and tensor sectors
-            println("  Sectors: $(sector_names)")
+            @test Set(keys(sectors)) == XPAND_SECTOR_NAMES
         end
     end
 
@@ -80,24 +73,16 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
 
             fol = define_foliation!(reg, :flat31; manifold=:M4)
 
-            tc = timed_compute() do
-                h_ab = Tensor(:h, [down(:a), down(:b)])
-                foliate_and_decompose(h_ab, :h; foliation=fol)
-            end
+            h_ab = Tensor(:h, [down(:a), down(:b)])
+            sectors = foliate_and_decompose(h_ab, :h; foliation=fol)
 
-            sectors = tc.result
             @test sectors isa Dict
-            @test length(sectors) >= 2
-            println("  E2E pipeline: $(length(sectors)) sectors ($(round(tc.time, digits=3))s)")
-
-            for (name, expr) in sort(collect(sectors), by=first)
-                println("    $name: $(count_terms(expr)) terms")
-            end
+            @test Set(keys(sectors)) == XPAND_E2E_SECTOR_NAMES
         end
     end
 
     # ── 3.5: Linearized Ricci + 3+1 split ──────────────────────────────
-    @testset "Linearized Ricci -> SVT sectors" begin
+    @testset "Linearized Ricci -> 3+1 split" begin
         reg = TensorRegistry()
         with_registry(reg) do
             @manifold M4 dim=4 metric=g
@@ -107,21 +92,17 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             mp = define_metric_perturbation!(reg, :g, :h)
             background_solution!(reg, [:Ric, :RicScalar, :Ein])
 
-            # Linearized Ricci
             dRic = δricci(mp, down(:a), down(:b), 1)
             @test dRic != TScalar(0 // 1)
 
-            # 3+1 split
             fol = define_foliation!(reg, :flat31; manifold=:M4)
-            tc = timed_compute() do
-                split_all_spacetime(dRic, fol)
-            end
-            @test tc.result != TScalar(0 // 1)
-            println("  δ¹Ric split: $(count_terms(tc.result)) terms ($(round(tc.time, digits=3))s)")
+            result = split_all_spacetime(dRic, fol)
+            @test result != TScalar(0 // 1)
+            @test count_terms(result) == XPAND_DRIC_SPLIT_TERMS
         end
     end
 
-    # ── 3.6: Full perturbed Einstein -> SVT (xPand main result) ─────────
+    # ── 3.6: Full perturbed Einstein -> SVT ──────────────────────────────
     @testset "Perturbed Einstein -> SVT sectors" begin
         reg = TensorRegistry()
         with_registry(reg) do
@@ -132,29 +113,25 @@ include(joinpath(@__DIR__, "ground_truth.jl"))
             mp = define_metric_perturbation!(reg, :g, :h)
             background_solution!(reg, [:Ric, :RicScalar, :Ein])
 
-            # Linearized Einstein: G_{ab} = R_{ab} - (1/2)g_{ab}R
             dRic = δricci(mp, down(:a), down(:b), 1)
             dR = δricci_scalar(mp, 1)
             g_ab = Tensor(:g, [down(:a), down(:b)])
             dEin = tsum(TensorExpr[dRic, tproduct(-1 // 2, TensorExpr[g_ab, dR])])
 
             fol = define_foliation!(reg, :flat31; manifold=:M4)
+            result = foliate_and_decompose(dEin, :h; foliation=fol)
 
-            tc = timed_compute() do
-                foliate_and_decompose(dEin, :h; foliation=fol)
-            end
-
-            if tc.result isa Dict
-                sectors = tc.result
-                @test length(sectors) >= 1
-                println("  δ¹G_{ab} -> $(length(sectors)) SVT sectors ($(round(tc.time, digits=3))s)")
-                for (name, expr) in sort(collect(sectors), by=first)
-                    println("    $name: $(count_terms(expr)) terms")
+            if result isa Dict
+                # Should produce sectors
+                @test length(result) >= 3
+                # Each sector must be non-trivial
+                for (name, expr) in result
+                    if name != :pure_scalar  # pure_scalar may have 0 or many terms
+                        @test count_terms(expr) > 0
+                    end
                 end
             else
-                # foliate_and_decompose may return a plain expression
-                @test tc.result != TScalar(0 // 1)
-                println("  δ¹G_{ab} split: $(count_terms(tc.result)) terms ($(round(tc.time, digits=3))s)")
+                @test result != TScalar(0 // 1)
             end
         end
     end

@@ -8,6 +8,7 @@
 
 using TensorGR, Test
 include(joinpath(@__DIR__, "common.jl"))
+include(joinpath(@__DIR__, "ground_truth.jl"))
 
 @testset "Bench 06: GW Stress-Energy (Chern-Simons)" begin
     reg = TensorRegistry()
@@ -19,23 +20,22 @@ include(joinpath(@__DIR__, "common.jl"))
         @testset "Pontryagin density construction" begin
             pont = pontryagin_density(:g; registry=reg)
 
-            # ε^{abcd} R_{ab}^{ef} R_{cdef} — should be a product of 3 tensors
             @test pont isa TProduct
             names = [f.name for f in pont.factors if f isa Tensor]
-            @test :εg in names  # epsilon tensor
-            @test count(==(:Riem), names) == 2  # two Riemann tensors
-            println("  Pontryagin density: ε·R·R with $(length(pont.factors)) factors")
-
-            # Euler density for comparison
-            euler = euler_density(:g; registry=reg)
-            @test euler isa TSum
-            @test count_terms(euler) == 3  # Riem² - 4Ric² + R²
-            println("  Euler density: $(count_terms(euler)) terms")
+            @test :εg in names
+            @test count(==(:Riem), names) == 2
+            @test length(pont.factors) == CS_PONTRYAGIN_FACTORS
         end
 
-        # ── 6.2: Chern-Simons field equations ─────────────────────────
-        @testset "Chern-Simons field equations" begin
-            # CS action: S_CS = (α/4) ∫ ϑ ★(R∧R)
+        # ── 6.2: Euler density structure ─────────────────────────────
+        @testset "Euler density = Riem^2 - 4Ric^2 + R^2" begin
+            euler = euler_density(:g; registry=reg)
+            @test euler isa TSum
+            @test count_terms(euler) == CS_EULER_TERMS
+        end
+
+        # ── 6.3: CS scalar EOM = Pontryagin density ─────────────────
+        @testset "CS scalar EOM = Pontryagin (identity)" begin
             register_tensor!(reg, TensorProperties(
                 name=:ϑ, manifold=:M4, rank=(0, 0), symmetries=Any[]))
             ϑ = Tensor(:ϑ, TIndex[])
@@ -43,39 +43,32 @@ include(joinpath(@__DIR__, "common.jl"))
             cs_lagrangian = chern_simons_action(ϑ, :g; registry=reg)
             @test cs_lagrangian isa TProduct
 
-            # The scalar field EOM: δS/δϑ = ★(R∧R) (Pontryagin density)
-            # Since L = ϑ · P, varying w.r.t. ϑ gives just P
+            # δS/δϑ = ★(R∧R) = Pontryagin density
             eom_theta = variational_derivative(cs_lagrangian, :ϑ)
-            @test eom_theta != TScalar(0 // 1)
-            # The EOM should be the Pontryagin density itself
-            @test eom_theta isa TProduct
-            println("  ϑ EOM (= ★RR): $(count_terms(eom_theta)) term(s)")
-
-            # The metric variation of ϑ★RR requires expanding Riemann
-            # in terms of Christoffel symbols first. The C-tensor (Cotton-like)
-            # arises from this expansion. Here we verify the structure exists
-            # by checking that the Pontryagin density has the right tensor content.
             pont = pontryagin_density(:g; registry=reg)
-            pont_names = Set(f.name for f in pont.factors if f isa Tensor)
-            @test :εg in pont_names
-            @test :Riem in pont_names
-            println("  CS C-tensor: verified Pontryagin structure (ε·R·R)")
+
+            # Identity test: EOM - Pont = 0
+            diff = simplify(tsum(TensorExpr[eom_theta, tproduct(-1 // 1, TensorExpr[pont])]))
+            @test diff == TScalar(0 // 1)
         end
 
-        # ── 6.3: Isaacson stress-energy tensor ────────────────────────
+        # ── 6.4: Isaacson averaging ──────────────────────────────────
         @testset "Isaacson stress-energy tensor" begin
             mp = define_metric_perturbation!(reg, :g, :h; curved=true)
 
-            # δ²Ricci — the second-order perturbation of the Ricci tensor
+            # δ²Ricci
             δ2Ric = δricci(mp, down(:a), down(:b), 2)
             @test δ2Ric != TScalar(0 // 1)
 
-            # Apply Isaacson averaging: keep only bilinear h·h terms
+            # Isaacson averaging keeps only bilinear h·h terms
             T_eff = isaacson_average(δ2Ric, :h)
             @test T_eff != TScalar(0 // 1)
-            n = count_terms(T_eff)
-            @test n > 0
-            println("  Isaacson ⟨δ²Ric⟩: $n terms (bilinear in h)")
+            @test count_terms(T_eff) == CS_ISAACSON_TERMS
+
+            # Linear terms must average to zero
+            δ1Ric = δricci(mp, down(:a), down(:b), 1)
+            T_lin = isaacson_average(δ1Ric, :h)
+            @test T_lin == TScalar(0 // 1)
         end
     end
 end

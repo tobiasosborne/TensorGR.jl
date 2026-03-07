@@ -9,6 +9,7 @@
 
 using TensorGR, Test
 include(joinpath(@__DIR__, "common.jl"))
+include(joinpath(@__DIR__, "ground_truth.jl"))
 
 @testset "Bench 07: Riemann Correlator (de Sitter)" begin
     reg = TensorRegistry()
@@ -26,44 +27,30 @@ include(joinpath(@__DIR__, "common.jl"))
         @testset "δ¹Riemann on de Sitter" begin
             δ1R = δriemann(mp, up(:a), down(:b), down(:c), down(:d), 1)
             @test δ1R != TScalar(0 // 1)
+            @test count_terms(δ1R) == DS_D1RIEM_RAW_TERMS
 
-            n = count_terms(δ1R)
-            @test n > 1
-            println("  δ¹Riem on dS: $n terms")
-
-            # After applying background rules (Ric → Λg, R → 4Λ),
-            # the linearized Riemann should contain Λ·h coupling terms
-            # from the Γ₀ cross terms in δriemann
             δ1R_simplified = simplify(δ1R)
-            n_s = count_terms(δ1R_simplified)
-            println("  δ¹Riem on dS (simplified): $n_s terms")
-            @test n_s > 0
+            @test δ1R_simplified != TScalar(0 // 1)
+            @test count_terms(δ1R_simplified) == DS_D1RIEM_SIMPLIFIED_TERMS
         end
 
         # ── 7.2: Weyl decomposition of linearised Riemann ─────────────
         @testset "Weyl decomposition of linearised Riemann" begin
-            # The linearized Riemann decomposes as
-            # δR_{abcd} = δC_{abcd} + (Weyl-trace terms involving δRic, δR)
-            # On dS, the Weyl part of the linearized Riemann is the
-            # gauge-invariant piece carrying the physical GW degrees of freedom
-
-            # Build the Riemann → Weyl decomposition at the symbolic level
             decomp = weyl_to_riemann(down(:a), down(:b), down(:c), down(:d), :g; dim=4)
-            @test decomp isa TSum  # Riem = Weyl + Ricci terms
-            n = count_terms(decomp)
-            @test n >= 3  # at least Weyl + Ricci + scalar terms
-            println("  Weyl decomposition: $n terms")
+            @test decomp isa TSum
+            @test count_terms(decomp) == WEYL_DECOMPOSITION_TERMS
+        end
 
-            # The linearized Weyl tensor on dS is traceless by construction
+        # ── 7.3: Weyl trace-free (identity) ──────────────────────────
+        @testset "Weyl trace-free on de Sitter" begin
             W = Tensor(:Weyl, [up(:a), down(:b), down(:a), down(:d)])
             W_expanded = to_riemann(W)
             W_contracted = contract_curvature(W_expanded)
             W_trace = simplify(W_contracted)
             @test W_trace == TScalar(0 // 1)
-            println("  Weyl trace-free: confirmed")
         end
 
-        # ── 7.3: Two-point function tensor structure ───────────────────
+        # ── 7.4: Two-point function tensor structure ───────────────────
         @testset "Two-point function tensor structure" begin
             @test_skip "Requires bitensor framework (parallel propagator, Synge world function)"
         end

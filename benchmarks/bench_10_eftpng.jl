@@ -8,6 +8,7 @@
 
 using TensorGR, Test
 include(joinpath(@__DIR__, "common.jl"))
+include(joinpath(@__DIR__, "ground_truth.jl"))
 
 @testset "Bench 10: EFTofPNG — Scalability" begin
     reg = TensorRegistry()
@@ -23,62 +24,57 @@ include(joinpath(@__DIR__, "common.jl"))
             @test has_tensor(reg, :vA)
             v = Tensor(:vA, [up(:a)])
             @test v isa Tensor
-            println("  Worldline A: velocity vA registered")
 
             # PN order counting
-            expr0 = Tensor(:g, [down(:a), down(:b)])  # no velocity → 0PN
-            @test pn_order(expr0, :vA) == 0
-
-            expr1 = Tensor(:vA, [up(:a)])  # one velocity → order 1
-            @test pn_order(expr1, :vA) == 1
-
-            expr2 = Tensor(:vA, [up(:a)]) * Tensor(:vA, [up(:b)])  # v² → 1PN
-            @test pn_order(expr2, :vA) == 2
-            println("  PN order counting: verified")
+            @test pn_order(Tensor(:g, [down(:a), down(:b)]), :vA) == 0
+            @test pn_order(Tensor(:vA, [up(:a)]), :vA) == 1
+            @test pn_order(Tensor(:vA, [up(:a)]) * Tensor(:vA, [up(:b)]), :vA) == 2
         end
 
-        # ── 10.2: Expression growth tracking ──────────────────────────
-        @testset "PN expansion expression growth" begin
-            # Build a simple EFT interaction: graviton exchange between
-            # two worldlines at increasing PN order.
-            #
-            # The point-particle action has the structure:
-            #   S_pp = -m ∫ ds √(-g_{μν} v^μ v^ν)
-            # Expanding g = η + h and keeping h interactions:
-            #   S_pp ≈ -m ∫ ds (1 + h_{μν}v^μ v^ν/2 + ...)
-            #
-            # At each PN order, the number of terms grows.
-
+        # ── 10.2: δⁿRicci term counts pinned ─────────────────────────
+        @testset "δⁿRicci term counts" begin
             mp = define_metric_perturbation!(reg, :g, :h)
+
+            for order in 1:3
+                dr = δricci(mp, down(:a), down(:b), order)
+                @test dr != TScalar(0 // 1)
+                @test count_terms(dr) == EFTPNG_DRICCI_TERMS[order]
+            end
+        end
+
+        # ── 10.3: Expression growth is superlinear ────────────────────
+        @testset "Expression growth with perturbation order" begin
+            mp = define_metric_perturbation!(reg, :g, :h)
+
+            term_counts = Int[]
+            for order in 1:3
+                dr = δricci(mp, down(:a), down(:b), order)
+                push!(term_counts, count_terms(dr))
+            end
+
+            @test term_counts[2] > term_counts[1]
+            @test term_counts[3] > term_counts[2]
+        end
+
+        # ── 10.4: PN truncation ───────────────────────────────────────
+        @testset "PN truncation drops velocity terms" begin
             wl_A = Worldline(:A; manifold=:M4)
             wl_B = Worldline(:B; manifold=:M4)
             define_worldline!(reg, wl_A; metric=:g)
             define_worldline!(reg, wl_B; metric=:g)
 
-            # Track expression growth: δⁿRicci gives a proxy for PN swell
-            term_counts = Int[]
-            for order in 1:3
-                tc = timed_compute() do
-                    δricci(mp, down(:a), down(:b), order)
-                end
-                n = count_terms(tc.result)
-                push!(term_counts, n)
-                println("  δ$(order)Ric: $n terms ($(round(tc.time, digits=3))s)")
-            end
-
-            # Expression growth should be superlinear but manageable
-            @test term_counts[1] > 0
-            @test term_counts[2] > term_counts[1]  # grows with order
-            @test term_counts[3] > term_counts[2]
-
-            # Truncation works
             v = Tensor(:vA, [up(:a)])
-            expr = v * v * Tensor(:h, [down(:a), down(:b)])  # 2 velocities
-            trunc = truncate_pn(tsum(TensorExpr[expr, Tensor(:h, [down(:c), down(:d)])]),
-                                 0, :vA)
+            # expr with v² terms + a bare h term
+            expr_v2 = v * v * Tensor(:h, [down(:a), down(:b)])
+            expr_bare = Tensor(:h, [down(:c), down(:d)])
+
+            trunc = truncate_pn(tsum(TensorExpr[expr_v2, expr_bare]), 0, :vA)
             # Only the term without velocities survives at 0PN
             @test count_terms(trunc) == 1
-            println("  PN truncation: verified")
+
+            # Higher truncation keeps both
+            trunc2 = truncate_pn(tsum(TensorExpr[expr_v2, expr_bare]), 2, :vA)
+            @test count_terms(trunc2) == 2
         end
     end
 end
