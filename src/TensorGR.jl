@@ -48,6 +48,7 @@ include("gr/box.jl")
 include("gr/lie.jl")
 include("gr/killing.jl")
 include("gr/hypersurface.jl")
+include("gr/mapping.jl")
 
 # Layer 4: Perturbation theory
 include("perturbation/partitions.jl")
@@ -171,6 +172,8 @@ export box, grad_squared, covd_chain, covd_product
 export lie_derivative, lie_bracket, lie_to_covd
 export HypersurfaceProperties, define_hypersurface!
 export extrinsic_curvature_expr, induced_metric_expr, projector_expr
+export MappingProperties, define_mapping!, get_mapping, has_mapping
+export pullback, pushforward, pullback_metric
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det

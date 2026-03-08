@@ -58,6 +58,8 @@ using TensorGR
     include("test_solve.jl")
     # Symbolic components (Symbolics.jl)
     include("test_symbolic_components.jl")
+    # Smooth mappings (pullback/pushforward)
+    include("test_mapping.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
 end
