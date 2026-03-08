@@ -23,7 +23,7 @@ function to_expr(s::TSum)
 end
 
 function to_expr(d::TDeriv)
-    Expr(:call, :TDeriv, to_expr(d.index), to_expr(d.arg))
+    Expr(:call, :TDeriv, to_expr(d.index), to_expr(d.arg), QuoteNode(d.covd))
 end
 
 function to_expr(s::TScalar)
@@ -53,7 +53,8 @@ function from_expr(ex::Expr)
     elseif tag == :TDeriv
         idx = _idx_from_expr(ex.args[2])
         arg = from_expr(ex.args[3])
-        return TDeriv(idx, arg)
+        covd = length(ex.args) >= 4 ? ex.args[4].value : :partial
+        return TDeriv(idx, arg, covd)
     elseif tag == :TScalar
         val = ex.args[2]
         val = val isa QuoteNode ? val.value : val

@@ -1,13 +1,18 @@
 #= Killing vector fields.
 
 A Killing vector ξ satisfies ∇_{(a} ξ_{b)} = 0, equivalently
-£_ξ g_{ab} = 0. We register this as a rewrite rule.
+£_ξ g_{ab} = 0.
+
+NOTE: The Killing equation is not automatically enforced as a rewrite rule.
+Users must manually impose Killing symmetry via `make_rule` or simplify.
 =#
 
 """
     define_killing!(reg, name; manifold, metric) -> TensorProperties
 
-Define a Killing vector field and register the Killing equation as a rule.
+Define a Killing vector field. Registers the vector with an `:is_killing` flag
+and records the associated metric. The Killing equation ∇_{(a} ξ_{b)} = 0 is
+not automatically registered as a rule; use `make_rule` to impose it.
 """
 function define_killing!(reg::TensorRegistry, name::Symbol;
                          manifold::Symbol, metric::Symbol)
@@ -18,20 +23,6 @@ function define_killing!(reg::TensorRegistry, name::Symbol;
             symmetries=Any[],
             options=Dict{Symbol,Any}(:is_killing => true, :metric => metric)))
     end
-
-    # Killing equation rule: ∇_{(a} ξ_{b)} = 0
-    # This means the symmetrized covariant derivative of ξ (with index lowered) vanishes.
-    # In practice, we register: Lie derivative of metric along ξ = 0
-    # £_ξ g_{ab} = 0 → any expression containing £_ξ g simplifies
-    register_rule!(reg, RewriteRule(
-        function(expr)
-            # Match: derivative of metric contracted with Killing vector
-            # This is a simplified pattern; full implementation would check
-            # the Killing equation structurally
-            false  # Placeholder: specific patterns added as needed
-        end,
-        _ -> ZERO
-    ))
 
     get_tensor(reg, name)
 end

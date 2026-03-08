@@ -28,13 +28,17 @@ end
 
 Properties of a tensor stored in the registry.
 """
-struct TensorProperties
+mutable struct TensorProperties
     name::Symbol
     manifold::Symbol
     rank::Tuple{Int,Int}
     symmetries::Vector{Any}
     dependencies::Vector{Symbol}
     weight::Int
+    # Hot-path boolean fields (avoid Dict lookup in contraction inner loop)
+    is_metric::Bool
+    is_delta::Bool
+    frozen::Bool
     options::Dict{Symbol,Any}
 end
 
@@ -42,8 +46,16 @@ function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int}
                            symmetries::Vector{Any}=Any[],
                            dependencies::Vector{Symbol}=Symbol[],
                            weight::Int=0,
+                           is_metric::Bool=false,
+                           is_delta::Bool=false,
+                           frozen::Bool=false,
                            options::Dict{Symbol,Any}=Dict{Symbol,Any}())
-    TensorProperties(name, manifold, rank, symmetries, dependencies, weight, options)
+    # Infer struct fields from options for backward compatibility
+    _is_metric = is_metric || get(options, :is_metric, false)
+    _is_delta = is_delta || get(options, :is_delta, false)
+    _frozen = frozen || get(options, :frozen, false)
+    TensorProperties(name, manifold, rank, symmetries, dependencies, weight,
+                     _is_metric, _is_delta, _frozen, options)
 end
 
 """
@@ -58,6 +70,9 @@ mutable struct TensorRegistry
     vbundles::Dict{Symbol, VBundleProperties}
     foliations::Dict{Symbol, Any}  # Dict{Symbol, FoliationProperties}, Any to avoid forward ref
     tex_aliases::Dict{Tuple{Symbol,Int}, Symbol}  # (tex_name, rank) => tensor_name; rank=-1 for any
+    # Caches: metric/delta name per manifold (populated by register_tensor!)
+    metric_cache::Dict{Symbol, Symbol}   # manifold => metric tensor name
+    delta_cache::Dict{Symbol, Symbol}    # manifold => delta tensor name
 end
 
 TensorRegistry() = TensorRegistry(
@@ -66,7 +81,9 @@ TensorRegistry() = TensorRegistry(
     Any[],
     Dict{Symbol,VBundleProperties}(),
     Dict{Symbol,Any}(),
-    Dict{Tuple{Symbol,Int}, Symbol}()
+    Dict{Tuple{Symbol,Int}, Symbol}(),
+    Dict{Symbol,Symbol}(),
+    Dict{Symbol,Symbol}()
 )
 
 has_manifold(reg::TensorRegistry, name::Symbol) = haskey(reg.manifolds, name)
@@ -104,7 +121,13 @@ end
 function register_manifold!(reg::TensorRegistry, mp::ManifoldProperties)
     has_manifold(reg, mp.name) && error("Manifold $(mp.name) already registered")
     reg.manifolds[mp.name] = mp
-    # Auto-register the tangent bundle
+    # Auto-register the tangent bundle (only if not already registered for a different manifold)
+    if has_vbundle(reg, :Tangent)
+        existing = get_vbundle(reg, :Tangent)
+        if existing.manifold != mp.name
+            @warn "Overwriting :Tangent vbundle (was on $(existing.manifold), now on $(mp.name))"
+        end
+    end
     reg.vbundles[:Tangent] = VBundleProperties(:Tangent, mp.name, mp.dim, mp.indices)
     mp
 end
@@ -112,6 +135,9 @@ end
 function register_tensor!(reg::TensorRegistry, tp::TensorProperties)
     has_tensor(reg, tp.name) && error("Tensor $(tp.name) already registered")
     reg.tensors[tp.name] = tp
+    # Populate metric/delta caches
+    tp.is_metric && (reg.metric_cache[tp.manifold] = tp.name)
+    tp.is_delta && (reg.delta_cache[tp.manifold] = tp.name)
     tp
 end
 

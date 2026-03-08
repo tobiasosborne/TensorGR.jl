@@ -185,8 +185,7 @@ end
 
 function _apply_lorentzian_sign(t::Tensor, fol::FoliationProperties,
                                 signature::Symbol)
-    # Count temporal indices that are Up (raised by inverse metric)
-    # In mostly_plus (-+++): η^{00} = -1, each temporal Up contributes -1
-    # In mostly_minus (+---): η^{ii} = -1, each spatial Up contributes -1
+    # NOTE: Stub — should count temporal/spatial raised indices and apply
+    # metric sign. Not yet implemented; returns tensor unchanged.
     t
 end

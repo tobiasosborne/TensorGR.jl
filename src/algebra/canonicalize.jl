@@ -59,30 +59,39 @@ struct _ImplodedObject
     tensor_name::Symbol
     deriv_indices::Vector{TIndex}
     tensor_indices::Vector{TIndex}
-    covd::Symbol
+    deriv_covds::Vector{Symbol}  # one covd per derivative index
 end
 
 _ImplodedObject(name::Symbol, derivs::Vector{TIndex}, indices::Vector{TIndex}) =
-    _ImplodedObject(name, derivs, indices, :partial)
+    _ImplodedObject(name, derivs, indices, fill(:partial, length(derivs)))
+
+_ImplodedObject(name::Symbol, derivs::Vector{TIndex}, indices::Vector{TIndex}, covd::Symbol) =
+    _ImplodedObject(name, derivs, indices, fill(covd, length(derivs)))
 
 function _all_indices(obj::_ImplodedObject)
     vcat(obj.deriv_indices, obj.tensor_indices)
 end
 
 function _implode(expr::Tensor)
-    _ImplodedObject(expr.name, TIndex[], copy(expr.indices), :partial)
+    _ImplodedObject(expr.name, TIndex[], copy(expr.indices), Symbol[])
 end
 
 function _implode(expr::TDeriv)
     derivs = TIndex[]
+    covds = Symbol[]
     inner = expr
-    covd = expr.covd
     while inner isa TDeriv
         push!(derivs, inner.index)
+        push!(covds, inner.covd)
         inner = inner.arg
     end
     inner isa Tensor || return nothing
-    _ImplodedObject(inner.name, derivs, copy(inner.indices), covd)
+    # Refuse to implode mixed-covd chains: canonicalization would scramble
+    # derivative indices across different covd types
+    if length(covds) >= 2 && !all(==(covds[1]), covds)
+        return nothing
+    end
+    _ImplodedObject(inner.name, derivs, copy(inner.indices), covds)
 end
 
 _implode(::TScalar) = nothing
@@ -92,7 +101,8 @@ _implode(::TSum) = nothing
 function _explode(obj::_ImplodedObject)
     result = Tensor(obj.tensor_name, obj.tensor_indices)
     for i in length(obj.deriv_indices):-1:1
-        result = TDeriv(obj.deriv_indices[i], result, obj.covd)
+        covd = i <= length(obj.deriv_covds) ? obj.deriv_covds[i] : :partial
+        result = TDeriv(obj.deriv_indices[i], result, covd)
     end
     result
 end
@@ -261,7 +271,8 @@ function _canonicalize_product(p::TProduct)
         new_obj = _ImplodedObject(
             obj.tensor_name,
             new_idxs[1:nderiv],
-            new_idxs[nderiv+1:end]
+            new_idxs[nderiv+1:end],
+            obj.deriv_covds
         )
         push!(new_factors, _explode(new_obj))
     end

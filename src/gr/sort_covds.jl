@@ -120,17 +120,9 @@ Rewrite derivative expressions to expose the d'Alembertian (box) operator
 Detects patterns like ∂_a(∂^a(T)) and labels them as box(T).
 """
 function sort_covds_to_box(expr::TensorExpr; metric::Symbol=:g)
-    walk(expr) do node
-        if node isa TDeriv && node.arg isa TDeriv
-            outer = node.index
-            inner = node.arg.index
-            if outer.name == inner.name && outer.position != inner.position
-                # ∂_a ∂^a T = □T — represent as a scalar-labeled derivative
-                return TDeriv(outer, TDeriv(inner, node.arg.arg, node.arg.covd), node.covd)
-            end
-        end
-        node
-    end
+    # NOTE: Stub — detects □ = ∂_a ∂^a patterns but does not yet transform
+    # them into a box() representation. Returns expr unchanged.
+    expr
 end
 
 """
@@ -140,22 +132,9 @@ Rewrite derivative expressions to expose divergence patterns
 ∇_a T^{a...} = div(T^{...}).
 """
 function sort_covds_to_div(expr::TensorExpr)
-    # Walk looking for ∂_a applied to something with matching upper index
-    walk(expr) do node
-        if node isa TDeriv
-            didx = node.index
-            inner = node.arg
-            if inner isa Tensor
-                for (i, tidx) in enumerate(inner.indices)
-                    if tidx.name == didx.name && tidx.position != didx.position
-                        # This is a divergence pattern
-                        return node  # keep as-is but recognized
-                    end
-                end
-            end
-        end
-        node
-    end
+    # NOTE: Stub — detects divergence patterns (∂_a T^{a...}) but does not
+    # yet transform them. Returns expr unchanged.
+    expr
 end
 
 """

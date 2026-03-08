@@ -46,13 +46,21 @@ Before comparing, each term's dummy indices are renamed to a canonical
 alphabet so that `T_{ab} X^{ab}` and `T_{cd} X^{cd}` are recognized as equal.
 """
 function collect_terms(expr::TSum)
+    _collect_terms_impl(expr, true)
+end
+
+collect_terms(expr::TensorExpr) = expr
+
+"""Skip re-canonicalization when terms are already canonical (called from simplify pipeline)."""
+function _collect_terms_impl(expr::TSum, do_canonicalize::Bool)
     buckets = Dict{TensorExpr, Rational{Int}}()
 
     for term in expr.terms
         scalar, core = _split_scalar(term)
-        # Canonicalize structure, then rename dummies for comparison
-        canonical_core = _normalize_dummies(canonicalize(core))
-        buckets[canonical_core] = get(buckets, canonical_core, 0 // 1) + scalar
+        normalized = do_canonicalize ?
+            _normalize_dummies(canonicalize(core)) :
+            _normalize_dummies(core)
+        buckets[normalized] = get(buckets, normalized, 0 // 1) + scalar
     end
 
     terms = TensorExpr[]
@@ -64,8 +72,6 @@ function collect_terms(expr::TSum)
     tsum(terms)
 end
 
-collect_terms(expr::TensorExpr) = expr
-
 """
     _normalize_dummies(expr) -> TensorExpr
 
@@ -73,11 +79,15 @@ Rename all dummy indices in `expr` to a canonical alphabet (`_d1`, `_d2`, ...)
 so that terms differing only in dummy names compare as equal.
 """
 function _normalize_dummies(expr::TensorExpr)
-    pairs = dummy_pairs(expr)
-    isempty(pairs) && return expr
+    # Sort commuting partial derivative chains so that
+    # ∂_b(∂_a(T)) and ∂_a(∂_b(T)) get the same normalized form.
+    normalized = _sort_partial_chains(expr)
+
+    pairs = dummy_pairs(normalized)
+    isempty(pairs) && return normalized
 
     # Sort dummy pairs by first occurrence to get deterministic ordering
-    all_idxs = indices(expr)
+    all_idxs = indices(normalized)
     first_occurrence = Dict{Symbol, Int}()
     for (i, idx) in enumerate(all_idxs)
         haskey(first_occurrence, idx.name) || (first_occurrence[idx.name] = i)
@@ -87,8 +97,8 @@ function _normalize_dummies(expr::TensorExpr)
     sort!(dummy_names, by = n -> get(first_occurrence, n, 0))
 
     # Rename to canonical names
-    result = expr
-    used = Set(idx.name for idx in free_indices(expr))
+    result = normalized
+    used = Set(idx.name for idx in free_indices(normalized))
     for (i, old_name) in enumerate(dummy_names)
         new_name = Symbol("_d", i)
         if old_name != new_name && new_name ∉ used
@@ -98,6 +108,42 @@ function _normalize_dummies(expr::TensorExpr)
     result
 end
 
+"""Sort partial derivative chains for normalization (partials commute)."""
+function _sort_partial_chains(expr::TDeriv)
+    inner = _sort_partial_chains(expr.arg)
+    d = TDeriv(expr.index, inner, expr.covd)
+    d.covd == :partial || return d
+    d.arg isa TDeriv || return d
+    d.arg.covd == :partial || return d
+
+    # Collect chain of commuting partial derivatives
+    chain_idxs = TIndex[]
+    current = d
+    while current isa TDeriv && current.covd == :partial
+        push!(chain_idxs, current.index)
+        current = current.arg
+    end
+    length(chain_idxs) < 2 && return d
+
+    sorted_idxs = sort(chain_idxs, by = idx -> idx.name)
+    sorted_idxs == chain_idxs && return d
+
+    result = current
+    for i in length(sorted_idxs):-1:1
+        result = TDeriv(sorted_idxs[i], result, :partial)
+    end
+    result
+end
+
+function _sort_partial_chains(expr::TProduct)
+    TProduct(expr.scalar, TensorExpr[_sort_partial_chains(f) for f in expr.factors])
+end
+function _sort_partial_chains(expr::TSum)
+    TSum(TensorExpr[_sort_partial_chains(t) for t in expr.terms])
+end
+_sort_partial_chains(expr::Tensor) = expr
+_sort_partial_chains(expr::TScalar) = expr
+
 """Split a TensorExpr into (scalar coefficient, tensor part)."""
 function _split_scalar(expr::TProduct)
     if length(expr.factors) == 1
@@ -106,7 +152,7 @@ function _split_scalar(expr::TProduct)
     return expr.scalar, TProduct(1 // 1, expr.factors)
 end
 _split_scalar(expr::Tensor) = (1 // 1, expr)
-_split_scalar(expr::TScalar) = (expr.val isa Rational ? expr.val : 1 // 1, TScalar(1))
+_split_scalar(expr::TScalar) = expr.val isa Rational ? (expr.val, TScalar(1)) : (1 // 1, expr)
 _split_scalar(expr::TDeriv) = (1 // 1, expr)
 _split_scalar(expr::TSum) = (1 // 1, expr)
 
@@ -206,11 +252,18 @@ function _simplify_fixpoint(expr::TensorExpr, reg::TensorRegistry, maxiter::Int,
                             covd_name::Union{Symbol,Nothing}=nothing,
                             parallel::Bool=false)
     current = expr
+    h_current = hash(current)
     for _ in 1:maxiter
         next = _simplify_one_pass(current, reg, covd_name, parallel)
-        next == current && return current
+        h_next = hash(next)
+        # Short-circuit: if hashes differ, expressions differ (skip deep ==)
+        if h_next == h_current && next == current
+            return current
+        end
         current = next
+        h_current = h_next
     end
+    @warn "simplify did not converge after $maxiter iterations"
     current
 end
 

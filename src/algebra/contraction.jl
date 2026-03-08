@@ -19,7 +19,7 @@ function contract_metrics(t::Tensor)
     reg = current_registry()
     if has_tensor(reg, t.name)
         props = get_tensor(reg, t.name)
-        if get(props.options, :is_delta, false) && length(t.indices) == 2
+        if props.is_delta && length(t.indices) == 2
             # Self-traced delta: δ^a_a → dim
             if t.indices[1].name == t.indices[2].name &&
                t.indices[1].position != t.indices[2].position
@@ -34,7 +34,7 @@ function contract_metrics(t::Tensor)
                 end
             end
         end
-        if get(props.options, :is_metric, false) && length(t.indices) == 2
+        if props.is_metric && length(t.indices) == 2
             if t.indices[1].name == t.indices[2].name &&
                t.indices[1].position != t.indices[2].position &&
                t.indices[1].vbundle == t.indices[2].vbundle
@@ -99,11 +99,11 @@ function _contract_one(p::TProduct)
         has_tensor(reg, fi.name) || continue
         props = get_tensor(reg, fi.name)
 
-        if get(props.options, :is_metric, false) && !get(props.options, :frozen, false)
+        if props.is_metric && !props.frozen
             result = _try_metric_contraction(p, i, fi, reg)
             result !== nothing && return result
 
-        elseif get(props.options, :is_delta, false)
+        elseif props.is_delta
             # Same-position delta → metric: δ_{ab} = g_{ab}, δ^{ab} = g^{ab}
             if length(fi.indices) == 2 && fi.indices[1].position == fi.indices[2].position
                 metric_name = _find_metric(reg, props.manifold)
@@ -139,8 +139,7 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
 
                     # Special case: metric × metric → delta
                     fj_props = has_tensor(reg, fj.name) ? get_tensor(reg, fj.name) : nothing
-                    is_partner_metric = fj_props !== nothing &&
-                        get(fj_props.options, :is_metric, false)
+                    is_partner_metric = fj_props !== nothing && fj_props.is_metric
 
                     if is_partner_metric
                         # g^{ab} g_{bc} → δ^a_c
@@ -185,22 +184,12 @@ end
 
 """Find the delta tensor name for a manifold, or :δ by default."""
 function _find_delta(reg::TensorRegistry, manifold::Symbol)
-    for (name, tp) in reg.tensors
-        if tp.manifold == manifold && get(tp.options, :is_delta, false)
-            return name
-        end
-    end
-    :δ
+    get(reg.delta_cache, manifold, :δ)
 end
 
 """Find the metric tensor name for a manifold, or nothing."""
 function _find_metric(reg::TensorRegistry, manifold::Symbol)
-    for (name, tp) in reg.tensors
-        if tp.manifold == manifold && get(tp.options, :is_metric, false)
-            return name
-        end
-    end
-    nothing
+    get(reg.metric_cache, manifold, nothing)
 end
 
 function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)

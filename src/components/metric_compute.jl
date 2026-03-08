@@ -170,39 +170,24 @@ end
 Compute Kretschmann scalar K = R_{abcd} R^{abcd}.
 """
 function metric_kretschmann(Riem::Array, g::Matrix, ginv::Matrix, dim::Int)
-    # R_{abcd} = g_{ae} R^e_{bcd}
-    # R^{abcd} = g^{bf} g^{cg} g^{dh} R^a_{fgh}
-    K = 0
+    # K = R_{abcd} R^{abcd}
+    # First lower the Riemann tensor: R_{abcd} = g_{ae} R^e_{bcd}
+    Riem_down = Array{Any}(undef, dim, dim, dim, dim)
     for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
-        R_down = 0
+        s = 0
         for e in 1:dim
-            R_down += g[a, e] * Riem[e, b, c, d]
+            s += g[a, e] * Riem[e, b, c, d]
         end
-        R_up = 0
-        for f in 1:dim, h in 1:dim, j in 1:dim
-            R_up += ginv[a, f] * ginv[b, h] * ginv[c, j] * Riem[f, h, j, d]  # partial raise
-        end
-        # Actually need full raise: R^{abcd} needs 4 ginv contractions on R_{abcd}
-        # Let me do this properly
+        Riem_down[a, b, c, d] = s
     end
-
-    # Proper computation: K = R_{abcd} R^{abcd}
-    # R^{abcd} = ginv^{ae} ginv^{bf} ginv^{cg} ginv^{dh} R_{efgh}
+    # Raise all indices: R^{abcd} = g^{ae} g^{bf} g^{ch} g^{dj} R_{efhj}
     K = 0
     for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
-        R_low = 0
-        for e in 1:dim
-            R_low += g[a, e] * Riem[e, b, c, d]
-        end
         R_up = 0
         for e in 1:dim, f in 1:dim, h in 1:dim, j in 1:dim
-            R_efhj = 0
-            for k in 1:dim
-                R_efhj += g[e, k] * Riem[k, f, h, j]
-            end
-            R_up += ginv[a, e] * ginv[b, f] * ginv[c, h] * ginv[d, j] * R_efhj
+            R_up += ginv[a, e] * ginv[b, f] * ginv[c, h] * ginv[d, j] * Riem_down[e, f, h, j]
         end
-        K += R_low * R_up
+        K += Riem_down[a, b, c, d] * R_up
     end
     K
 end
