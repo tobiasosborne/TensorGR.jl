@@ -200,17 +200,26 @@ function δinverse_metric(mp::MetricPerturbation, idx_a::TIndex, idx_b::TIndex, 
     order == 0 && return Tensor(mp.metric, [idx_a, idx_b])
     order < 0 && return ZERO
 
+    key = (:δinverse_metric, idx_a, idx_b, order)
+    memo = get(task_local_storage(), :_pert_memo, nothing)
+    if memo !== nothing
+        cached = get(memo, key, nothing)
+        cached !== nothing && return cached
+    end
+
     if order == 1
         used = Set{Symbol}([idx_a.name, idx_b.name])
         c = fresh_index(used)
         push!(used, c)
         d = fresh_index(used)
         # δ(g^{ab}) = -g^{ac} g^{bd} h_{cd}
-        return tproduct(-1 // 1, TensorExpr[
+        result = tproduct(-1 // 1, TensorExpr[
             Tensor(mp.metric, [idx_a, up(c)]),
             Tensor(mp.metric, [idx_b, up(d)]),
             Tensor(mp.perturbation, [down(c), down(d)])
         ])
+        memo !== nothing && (memo[key] = result)
+        return result
     end
 
     # Higher orders: δⁿ(g^{ab}) = -Σ_{k=1}^{n-1} δᵏ(g^{ac}) g^{bd} δⁿ⁻ᵏ(g_{cd})
@@ -233,5 +242,7 @@ function δinverse_metric(mp::MetricPerturbation, idx_a::TIndex, idx_b::TIndex, 
             push!(terms, term)
         end
     end
-    tsum(terms)
+    result = tsum(terms)
+    memo !== nothing && (memo[key] = result)
+    result
 end

@@ -80,6 +80,10 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
     @assert c.position == Down "Third index of Christoffel must be Down"
     order <= 0 && return ZERO
 
+    key = (:δchristoffel, a, b, c, order)
+    cached = _pert_memo_get(key)
+    cached !== nothing && return cached
+
     used = _collect_used(a, b, c)
     terms = TensorExpr[]
 
@@ -132,7 +136,7 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
         push!(terms, term)
     end
 
-    tsum(terms)
+    _pert_memo_set!(key, tsum(terms))
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -160,6 +164,10 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
     @assert c.position == Down "Third Riemann index must be Down"
     @assert d.position == Down "Fourth Riemann index must be Down"
     order <= 0 && return ZERO
+
+    key = (:δriemann, a, b, c, d, order)
+    cached = _pert_memo_get(key)
+    cached !== nothing && return cached
 
     used = _collect_used(a, b, c, d)
     terms = TensorExpr[]
@@ -207,7 +215,7 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
         end
     end
 
-    tsum(terms)
+    _pert_memo_set!(key, tsum(terms))
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -230,10 +238,14 @@ function δricci(mp::MetricPerturbation, a::TIndex, b::TIndex, order::Int)
     @assert b.position == Down "Second Ricci index must be Down"
     order <= 0 && return ZERO
 
+    key = (:δricci, a, b, order)
+    cached = _pert_memo_get(key)
+    cached !== nothing && return cached
+
     used = _collect_used(a, b)
     c = fresh_index(used)
 
-    δriemann(mp, up(c), a, down(c), b, order)
+    _pert_memo_set!(key, δriemann(mp, up(c), a, down(c), b, order))
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -250,6 +262,10 @@ At order n, uses the Leibniz rule:
 """
 function δricci_scalar(mp::MetricPerturbation, order::Int)
     order <= 0 && return ZERO
+
+    key = (:δricci_scalar, order)
+    cached = _pert_memo_get(key)
+    cached !== nothing && return cached
 
     used = Set{Symbol}()
     terms = TensorExpr[]
@@ -282,7 +298,7 @@ function δricci_scalar(mp::MetricPerturbation, order::Int)
         push!(terms, tproduct(1 // 1, TensorExpr[δk_ginv, δl_ric]))
     end
 
-    tsum(terms)
+    _pert_memo_set!(key, tsum(terms))
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -307,7 +323,32 @@ For sums, distributes linearly.
 For derivatives, commutes the perturbation through.
 """
 function expand_perturbation(expr::TensorExpr, mp::MetricPerturbation, order::Int)
-    _expand_pert(expr, mp, order)
+    # Set up memoization cache for this expansion (scoped via task-local storage)
+    memo = Dict{Any,TensorExpr}()
+    prev = get(task_local_storage(), :_pert_memo, nothing)
+    task_local_storage(:_pert_memo, memo)
+    try
+        _expand_pert(expr, mp, order)
+    finally
+        if prev === nothing
+            delete!(task_local_storage(), :_pert_memo)
+        else
+            task_local_storage(:_pert_memo, prev)
+        end
+    end
+end
+
+"""Check the perturbation memo cache. Returns `nothing` on miss."""
+function _pert_memo_get(key)
+    memo = get(task_local_storage(), :_pert_memo, nothing)
+    memo === nothing ? nothing : get(memo, key, nothing)
+end
+
+"""Store a result in the perturbation memo cache."""
+function _pert_memo_set!(key, result::TensorExpr)
+    memo = get(task_local_storage(), :_pert_memo, nothing)
+    memo !== nothing && (memo[key] = result)
+    result
 end
 
 function _expand_pert(t::Tensor, mp::MetricPerturbation, order::Int)
