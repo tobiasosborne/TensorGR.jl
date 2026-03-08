@@ -134,7 +134,7 @@ export to_expr, from_expr, is_well_formed, validate
 
 # Exports: Rules
 export RewriteRule, apply_rules, apply_rules_fixpoint, @rule
-export make_rule, folded_rule
+export make_rule, folded_rule, is_pattern_variable
 
 # Exports: Symmetries
 export Symmetric, AntiSymmetric, PairSymmetric, RiemannSymmetry
