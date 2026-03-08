@@ -54,6 +54,8 @@ using TensorGR
     include("test_foliation.jl")
     # CAS integration (Symbolics.jl)
     include("test_cas_integration.jl")
+    # Tensor equation solver
+    include("test_solve.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
 end

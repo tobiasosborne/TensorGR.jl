@@ -32,6 +32,7 @@ include("algebra/ansatz.jl")
 include("algebra/trace.jl")
 include("algebra/symmetrize.jl")
 include("algebra/young.jl")
+include("algebra/solve.jl")
 
 # Layer 2.5: Scalar algebra
 include("scalar/algebra.jl")
@@ -149,6 +150,7 @@ export abstract_trace, make_traceless
 export symmetrize, antisymmetrize, impose_symmetry
 export YoungTableau, young_shape, young_symmetrize, young_project
 export all_contractions, contraction_ansatz
+export solve_tensors
 
 # Exports: Scalar algebra
 export scalar_expand, scalar_collect, scalar_subst, scalar_cancel
