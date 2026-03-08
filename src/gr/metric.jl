@@ -57,6 +57,7 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
         register_tensor!(reg, TensorProperties(
             name=name, manifold=manifold, rank=(0, 2),
             symmetries=Any[Symmetric(1, 2)],
+            is_metric=true,
             options=Dict{Symbol,Any}(:is_metric => true,
                                      :signature => sig)))
     else
@@ -69,6 +70,7 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
         register_tensor!(reg, TensorProperties(
             name=:δ, manifold=manifold, rank=(1, 1),
             symmetries=Any[],
+            is_delta=true,
             options=Dict{Symbol,Any}(:is_delta => true)))
     end
 
@@ -121,6 +123,7 @@ Weyl=0, Ein=0, and Christoffel=0.
 function set_flat!(reg::TensorRegistry, metric::Symbol)
     has_tensor(reg, metric) || error("Metric $metric not registered")
     props = get_tensor(reg, metric)
+    props.flat = true
     props.options[:flat] = true
 
     for tname in [:Riem, :Ric, :RicScalar, :Weyl, :Ein, :Sch]
@@ -136,7 +139,7 @@ function set_flat!(reg::TensorRegistry, metric::Symbol)
     if has_tensor(reg, metric)
         tp = get_tensor(reg, metric)
         for (tname, tp2) in reg.tensors
-            if get(tp2.options, :is_christoffel, false) &&
+            if tp2.is_christoffel &&
                get(tp2.options, :metric, nothing) == metric
                 register_rule!(reg, RewriteRule(
                     expr -> expr isa Tensor && expr.name == tname,
@@ -155,7 +158,7 @@ Check if a metric is marked as flat.
 """
 function is_flat(reg::TensorRegistry, metric::Symbol)
     has_tensor(reg, metric) || return false
-    get(get_tensor(reg, metric).options, :flat, false)
+    get_tensor(reg, metric).flat
 end
 
 """
@@ -165,7 +168,9 @@ Freeze a metric so it does not participate in contraction.
 """
 function freeze_metric!(reg::TensorRegistry, metric::Symbol)
     has_tensor(reg, metric) || error("Metric $metric not registered")
-    get_tensor(reg, metric).options[:frozen] = true
+    tp = get_tensor(reg, metric)
+    tp.frozen = true
+    tp.options[:frozen] = true
     nothing
 end
 
@@ -176,7 +181,9 @@ Unfreeze a metric to allow contraction again.
 """
 function unfreeze_metric!(reg::TensorRegistry, metric::Symbol)
     has_tensor(reg, metric) || error("Metric $metric not registered")
-    get_tensor(reg, metric).options[:frozen] = false
+    tp = get_tensor(reg, metric)
+    tp.frozen = false
+    tp.options[:frozen] = false
     nothing
 end
 
@@ -187,7 +194,7 @@ Check if a metric is frozen.
 """
 function is_frozen(reg::TensorRegistry, metric::Symbol)
     has_tensor(reg, metric) || return false
-    get(get_tensor(reg, metric).options, :frozen, false)
+    get_tensor(reg, metric).frozen
 end
 
 """

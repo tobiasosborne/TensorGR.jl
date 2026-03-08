@@ -27,32 +27,7 @@ Return the free (uncontracted) indices. A free index appears exactly once.
 A dummy index appears as a pair (one Up, one Down, same name).
 """
 function free_indices(expr::TensorExpr)
-    all_idxs = indices(expr)
-    # Group by (name, vbundle). An index is dummy if the same (name, vbundle)
-    # appears with both Up and Down positions.
-    key_counts = Dict{Tuple{Symbol,Symbol}, Vector{TIndex}}()
-    for idx in all_idxs
-        push!(get!(Vector{TIndex}, key_counts, (idx.name, idx.vbundle)), idx)
-    end
-
-    free = TIndex[]
-    for ((name, vb), idxs) in key_counts
-        has_up = any(i -> i.position == Up, idxs)
-        has_down = any(i -> i.position == Down, idxs)
-        if has_up && has_down
-            up_count = count(i -> i.position == Up, idxs)
-            down_count = count(i -> i.position == Down, idxs)
-            paired = min(up_count, down_count)
-            for _ in 1:(up_count - paired)
-                push!(free, TIndex(name, Up, vb))
-            end
-            for _ in 1:(down_count - paired)
-                push!(free, TIndex(name, Down, vb))
-            end
-        else
-            append!(free, idxs)
-        end
-    end
+    _, free, _ = _analyze_indices(expr)
     free
 end
 
@@ -62,21 +37,58 @@ end
 Return pairs of contracted indices (one Up, one Down, same name).
 """
 function dummy_pairs(expr::TensorExpr)
+    _, _, pairs = _analyze_indices(expr)
+    pairs
+end
+
+"""
+    _analyze_indices(expr) -> (all_indices, free_indices, dummy_pairs)
+
+Single-pass index analysis. Groups indices by (name, vbundle) once and extracts
+all three results from the same grouping, avoiding redundant tree walks.
+"""
+function _analyze_indices(expr::TensorExpr)
     all_idxs = indices(expr)
+
     key_groups = Dict{Tuple{Symbol,Symbol}, Vector{TIndex}}()
     for idx in all_idxs
         push!(get!(Vector{TIndex}, key_groups, (idx.name, idx.vbundle)), idx)
     end
 
+    free = TIndex[]
     pairs = Tuple{TIndex, TIndex}[]
+
     for ((name, vb), idxs) in key_groups
-        ups = filter(i -> i.position == Up, idxs)
-        downs = filter(i -> i.position == Down, idxs)
-        for i in 1:min(length(ups), length(downs))
+        ups = TIndex[]
+        downs = TIndex[]
+        for idx in idxs
+            if idx.position == Up
+                push!(ups, idx)
+            else
+                push!(downs, idx)
+            end
+        end
+
+        npaired = min(length(ups), length(downs))
+        for i in 1:npaired
             push!(pairs, (ups[i], downs[i]))
         end
+
+        # Unpaired indices are free
+        for i in (npaired + 1):length(ups)
+            push!(free, ups[i])
+        end
+        for i in (npaired + 1):length(downs)
+            push!(free, downs[i])
+        end
+
+        # If no pairing possible (all same position), all are free
+        if isempty(ups) || isempty(downs)
+            # Already handled: npaired=0, all go to unpaired loops
+        end
     end
-    pairs
+
+    (all_idxs, free, pairs)
 end
 
 """
@@ -128,6 +140,37 @@ end
 rename_dummy(expr::TScalar, ::Symbol, ::Symbol) = expr
 
 """
+    rename_dummies(expr::TensorExpr, mapping::Dict{Symbol,Symbol}) -> TensorExpr
+
+Rename multiple index names in a single tree walk. More efficient than
+calling `rename_dummy` repeatedly (N names = 1 walk instead of N walks).
+"""
+function rename_dummies(expr::Tensor, mapping::Dict{Symbol,Symbol})
+    new_indices = map(expr.indices) do idx
+        new_name = get(mapping, idx.name, idx.name)
+        new_name == idx.name ? idx : TIndex(new_name, idx.position, idx.vbundle)
+    end
+    Tensor(expr.name, new_indices)
+end
+
+function rename_dummies(expr::TProduct, mapping::Dict{Symbol,Symbol})
+    TProduct(expr.scalar, TensorExpr[rename_dummies(f, mapping) for f in expr.factors])
+end
+
+function rename_dummies(expr::TSum, mapping::Dict{Symbol,Symbol})
+    TSum(TensorExpr[rename_dummies(t, mapping) for t in expr.terms])
+end
+
+function rename_dummies(expr::TDeriv, mapping::Dict{Symbol,Symbol})
+    new_name = get(mapping, expr.index.name, expr.index.name)
+    new_idx = new_name == expr.index.name ? expr.index :
+        TIndex(new_name, expr.index.position, expr.index.vbundle)
+    TDeriv(new_idx, rename_dummies(expr.arg, mapping), expr.covd)
+end
+
+rename_dummies(expr::TScalar, ::Dict{Symbol,Symbol}) = expr
+
+"""
     index_sort(idxs::Vector{TIndex}; by=:name) -> Vector{TIndex}
 
 Sort indices canonically: by name alphabetically, preserving position.
@@ -168,25 +211,23 @@ function _normalize_dummies_for_display(expr::TensorExpr)
     dummy_names = [p[1].name for p in pairs]
     sort!(dummy_names, by = n -> get(first_occurrence, n, 0))
 
-    # Rename to standard dummy names: p, q, r, s, ...
     canonical_dummy_names = [:p, :q, :r, :s, :t, :u, :v, :w]
-    result = expr
-    used = Set(idx.name for idx in free_indices(expr))
-    for n in canonical_dummy_names
-        push!(used, n)
-    end
 
+    # Two-phase batch renaming (2 tree walks instead of 2N):
+    phase1 = Dict{Symbol,Symbol}()
     for (i, old_name) in enumerate(dummy_names)
-        if i <= length(canonical_dummy_names)
-            new_name = canonical_dummy_names[i]
-        else
-            new_name = Symbol("_d", i)
-        end
-        if old_name != new_name && new_name ∉ Set(idx.name for idx in free_indices(result))
-            result = rename_dummy(result, old_name, new_name)
-        end
+        tmp_name = Symbol("__dtmp", i)
+        old_name != tmp_name && (phase1[old_name] = tmp_name)
     end
-    result
+    result = isempty(phase1) ? expr : rename_dummies(expr, phase1)
+
+    phase2 = Dict{Symbol,Symbol}()
+    for (i, _) in enumerate(dummy_names)
+        tmp_name = Symbol("__dtmp", i)
+        new_name = i <= length(canonical_dummy_names) ? canonical_dummy_names[i] : Symbol("_d", i)
+        tmp_name != new_name && (phase2[tmp_name] = new_name)
+    end
+    isempty(phase2) ? result : rename_dummies(result, phase2)
 end
 
 """
@@ -234,17 +275,20 @@ Return a modified version of `b` where any dummy index names that clash
 with dummy names in `a` have been renamed to fresh names.
 """
 function ensure_no_dummy_clash(a::TensorExpr, b::TensorExpr)
-    dummies_a = Set(pair[1].name for pair in dummy_pairs(a))
-    dummies_b = Set(pair[1].name for pair in dummy_pairs(b))
+    all_a, _, pairs_a = _analyze_indices(a)
+    all_b, _, pairs_b = _analyze_indices(b)
+
+    dummies_a = Set(pair[1].name for pair in pairs_a)
+    dummies_b = Set(pair[1].name for pair in pairs_b)
     clashing = intersect(dummies_a, dummies_b)
 
     isempty(clashing) && return b
 
     all_names = Set{Symbol}()
-    for idx in indices(a)
+    for idx in all_a
         push!(all_names, idx.name)
     end
-    for idx in indices(b)
+    for idx in all_b
         push!(all_names, idx.name)
     end
 

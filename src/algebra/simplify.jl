@@ -83,11 +83,11 @@ function _normalize_dummies(expr::TensorExpr)
     # ∂_b(∂_a(T)) and ∂_a(∂_b(T)) get the same normalized form.
     normalized = _sort_partial_chains(expr)
 
-    pairs = dummy_pairs(normalized)
+    # Single-pass index analysis (replaces 3 separate tree walks)
+    all_idxs, free, pairs = _analyze_indices(normalized)
     isempty(pairs) && return normalized
 
     # Sort dummy pairs by first occurrence to get deterministic ordering
-    all_idxs = indices(normalized)
     first_occurrence = Dict{Symbol, Int}()
     for (i, idx) in enumerate(all_idxs)
         haskey(first_occurrence, idx.name) || (first_occurrence[idx.name] = i)
@@ -98,7 +98,7 @@ function _normalize_dummies(expr::TensorExpr)
 
     # Rename to canonical names
     result = normalized
-    used = Set(idx.name for idx in free_indices(normalized))
+    used = Set(idx.name for idx in free)
     for (i, old_name) in enumerate(dummy_names)
         new_name = Symbol("_d", i)
         if old_name != new_name && new_name ∉ used

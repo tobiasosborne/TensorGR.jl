@@ -39,6 +39,10 @@ mutable struct TensorProperties
     is_metric::Bool
     is_delta::Bool
     frozen::Bool
+    flat::Bool
+    is_covd::Bool
+    is_christoffel::Bool
+    vanishing::Bool
     options::Dict{Symbol,Any}
 end
 
@@ -54,8 +58,13 @@ function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int}
     _is_metric = is_metric || get(options, :is_metric, false)
     _is_delta = is_delta || get(options, :is_delta, false)
     _frozen = frozen || get(options, :frozen, false)
+    _flat = get(options, :flat, false)
+    _is_covd = get(options, :is_covd, false)
+    _is_christoffel = get(options, :is_christoffel, false)
+    _vanishing = get(options, :vanishing, false)
     TensorProperties(name, manifold, rank, symmetries, dependencies, weight,
-                     _is_metric, _is_delta, _frozen, options)
+                     _is_metric, _is_delta, _frozen, _flat, _is_covd, _is_christoffel,
+                     _vanishing, options)
 end
 
 """
@@ -212,7 +221,7 @@ Remove a covariant derivative and its Christoffel symbol.
 function unregister_covd!(reg::TensorRegistry, name::Symbol)
     has_tensor(reg, name) || error("CovD $name not registered")
     props = get_tensor(reg, name)
-    get(props.options, :is_covd, false) || error("$name is not a CovD")
+    props.is_covd || error("$name is not a CovD")
     christoffel = props.options[:covd_props].christoffel
     delete!(reg.tensors, name)
     haskey(reg.tensors, christoffel) && delete!(reg.tensors, christoffel)
@@ -227,6 +236,7 @@ Mark a tensor as identically zero. Adds a rule that replaces it with ZERO.
 function set_vanishing!(reg::TensorRegistry, name::Symbol)
     has_tensor(reg, name) || error("Tensor $name not registered")
     tp = get_tensor(reg, name)
+    tp.vanishing = true
     tp.options[:vanishing] = true
     register_rule!(reg, RewriteRule(
         expr -> expr isa Tensor && expr.name == name,

@@ -99,7 +99,7 @@ Retrieve CovD properties from the registry.
 function get_covd(reg::TensorRegistry, name::Symbol)
     has_tensor(reg, name) || error("CovD $name not registered")
     props = get_tensor(reg, name)
-    get(props.options, :is_covd, false) || error("$name is not a CovD")
+    props.is_covd || error("$name is not a CovD")
     props.options[:covd_props]::CovDProperties
 end
 
