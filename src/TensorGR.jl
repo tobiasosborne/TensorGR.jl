@@ -118,7 +118,7 @@ export current_registry, with_registry
 
 # Exports: AST primitives
 export indices, free_indices, dummy_pairs
-export rename_dummy, fresh_index, ensure_no_dummy_clash
+export rename_dummy, rename_dummies, fresh_index, ensure_no_dummy_clash
 export index_sort, same_dummies, split_index
 export walk, substitute, children
 export derivative_order, is_constant, is_sorted_covds
@@ -136,7 +136,7 @@ export make_rule, folded_rule
 
 # Exports: Symmetries
 export Symmetric, AntiSymmetric, PairSymmetric, RiemannSymmetry
-export FullySymmetric, FullyAntiSymmetric
+export FullySymmetric, FullyAntiSymmetric, SymmetrySpec
 export symmetry_generators
 
 # Exports: Algebra

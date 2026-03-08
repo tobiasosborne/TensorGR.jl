@@ -26,7 +26,7 @@ function maximally_symmetric_background!(reg::TensorRegistry, manifold::Symbol;
     if !has_tensor(reg, cosmological_constant)
         register_tensor!(reg, TensorProperties(
             name=cosmological_constant, manifold=manifold, rank=(0, 0),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             options=Dict{Symbol,Any}(:is_constant => true)))
     end
 

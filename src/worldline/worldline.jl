@@ -38,7 +38,7 @@ function define_worldline!(reg::TensorRegistry, wl::Worldline;
     if !has_tensor(reg, wl.velocity)
         register_tensor!(reg, TensorProperties(
             name=wl.velocity, manifold=wl.manifold, rank=(1, 0),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             options=Dict{Symbol,Any}(:is_velocity => true,
                                      :worldline => wl.label)))
     end

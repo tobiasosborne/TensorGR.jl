@@ -95,3 +95,19 @@ end
 
 Base.:(==)(a::TScalar, b::TScalar) = a.val == b.val
 Base.hash(a::TScalar, h::UInt) = hash(a.val, hash(:TScalar, h))
+
+# ── Symmetry types (defined early so TensorProperties can use the union) ──
+
+struct Symmetric;          i::Int; j::Int; end
+struct AntiSymmetric;      i::Int; j::Int; end
+struct PairSymmetric;      i::Int; j::Int; k::Int; l::Int; end
+struct RiemannSymmetry;    end
+struct FullySymmetric;     slots::Vector{Int}; end
+struct FullyAntiSymmetric; slots::Vector{Int}; end
+
+FullySymmetric(slots::Int...) = FullySymmetric(collect(slots))
+FullyAntiSymmetric(slots::Int...) = FullyAntiSymmetric(collect(slots))
+
+"""Union of all symmetry specification types."""
+const SymmetrySpec = Union{Symmetric, AntiSymmetric, PairSymmetric,
+                           RiemannSymmetry, FullySymmetric, FullyAntiSymmetric}

@@ -41,7 +41,7 @@ function define_metric_perturbation!(reg::TensorRegistry, metric::Symbol,
     if !has_tensor(reg, perturbation)
         register_tensor!(reg, TensorProperties(
             name=perturbation, manifold=mp.name, rank=(0, 2),
-            symmetries=Any[Symmetric(1, 2)]))
+            symmetries=SymmetrySpec[Symmetric(1, 2)]))
     end
 
     bg_christoffel = nothing
@@ -51,7 +51,7 @@ function define_metric_perturbation!(reg::TensorRegistry, metric::Symbol,
         if !has_tensor(reg, bg_christoffel)
             register_tensor!(reg, TensorProperties(
                 name=bg_christoffel, manifold=mp.name, rank=(1, 2),
-                symmetries=Any[Symmetric(2, 3)],
+                symmetries=SymmetrySpec[Symmetric(2, 3)],
                 options=Dict{Symbol,Any}(:is_christoffel => true,
                                          :is_background => true,
                                          :metric => metric)))

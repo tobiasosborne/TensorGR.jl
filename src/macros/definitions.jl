@@ -47,12 +47,14 @@ function _parse_manifold(name, kwargs)
             register_tensor!(reg, TensorProperties(
                 name=$(QuoteNode(metric)), manifold=$(QuoteNode(name)),
                 rank=(0, 2),
-                symmetries=Any[Symmetric(1, 2)],
+                symmetries=SymmetrySpec[Symmetric(1, 2)],
+                is_metric=true,
                 options=Dict{Symbol,Any}(:is_metric => true)))
             register_tensor!(reg, TensorProperties(
                 name=:δ, manifold=$(QuoteNode(name)),
                 rank=(1, 1),
-                symmetries=Any[],
+                symmetries=SymmetrySpec[],
+                is_delta=true,
                 options=Dict{Symbol,Any}(:is_delta => true)))
         end
     end |> esc
@@ -70,7 +72,7 @@ end
 function _parse_define_tensor(name, kwargs)
     manifold = :M4
     rank = (0, 0)
-    syms = Any[]
+    syms = SymmetrySpec[]
 
     for kw in kwargs
         if kw isa Expr && kw.head == :(=)
@@ -94,7 +96,7 @@ function _parse_define_tensor(name, kwargs)
         register_tensor!(current_registry(), TensorProperties(
             name=$(QuoteNode(name)), manifold=$(QuoteNode(manifold)),
             rank=$rank,
-            symmetries=Any[$(syms...)]))
+            symmetries=SymmetrySpec[$(syms...)]))
     end |> esc
 end
 

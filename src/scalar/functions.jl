@@ -16,7 +16,7 @@ function define_scalar_function!(reg::TensorRegistry, name::Symbol;
     if !haskey(reg.tensors, name)
         register_tensor!(reg, TensorProperties(
             name=name, manifold=:_scalar, rank=(0, 0),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             options=Dict{Symbol,Any}(:is_scalar_function => true,
                                      :derivative => derivative)))
     else

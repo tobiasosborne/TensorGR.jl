@@ -69,6 +69,9 @@ function _collect_terms_impl(expr::TSum, do_canonicalize::Bool)
         push!(terms, tproduct(coeff, TensorExpr[core]))
     end
 
+    # Sort terms by hash for deterministic ordering across Dict iterations.
+    # This prevents spurious simplify iterations caused by Dict randomization.
+    sort!(terms, by = t -> hash(t))
     tsum(terms)
 end
 
@@ -213,6 +216,7 @@ function _collect_terms_parallel(expr::TSum)
         buckets[core] = get(buckets, core, 0 // 1) + scalar
     end
     terms = TensorExpr[tproduct(c, TensorExpr[k]) for (k, c) in buckets if c != 0]
+    sort!(terms, by = t -> hash(t))
     tsum(terms)
 end
 

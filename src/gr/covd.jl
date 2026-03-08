@@ -50,7 +50,7 @@ function define_covd!(reg::TensorRegistry, name::Symbol;
     if !torsion_free && !has_tensor(reg, torsion_sym)
         register_tensor!(reg, TensorProperties(
             name=torsion_sym, manifold=manifold, rank=(1, 2),
-            symmetries=Any[AntiSymmetric(2, 3)],
+            symmetries=SymmetrySpec[AntiSymmetric(2, 3)],
             options=Dict{Symbol,Any}(:is_torsion => true,
                                      :covd => name)))
     end
@@ -63,7 +63,7 @@ function define_covd!(reg::TensorRegistry, name::Symbol;
         # Register a "tensor" entry for the CovD for lookup
         register_tensor!(reg, TensorProperties(
             name=name, manifold=manifold, rank=(0, 0),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             options=Dict{Symbol,Any}(:is_covd => true,
                                      :covd_props => covd_props)))
     end

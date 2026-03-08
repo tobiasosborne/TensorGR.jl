@@ -56,7 +56,7 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
     if !has_tensor(reg, name)
         register_tensor!(reg, TensorProperties(
             name=name, manifold=manifold, rank=(0, 2),
-            symmetries=Any[Symmetric(1, 2)],
+            symmetries=SymmetrySpec[Symmetric(1, 2)],
             is_metric=true,
             options=Dict{Symbol,Any}(:is_metric => true,
                                      :signature => sig)))
@@ -69,7 +69,7 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
     if !has_tensor(reg, :δ)
         register_tensor!(reg, TensorProperties(
             name=:δ, manifold=manifold, rank=(1, 1),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             is_delta=true,
             options=Dict{Symbol,Any}(:is_delta => true)))
     end
@@ -77,7 +77,7 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
     # Register epsilon tensor ε_{a1...ad} (fully antisymmetric)
     eps_name = Symbol(:ε, name)
     if !has_tensor(reg, eps_name)
-        syms = Any[]
+        syms = SymmetrySpec[]
         for i in 1:d-1
             push!(syms, AntiSymmetric(i, i + 1))
         end

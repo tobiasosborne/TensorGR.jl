@@ -20,7 +20,7 @@ function define_killing!(reg::TensorRegistry, name::Symbol;
     if !has_tensor(reg, name)
         register_tensor!(reg, TensorProperties(
             name=name, manifold=manifold, rank=(1, 0),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             options=Dict{Symbol,Any}(:is_killing => true, :metric => metric)))
     end
 

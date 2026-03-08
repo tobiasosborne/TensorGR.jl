@@ -15,43 +15,44 @@ function define_curvature_tensors!(reg::TensorRegistry, manifold::Symbol, metric
 
     # Kronecker delta
     has_tensor(reg, :δ) || register_tensor!(reg, TensorProperties(
-        name=:δ, manifold=manifold, rank=(1, 1), symmetries=Any[],
+        name=:δ, manifold=manifold, rank=(1, 1), symmetries=SymmetrySpec[],
+        is_delta=true,
         options=Dict{Symbol,Any}(:is_delta => true)))
 
     # Riemann tensor R_{abcd}
     register_tensor!(reg, TensorProperties(
         name=:Riem, manifold=manifold, rank=(0, 4),
-        symmetries=Any[RiemannSymmetry()],
+        symmetries=SymmetrySpec[RiemannSymmetry()],
         options=Dict{Symbol,Any}()))
 
     # Ricci tensor R_{ab} = R^c_{acb}
     register_tensor!(reg, TensorProperties(
         name=:Ric, manifold=manifold, rank=(0, 2),
-        symmetries=Any[Symmetric(1, 2)],
+        symmetries=SymmetrySpec[Symmetric(1, 2)],
         options=Dict{Symbol,Any}()))
 
     # Ricci scalar R = g^{ab} R_{ab}
     register_tensor!(reg, TensorProperties(
         name=:RicScalar, manifold=manifold, rank=(0, 0),
-        symmetries=Any[],
+        symmetries=SymmetrySpec[],
         options=Dict{Symbol,Any}()))
 
     # Einstein tensor G_{ab} = R_{ab} - (1/2) g_{ab} R
     register_tensor!(reg, TensorProperties(
         name=:Ein, manifold=manifold, rank=(0, 2),
-        symmetries=Any[Symmetric(1, 2)],
+        symmetries=SymmetrySpec[Symmetric(1, 2)],
         options=Dict{Symbol,Any}()))
 
     # Weyl tensor C_{abcd}
     register_tensor!(reg, TensorProperties(
         name=:Weyl, manifold=manifold, rank=(0, 4),
-        symmetries=Any[RiemannSymmetry()],
+        symmetries=SymmetrySpec[RiemannSymmetry()],
         options=Dict{Symbol,Any}(:traceless => true)))
 
     # Schouten tensor S_{ab}
     register_tensor!(reg, TensorProperties(
         name=:Sch, manifold=manifold, rank=(0, 2),
-        symmetries=Any[Symmetric(1, 2)],
+        symmetries=SymmetrySpec[Symmetric(1, 2)],
         options=Dict{Symbol,Any}()))
 
     # Register standard LaTeX aliases for the tex"..." parser

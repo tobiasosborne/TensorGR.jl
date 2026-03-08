@@ -77,7 +77,7 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
     if !has_tensor(reg, normal_name)
         register_tensor!(reg, TensorProperties(
             name=normal_name, manifold=ambient, rank=(0, 1),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             options=Dict{Symbol,Any}(:is_normal => true, :signature => signature)))
     end
 
@@ -85,7 +85,7 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
     if !has_tensor(reg, induced_name)
         register_tensor!(reg, TensorProperties(
             name=induced_name, manifold=ambient, rank=(0, 2),
-            symmetries=Any[Symmetric(1, 2)],
+            symmetries=SymmetrySpec[Symmetric(1, 2)],
             options=Dict{Symbol,Any}(:is_induced_metric => true)))
     end
 
@@ -93,7 +93,7 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
     if !has_tensor(reg, extrinsic_name)
         register_tensor!(reg, TensorProperties(
             name=extrinsic_name, manifold=ambient, rank=(0, 2),
-            symmetries=Any[Symmetric(1, 2)],
+            symmetries=SymmetrySpec[Symmetric(1, 2)],
             options=Dict{Symbol,Any}(:is_extrinsic => true)))
     end
 
@@ -101,7 +101,7 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
     if !has_tensor(reg, projector_name)
         register_tensor!(reg, TensorProperties(
             name=projector_name, manifold=ambient, rank=(1, 1),
-            symmetries=Any[],
+            symmetries=SymmetrySpec[],
             options=Dict{Symbol,Any}(:is_projector => true)))
     end
 

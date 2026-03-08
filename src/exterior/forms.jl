@@ -15,7 +15,7 @@ function define_form!(reg::TensorRegistry, name::Symbol;
     degree >= 0 || error("Form degree must be non-negative")
 
     # Build antisymmetry generators for all pairs
-    syms = Any[]
+    syms = SymmetrySpec[]
     for i in 1:degree-1
         push!(syms, AntiSymmetric(i, i+1))
     end

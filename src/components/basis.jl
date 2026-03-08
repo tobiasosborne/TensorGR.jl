@@ -31,7 +31,7 @@ function define_chart!(reg::TensorRegistry, name::Symbol;
     # Store in registry tensors with a marker
     register_tensor!(reg, TensorProperties(
         name=name, manifold=manifold, rank=(0, 0),
-        symmetries=Any[],
+        symmetries=SymmetrySpec[],
         options=Dict{Symbol,Any}(:is_chart => true, :chart_props => chart)))
 
     chart
@@ -70,7 +70,7 @@ function define_basis!(reg::TensorRegistry, name::Symbol;
     bp = BasisProperties(name, manifold, mp.dim, basis_type)
     register_tensor!(reg, TensorProperties(
         name=name, manifold=manifold, rank=(0, 0),
-        symmetries=Any[],
+        symmetries=SymmetrySpec[],
         options=Dict{Symbol,Any}(:is_basis => true, :basis_props => bp)))
     bp
 end

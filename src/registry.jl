@@ -32,7 +32,7 @@ mutable struct TensorProperties
     name::Symbol
     manifold::Symbol
     rank::Tuple{Int,Int}
-    symmetries::Vector{Any}
+    symmetries::Vector{SymmetrySpec}
     dependencies::Vector{Symbol}
     weight::Int
     # Hot-path boolean fields (avoid Dict lookup in contraction inner loop)
@@ -47,7 +47,7 @@ mutable struct TensorProperties
 end
 
 function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int},
-                           symmetries::Vector{Any}=Any[],
+                           symmetries=SymmetrySpec[],
                            dependencies::Vector{Symbol}=Symbol[],
                            weight::Int=0,
                            is_metric::Bool=false,
@@ -62,7 +62,10 @@ function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int}
     _is_covd = get(options, :is_covd, false)
     _is_christoffel = get(options, :is_christoffel, false)
     _vanishing = get(options, :vanishing, false)
-    TensorProperties(name, manifold, rank, symmetries, dependencies, weight,
+    # Convert Any[] to SymmetrySpec[] for backward compatibility
+    typed_syms = symmetries isa Vector{SymmetrySpec} ? symmetries :
+                 SymmetrySpec[s for s in symmetries]
+    TensorProperties(name, manifold, rank, typed_syms, dependencies, weight,
                      _is_metric, _is_delta, _frozen, _flat, _is_covd, _is_christoffel,
                      _vanishing, options)
 end
