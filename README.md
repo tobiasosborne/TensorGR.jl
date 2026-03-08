@@ -14,11 +14,19 @@ TensorGR.jl provides a complete symbolic tensor calculus system for general rela
 | **Canonicalization** | Slot symmetries via xperm.c (Butler-Portugal), Riemann symmetry, fully (anti)symmetric tensors |
 | **Index Contraction** | Metric contraction engine, Kronecker delta elimination, automatic raising/lowering |
 | **Covariant Derivatives** | `define_covd!`, Christoffel expansion, derivative commutation with Riemann curvature terms |
-| **Curvature Algebra** | Riemann/Weyl decomposition, Schouten, trace-free Ricci, Einstein, `to_riemann`/`to_ricci` conversions |
-| **Perturbation Theory** | Arbitrary-order metric perturbation (xPert-style), Leibniz partition recursion, gauge transformations |
-| **Component Calculations** | `CTensor` arrays, Christoffel/Riemann/Ricci/Einstein/Weyl/Kretschmann from metric components |
-| **Exterior Calculus** | Differential forms, wedge product, exterior derivative, Hodge dual, Cartan structure equations |
+| **Curvature Algebra** | Riemann/Weyl decomposition, Schouten, trace-free Ricci, Einstein, Cotton tensor, `to_riemann`/`to_ricci` conversions |
+| **Perturbation Theory** | Arbitrary-order metric perturbation (xPert-style), Leibniz partition recursion, gauge transformations, Isaacson averaging |
+| **Equation Solver** | `solve_tensors` — solve linear tensor equations for unknowns, return `RewriteRule`s |
+| **Component Calculations** | `CTensor` arrays with inverse/det/trace, Christoffel/Riemann/Ricci/Einstein/Weyl/Kretschmann from metric components |
+| **Exterior Calculus** | Differential forms, wedge product, exterior derivative, Hodge dual, codifferential, Cartan structure equations |
+| **3+1 Foliation** | `define_foliation!`, spacetime splitting, SVT decomposition, constraint engine, sector collection |
+| **Quadratic Action** | `QuadraticForm`, spin projectors (Barnes-Rivers P2/P1/P0s/P0w), propagator analysis |
+| **Topological Invariants** | Pontryagin density, Euler density, Chern-Simons action |
+| **Hypersurface/ADM** | `define_hypersurface!`, induced metric, extrinsic curvature, projector |
 | **Vector Bundles** | `define_vbundle!`, per-index bundle tracking, cross-bundle contraction protection |
+| **Worldline/PN** | `Worldline` struct, PN order tracking, `truncate_pn` |
+| **CAS Integration** | Symbolics.jl and SymEngine.jl extensions for scalar simplification |
+| **Parallel Simplify** | `simplify(expr; parallel=true)` for TSum-level threading |
 | **Rewrite Rules** | Pattern-matching rule engine, Bianchi identities, background field equations |
 | **Display** | LaTeX and Unicode output |
 | **Macros** | `@tensor`, `@manifold`, `@define_tensor`, `@covd` |
@@ -52,7 +60,7 @@ end
 
 ## Examples
 
-Seven runnable example scripts are provided in [`examples/`](examples/):
+Eleven runnable example scripts are provided in [`examples/`](examples/):
 
 | Script | Description |
 |--------|-------------|
@@ -63,6 +71,10 @@ Seven runnable example scripts are provided in [`examples/`](examples/):
 | [`05_schwarzschild.jl`](examples/05_schwarzschild.jl) | Schwarzschild metric, Christoffel symbols, Kretschmann scalar |
 | [`06_exterior_calculus.jl`](examples/06_exterior_calculus.jl) | Forms, wedge product, Hodge dual, Cartan formula |
 | [`07_gauge_theory.jl`](examples/07_gauge_theory.jl) | SU(2) vector bundle, mixed indices, Yang-Mills structure |
+| [`08_postquantum_gravity.jl`](examples/08_postquantum_gravity.jl) | Post-quantum gravity action analysis |
+| [`09_compare_with_reference.jl`](examples/09_compare_with_reference.jl) | Comparison with reference computations |
+| [`10_onsager_machlup_R2_RicciSq.jl`](examples/10_onsager_machlup_R2_RicciSq.jl) | Onsager-Machlup functional with R^2 and Ricci-squared |
+| [`11_6deriv_gravity_dS.jl`](examples/11_6deriv_gravity_dS.jl) | 6-derivative gravity on de Sitter (parallel simplify) |
 
 Run any example:
 
@@ -156,7 +168,7 @@ julia --project=docs docs/make.jl
 julia --project -e 'using Pkg; Pkg.test()'
 ```
 
-The test suite has **2,553 tests** covering all modules.
+The test suite has **3,075 tests** across 38 test files, plus 12 benchmarks (152 benchmark tests).
 
 ## Comparison with xAct
 
@@ -168,6 +180,7 @@ TensorGR.jl aims for feature parity with the core xAct packages:
 | xPerm | `xperm/` (compiled C library), `canonicalize` |
 | xCoba | `components/` module, `CTensor`, `metric_compute` |
 | xPert | `perturbation/` module, `expand_perturbation`, `MetricPerturbation` |
+| xTras | `solve_tensors`, `collect_tensors`, `make_ansatz`, `all_contractions` |
 | Invar | `gr/conversions.jl`, `contract_curvature`, `kretschmann_expr` |
 
 ## License

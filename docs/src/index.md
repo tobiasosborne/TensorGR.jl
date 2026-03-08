@@ -12,9 +12,16 @@ A Julia package for abstract tensor algebra and general relativity calculations,
 - **Component calculations**: CTensor arrays, Christoffel/Riemann/Ricci/Einstein/Weyl/Kretschmann from metric components
 - **Exterior calculus**: differential forms, wedge product, Hodge dual, exterior derivative, Cartan structure equations
 - **Vector bundles**: define_vbundle!, per-index bundle tracking, cross-bundle contraction protection (gauge theory)
+- **3+1 Foliation**: define_foliation!, split_spacetime, SVT substitution rules, constraint engine, sector collection
+- **SVT decomposition**: Fourier transforms, transverse/TT projectors, Barnes-Rivers spin projectors (P2/P1/P0s/P0w)
+- **Quadratic action**: extract kinetic matrix from Lagrangian, propagator inversion, symbolic determinant
+- **Worldline / PN**: point-particle EFT, post-Newtonian order counting, truncation
+- **CAS integration**: Symbolics.jl weak dependency for scalar simplification, symbolic quadratic forms, Fourier transforms
+- **Parallel simplification**: `simplify(expr; parallel=true)` for multi-threaded TSum-level parallelism
 - **Rewrite rules**: pattern-matching rule engine with fixed-point iteration
 - **Display**: LaTeX and Unicode output
 - **Ergonomic macros**: `@tensor`, `@manifold`, `@define_tensor`, `@covd`
+- **LaTeX parser**: `parse_tex`, `@tex_str` for reading LaTeX tensor notation
 
 ## Quick Start
 
@@ -73,6 +80,10 @@ Pages = [
     "api/perturbation.md",
     "api/components.md",
     "api/exterior.md",
+    "api/foliation.md",
+    "api/svt.md",
+    "api/action.md",
+    "api/advanced.md",
     "xperm_internals.md",
 ]
 Depth = 2

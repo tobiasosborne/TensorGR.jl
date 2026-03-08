@@ -484,3 +484,507 @@ lhs = Tensor(:Ein, [down(:a), down(:b)])
 rhs = einstein_to_ricci(down(:a), down(:b), :g)
 rule = make_rule(lhs, rhs)
 ```
+
+---
+
+## 8. Equation Solver (`solve_tensors`)
+
+The `solve_tensors` function solves linear tensor equations for unknown tensors. Given an equation of the form `expr = 0`, it decomposes each term, identifies unknowns, and returns rewrite rules for the solution.
+
+### Solving Einstein's Equation for the Stress-Energy Tensor
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_curvature_tensors!(reg, :M4, :g)
+    @define_tensor T on=M4 rank=(0,2) symmetries=[Symmetric(1,2)]
+
+    # Einstein's equation: G_{ab} - 8pi T_{ab} = 0
+    G = Tensor(:Ein, [down(:a), down(:b)])
+    T = Tensor(:T, [down(:a), down(:b)])
+    equation = G - tproduct(8 // 1, TensorExpr[TScalar(:pi), T])
+
+    # Solve for T_{ab}
+    rules = solve_tensors(equation, [:T])
+    # Returns a RewriteRule: T_{ab} => (1/8pi) G_{ab}
+end
+```
+
+### Roundtrip Verification
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_curvature_tensors!(reg, :M4, :g)
+    @define_tensor T on=M4 rank=(0,2) symmetries=[Symmetric(1,2)]
+
+    # Solve G_{ab} = 8pi T_{ab} for T
+    G = Tensor(:Ein, [down(:a), down(:b)])
+    T = Tensor(:T, [down(:a), down(:b)])
+    equation = G - tproduct(8 // 1, TensorExpr[TScalar(:pi), T])
+    rules = solve_tensors(equation, [:T])
+
+    # Register the solution as a rule and verify roundtrip
+    for r in rules
+        register_rule!(reg, r)
+    end
+
+    # Substituting the solution back into the equation should give zero
+    result = simplify(equation)
+    # result == TScalar(0//1)
+end
+```
+
+The solver also supports systems of equations via `solve_tensors(equations::Vector, unknowns)` and optional trace-taking with `take_traces=true`.
+
+---
+
+## 9. Metric Engine
+
+The `define_metric!` function is a one-liner that registers a metric together with its inverse, Kronecker delta, epsilon tensor, Levi-Civita covariant derivative with Christoffel symbols, all curvature tensors, and Bianchi rules.
+
+### Full Metric Setup
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+
+    # Full DefMetric setup with explicit signature
+    define_metric!(reg, :g; manifold=:M4, signature=lorentzian(4))
+
+    # This registers: g_{ab}, delta^a_b, epsilon_{abcd}, curvature tensors,
+    # Levi-Civita CovD (named nabla_g), Christoffel symbols, and Bianchi rules.
+end
+```
+
+### Flat Metrics
+
+Mark a metric as flat to automatically set all curvature tensors and Christoffel symbols to zero:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=eta
+    define_metric!(reg, :eta; manifold=:M4, signature=lorentzian(4))
+
+    set_flat!(reg, :eta)
+    # Now: Riem = 0, Ric = 0, RicScalar = 0, Weyl = 0, Ein = 0, Christoffel = 0
+
+    result = simplify(Tensor(:Riem, [down(:a), down(:b), down(:c), down(:d)]))
+    # result == TScalar(0//1)
+end
+```
+
+### Freezing Metrics
+
+Freeze a metric to prevent it from participating in index contraction:
+
+```julia
+freeze_metric!(reg, :g)
+# g^{ab} g_{bc} is no longer simplified to delta^a_c
+
+unfreeze_metric!(reg, :g)
+# Contraction resumes
+```
+
+### Conformal Metrics
+
+Declare a conformal relationship between two metrics:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+    define_metric!(reg, :g_tilde; manifold=:M4)
+
+    # g_tilde = e^{2f} g
+    set_conformal_to!(reg, :g_tilde, :g, :f)
+end
+```
+
+### Metric Determinant and Volume Element
+
+```julia
+# Symbolic determinant det(g)
+det_g = metric_det_expr(:g)
+
+# Volume element sqrt(-det(g)) for Lorentzian signature
+vol = sqrt_det_expr(:g; neg=true)
+```
+
+### Signatures
+
+```julia
+lorentzian(4)   # MetricSignature(-,+,+,+)
+euclidean(3)    # MetricSignature(+,+,+)
+sign_det(lorentzian(4))  # -1
+```
+
+---
+
+## 10. Topological Invariants
+
+TensorGR provides constructors for topological densities in 4D, useful in modified gravity and anomaly analysis.
+
+### Pontryagin Density
+
+The Pontryagin (Chern-Pontryagin) density is the pseudoscalar `*(R wedge R)`:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+
+    # P = epsilon^{abcd} R_{ab}^{ef} R_{cdef}
+    P = pontryagin_density(:g)
+end
+```
+
+### Euler (Gauss-Bonnet) Density
+
+The Euler density in 4D is `E_4 = R^2 - 4 R_{ab} R^{ab} + R_{abcd} R^{abcd}`:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+
+    E4 = euler_density(:g; dim=4)
+    # Kretschmann - 4 Ricci^2 + RicciScalar^2
+end
+```
+
+### Chern-Simons Gravitational Coupling
+
+Couple an axion/dilaton scalar field to the Pontryagin density:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+    @define_tensor theta on=M4 rank=(0,0)
+
+    # S_CS = theta * epsilon^{abcd} R_{ab}^{ef} R_{cdef}
+    S_CS = chern_simons_action(Tensor(:theta, TIndex[]), :g)
+end
+```
+
+> **See also:** [`examples/08_postquantum_gravity.jl`](https://github.com/tobiasosborne/TensorGR.jl/blob/master/examples/08_postquantum_gravity.jl) for topological terms in higher-derivative gravity actions.
+
+---
+
+## 11. Hypersurface & ADM
+
+Define codimension-1 hypersurface embeddings for boundary terms, junction conditions, and ADM decompositions.
+
+### Defining a Hypersurface
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+
+    # Define a spacelike hypersurface with timelike normal (signature=-1)
+    hs = define_hypersurface!(reg, :Sigma;
+        ambient=:M4, metric=:g,
+        normal_name=:n, extrinsic_name=:K, induced_name=:gamma,
+        signature=-1)
+
+    # This registers:
+    #   - Unit normal n_a (rank-1, with n_a n^a = -1 rule)
+    #   - Induced metric gamma_{ab} (symmetric)
+    #   - Extrinsic curvature K_{ab} (symmetric)
+    #   - Projector P^a_b onto the hypersurface
+end
+```
+
+### Induced Metric
+
+The induced metric on the hypersurface is `gamma_{ab} = g_{ab} - sigma * n_a n_b`:
+
+```julia
+# For timelike normal (signature = -1):
+# gamma_{ab} = g_{ab} + n_a n_b
+gamma = induced_metric_expr(down(:a), down(:b), :g, :n; signature=-1)
+```
+
+### Extrinsic Curvature
+
+The extrinsic curvature (second fundamental form) is `K_{ab} = -nabla_a n_b`:
+
+```julia
+K = extrinsic_curvature_expr(down(:a), down(:b), :n, :g)
+# Returns -d_a(n_b); expand with covd_to_christoffel for connection terms
+```
+
+### Projector
+
+The projection tensor onto the hypersurface:
+
+```julia
+# P^a_b = delta^a_b + n^a n_b  (for timelike normal)
+P = projector_expr(up(:a), down(:b), :n; signature=-1)
+```
+
+### Normal Normalization
+
+The `define_hypersurface!` function automatically registers a rule so that `n_a n^a` simplifies to the signature value:
+
+```julia
+with_registry(reg) do
+    # ... after define_hypersurface! ...
+    nn = Tensor(:n, [down(:a)]) * Tensor(:n, [up(:a)])
+    simplify(nn)  # => TScalar(-1//1) for timelike normal
+end
+```
+
+---
+
+## 12. Perturbation Theory (Advanced)
+
+Building on Section 4, TensorGR provides specialized background geometries, Isaacson averaging for gravitational wave stress-energy, and variational derivatives.
+
+### Maximally Symmetric Backgrounds
+
+For de Sitter, anti-de Sitter, or Minkowski backgrounds, register curvature rules in terms of a cosmological constant:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+
+    # Register: R_{abcd} = (2Lambda/(d-1))(g_{ac}g_{bd} - g_{ad}g_{bc})
+    #           R_{ab} = Lambda * g_{ab}
+    #           R = d * Lambda
+    maximally_symmetric_background!(reg, :M4; metric=:g, cosmological_constant=:Lambda)
+
+    # Now curvature simplifies using these rules
+    Ric = Tensor(:Ric, [down(:a), down(:b)])
+    result = simplify(Ric)
+    # result = Lambda * g_{ab}
+end
+```
+
+### Vacuum Backgrounds
+
+For Ricci-flat backgrounds (Schwarzschild, Kerr), set only Ricci to zero while keeping Riemann nonzero:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+
+    vacuum_background!(reg, :M4; metric=:g)
+    # Now: Ric_{ab} = 0, RicScalar = 0
+    # But: Riem_{abcd} is NOT set to zero
+end
+```
+
+### Isaacson Averaging
+
+Compute the effective stress-energy tensor of gravitational waves via short-wavelength averaging. The `isaacson_average` function keeps only terms bilinear in the perturbation and discards linear and higher-order terms:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+    mp = define_metric_perturbation!(reg, :g, :h)
+
+    # Expand Einstein tensor to second order
+    delta2_G = expand_perturbation(
+        Tensor(:Ein, [down(:a), down(:b)]), mp, 2)
+
+    # Isaacson average: keep only h*h terms (bilinear)
+    T_eff = isaacson_average(delta2_G, :h)
+    # Terms linear in h are discarded (average to zero)
+    # Terms with 0 or >2 factors of h are also discarded
+end
+```
+
+### Variational Derivatives
+
+Compute the Euler-Lagrange equations by varying a Lagrangian with respect to a field:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    @define_tensor phi on=M4 rank=(0,0)
+
+    # Scalar field Lagrangian: L = (1/2) g^{ab} d_a(phi) d_b(phi)
+    phi_field = Tensor(:phi, TIndex[])
+    L = (1 // 2) * grad_squared(phi_field, :g)
+
+    # delta L / delta phi = -box(phi)
+    eom = variational_derivative(L, :phi)
+end
+```
+
+For metric variations, use `metric_variation` which implements the identities `delta(g^{ab})/delta(g^{cd})` and `delta(g_{ab})/delta(g^{cd})` via the Leibniz rule:
+
+```julia
+# Vary an expression with respect to g^{cd}
+delta_expr = metric_variation(expr, :g, down(:c), down(:d))
+```
+
+> **See also:** [`examples/11_6deriv_gravity_dS.jl`](https://github.com/tobiasosborne/TensorGR.jl/blob/master/examples/11_6deriv_gravity_dS.jl) for perturbation theory on a de Sitter background.
+
+---
+
+## 13. Quadratic Action & Spin Projectors
+
+For analyzing the particle content of gravitational theories, TensorGR provides quadratic form analysis and Barnes-Rivers spin-projection operators.
+
+### Quadratic Forms
+
+A quadratic Lagrangian `L = Phi_i M_{ij}(k) Phi_j` defines a kinetic matrix whose inverse is the propagator:
+
+```julia
+# Build a quadratic form from field pairs
+fields = [:phi, :psi]
+entries = Dict(
+    (:phi, :phi) => :(k^2),
+    (:phi, :psi) => 0,
+    (:psi, :psi) => :(k^2 - m^2)
+)
+qf = quadratic_form(entries, fields)
+
+# Compute the propagator (matrix inverse)
+prop = propagator(qf)
+
+# Compute the determinant
+det = determinant(qf)
+```
+
+### Barnes-Rivers Spin Projectors
+
+In momentum space, symmetric rank-2 fields decompose into spin sectors using transverse and longitudinal projectors:
+
+```julia
+mu, nu, rho, sigma = down(:mu), down(:nu), down(:rho), down(:sigma)
+
+# Transverse projector: theta_{mu nu} = eta_{mu nu} - k_mu k_nu / k^2
+theta = theta_projector(mu, nu; metric=:eta, k_name=:k, k_sq=:k2)
+
+# Longitudinal projector: omega_{mu nu} = k_mu k_nu / k^2
+omega = omega_projector(mu, nu; k_name=:k, k_sq=:k2)
+```
+
+### Spin-2, Spin-1, and Spin-0 Projectors
+
+The six Barnes-Rivers operators decompose a symmetric tensor into irreducible spin sectors:
+
+```julia
+# Spin-2 (transverse-traceless graviton)
+P2 = spin2_projector(mu, nu, rho, sigma; dim=4, metric=:eta, k_name=:k, k_sq=:k2)
+
+# Spin-1 (vector)
+P1 = spin1_projector(mu, nu, rho, sigma; metric=:eta, k_name=:k, k_sq=:k2)
+
+# Spin-0 scalar (transverse trace)
+P0s = spin0s_projector(mu, nu, rho, sigma; dim=4, metric=:eta, k_name=:k, k_sq=:k2)
+
+# Spin-0 w (longitudinal)
+P0w = spin0w_projector(mu, nu, rho, sigma; k_name=:k, k_sq=:k2)
+
+# Transfer operators between spin-0 sectors
+Tsw = transfer_sw(mu, nu, rho, sigma; dim=4, metric=:eta, k_name=:k, k_sq=:k2)
+Tws = transfer_ws(mu, nu, rho, sigma; dim=4, metric=:eta, k_name=:k, k_sq=:k2)
+```
+
+These projectors satisfy the completeness relation `P2 + P1 + P0s + P0w = I` (symmetrized identity on rank-2 symmetric tensors) and are idempotent: `P_i * P_j = delta_{ij} P_i`.
+
+> **See also:** [`examples/08_postquantum_gravity.jl`](https://github.com/tobiasosborne/TensorGR.jl/blob/master/examples/08_postquantum_gravity.jl) for spin projectors applied to higher-derivative gravity propagators.
+
+---
+
+## 14. 3+1 Foliation & SVT Decomposition
+
+TensorGR supports the 3+1 decomposition of spacetime tensors and their scalar-vector-tensor (SVT) decomposition, widely used in cosmological perturbation theory.
+
+### Defining a Foliation
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+
+    # Define a standard 3+1 foliation: temporal=0, spatial=[1,2,3]
+    fol = define_foliation!(reg, :flat31;
+        manifold=:M4, temporal=0, spatial=[1, 2, 3])
+end
+```
+
+### Splitting Spacetime Indices
+
+Replace an abstract spacetime index with a sum over temporal and spatial components:
+
+```julia
+# Split a single index
+expr = Tensor(:V, [up(:a)])
+split_expr = split_spacetime(expr, :a, fol)
+# V^0 + V^1 + V^2 + V^3
+
+# Split all free indices in an expression
+full_split = split_all_spacetime(expr, fol)
+```
+
+### SVT Decomposition of Metric Perturbations
+
+The standard SVT decomposition of a symmetric rank-2 perturbation `h_{ab}` is:
+- `h_{00} = 2 Phi` (scalar)
+- `h_{0i} = d_i B + S_i` (scalar + transverse vector)
+- `h_{ij} = 2 psi delta_{ij} + 2 d_i d_j E + d_i F_j + d_j F_i + hTT_{ij}` (scalar + vector + TT tensor)
+
+In Bardeen gauge (`B = E = F = 0`), this simplifies to:
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+    fol = define_foliation!(reg, :flat31; manifold=:M4, temporal=0, spatial=[1,2,3])
+
+    # SVT fields with default names: phi, B, psi, E, S, F, hTT
+    fields = SVTFields()  # or SVTFields(; phi=:Phi, psi=:Psi, ...)
+end
+```
+
+### End-to-End Pipeline
+
+The `foliate_and_decompose` function chains all steps (split, substitute, constrain, collect):
+
+```julia
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_metric!(reg, :g; manifold=:M4)
+    fol = define_foliation!(reg, :flat31; manifold=:M4, temporal=0, spatial=[1,2,3])
+
+    # Some expression involving h_{ab}
+    mp = define_metric_perturbation!(reg, :g, :h)
+    expr = expand_perturbation(Tensor(:Ein, [down(:a), down(:b)]), mp, 1)
+
+    # Decompose into SVT sectors
+    sectors = foliate_and_decompose(expr, :h; foliation=fol, gauge=:bardeen)
+    # Returns Dict{Symbol, TensorExpr}:
+    #   :scalar      => terms with only Phi, psi
+    #   :vector      => terms with only S
+    #   :tensor      => terms with only hTT
+    #   :mixed       => cross-sector terms (should vanish)
+    #   :pure_scalar => terms with no SVT fields
+end
+```
+
+### Component Classification
+
+Inspect how indices were classified after splitting:
+
+```julia
+# Check if an index is temporal or spatial
+is_temporal_component(idx, fol)
+is_spatial_component(idx, fol)
+
+# Get the component pattern for a tensor
+t = Tensor(:h, [down(:_0), down(:_1)])
+pattern = component_pattern(t, fol)
+# [:temporal, :spatial]
+```
+
+> **See also:** [`examples/11_6deriv_gravity_dS.jl`](https://github.com/tobiasosborne/TensorGR.jl/blob/master/examples/11_6deriv_gravity_dS.jl) for a full worked example with perturbation theory and cosmological backgrounds.
