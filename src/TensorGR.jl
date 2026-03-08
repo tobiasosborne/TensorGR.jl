@@ -92,6 +92,7 @@ include("components/ctensor.jl")
 include("components/metric_compute.jl")
 include("components/values.jl")
 include("components/to_basis.jl")
+include("components/symbolic_metric.jl")
 
 # Layer 5.5: Worldline / PN
 include("worldline/worldline.jl")
@@ -244,6 +245,11 @@ export metric_einstein, metric_weyl, metric_kretschmann
 export ComponentStore, set_component!, get_component, independent_components
 export BasisProperties, define_basis!, get_basis, basis_change
 export to_basis, component_array, to_ctensor
+
+# Exports: Symbolic components
+export SymbolicMetric, symbolic_diagonal_metric, symbolic_metric, sym_deriv
+export symbolic_christoffel, symbolic_riemann, symbolic_ricci, symbolic_ricci_scalar
+export symbolic_einstein, symbolic_kretschmann, symbolic_curvature_from_metric
 
 # Exports: Macros
 export @tensor

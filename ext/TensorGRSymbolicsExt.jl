@@ -207,4 +207,134 @@ function _fourier_symbolic(d::TDeriv, omega::Symbolics.Num, k_vars::Vector{Symbo
     TProduct(1 // 1, TensorExpr[k, inner])
 end
 
+# ─── Symbolic Components: metric → curvature pipeline ─────────────
+
+function TensorGR.sym_deriv(expr, coord)
+    D = Symbolics.Differential(coord)
+    Symbolics.expand_derivatives(D(expr))
+end
+
+function TensorGR.symbolic_diagonal_metric(coords::Vector, diag::Vector)
+    dim = length(coords)
+    @assert length(diag) == dim "diagonal entries must match coordinate count"
+    coord_names = [Symbol(c) for c in coords]
+    g = Matrix{Any}(undef, dim, dim)
+    ginv = Matrix{Any}(undef, dim, dim)
+    for i in 1:dim, j in 1:dim
+        if i == j
+            g[i, i] = diag[i]
+            ginv[i, i] = Symbolics.simplify(1 / diag[i])
+        else
+            g[i, j] = 0
+            ginv[i, j] = 0
+        end
+    end
+    SymbolicMetric(coords, coord_names, g, ginv, dim)
+end
+
+function TensorGR.symbolic_metric(coords::Vector, g::Matrix)
+    dim = length(coords)
+    @assert size(g) == (dim, dim) "metric matrix must be dim×dim"
+    coord_names = [Symbol(c) for c in coords]
+    ginv = Matrix{Any}(undef, dim, dim)
+    ginv_raw = Symbolics.simplify.(inv(Symbolics.Num.(g)))
+    for i in 1:dim, j in 1:dim
+        ginv[i, j] = ginv_raw[i, j]
+    end
+    g_any = Matrix{Any}(undef, dim, dim)
+    for i in 1:dim, j in 1:dim
+        g_any[i, j] = g[i, j]
+    end
+    SymbolicMetric(coords, coord_names, g_any, ginv, dim)
+end
+
+function TensorGR.symbolic_christoffel(sm::SymbolicMetric)
+    dim = sm.dim
+    # Pre-compute metric derivatives: dg[i,j,k] = ∂_k g_{ij}
+    dg = Array{Any}(undef, dim, dim, dim)
+    for i in 1:dim, j in 1:dim, k in 1:dim
+        dg[i, j, k] = Symbolics.simplify(TensorGR.sym_deriv(sm.g[i, j], sm.coords[k]))
+    end
+    # Γ^a_{bc} = (1/2) g^{ad} (∂_b g_{cd} + ∂_c g_{bd} - ∂_d g_{bc})
+    Gamma = Array{Any}(undef, dim, dim, dim)
+    for a in 1:dim, b in 1:dim, c in 1:dim
+        s = 0
+        for d in 1:dim
+            s += sm.ginv[a, d] * (dg[c, d, b] + dg[b, d, c] - dg[b, c, d])
+        end
+        Gamma[a, b, c] = Symbolics.simplify(s / 2)
+    end
+    Gamma
+end
+
+function TensorGR.symbolic_riemann(sm::SymbolicMetric, Gamma)
+    dim = sm.dim
+    # Pre-compute Christoffel derivatives: dGamma[a,b,c,k] = ∂_k Γ^a_{bc}
+    dGamma = Array{Any}(undef, dim, dim, dim, dim)
+    for a in 1:dim, b in 1:dim, c in 1:dim, k in 1:dim
+        dGamma[a, b, c, k] = TensorGR.sym_deriv(Gamma[a, b, c], sm.coords[k])
+    end
+    # R^a_{bcd} = ∂_c Γ^a_{db} - ∂_d Γ^a_{cb} + Γ^a_{ce} Γ^e_{db} - Γ^a_{de} Γ^e_{cb}
+    Riem = Array{Any}(undef, dim, dim, dim, dim)
+    for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
+        t1 = dGamma[a, d, b, c]
+        t2 = dGamma[a, c, b, d]
+        t3 = sum(Gamma[a, c, e] * Gamma[e, d, b] for e in 1:dim)
+        t4 = sum(Gamma[a, d, e] * Gamma[e, c, b] for e in 1:dim)
+        Riem[a, b, c, d] = Symbolics.simplify(t1 - t2 + t3 - t4)
+    end
+    Riem
+end
+
+function TensorGR.symbolic_ricci(Riem, dim::Int)
+    Ric = Matrix{Any}(undef, dim, dim)
+    for b in 1:dim, d in 1:dim
+        Ric[b, d] = Symbolics.simplify(sum(Riem[a, b, a, d] for a in 1:dim))
+    end
+    Ric
+end
+
+function TensorGR.symbolic_ricci_scalar(Ric, ginv, dim::Int)
+    Symbolics.simplify(sum(ginv[a, b] * Ric[a, b] for a in 1:dim, b in 1:dim))
+end
+
+function TensorGR.symbolic_einstein(Ric, R, g, dim::Int)
+    G = Matrix{Any}(undef, dim, dim)
+    for a in 1:dim, b in 1:dim
+        G[a, b] = Symbolics.simplify(Ric[a, b] - g[a, b] * R / 2)
+    end
+    G
+end
+
+function TensorGR.symbolic_kretschmann(Riem, g, ginv, dim::Int)
+    # K = R_{abcd} R^{abcd}
+    # First lower first index: R_{abcd} = g_{ae} R^e_{bcd}
+    Riem_down = Array{Any}(undef, dim, dim, dim, dim)
+    for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
+        Riem_down[a, b, c, d] = Symbolics.simplify(
+            sum(g[a, e] * Riem[e, b, c, d] for e in 1:dim))
+    end
+    # Raise all indices via ginv and contract with R_{abcd}
+    K = 0
+    for a in 1:dim, b in 1:dim, c in 1:dim, d in 1:dim
+        R_up = 0
+        for e in 1:dim, f in 1:dim, g_idx in 1:dim, h in 1:dim
+            R_up += ginv[a, e] * ginv[b, f] * ginv[c, g_idx] * ginv[d, h] *
+                    Riem_down[e, f, g_idx, h]
+        end
+        K += R_up * Riem_down[a, b, c, d]
+    end
+    Symbolics.simplify(K)
+end
+
+function TensorGR.symbolic_curvature_from_metric(sm::SymbolicMetric)
+    Gamma = TensorGR.symbolic_christoffel(sm)
+    Riem = TensorGR.symbolic_riemann(sm, Gamma)
+    Ric = TensorGR.symbolic_ricci(Riem, sm.dim)
+    R = TensorGR.symbolic_ricci_scalar(Ric, sm.ginv, sm.dim)
+    G = TensorGR.symbolic_einstein(Ric, R, sm.g, sm.dim)
+    K = TensorGR.symbolic_kretschmann(Riem, sm.g, sm.ginv, sm.dim)
+    (; Gamma=Gamma, Riem=Riem, Ric=Ric, R=R, G=G, K=K)
+end
+
 end # module

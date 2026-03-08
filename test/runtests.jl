@@ -56,6 +56,8 @@ using TensorGR
     include("test_cas_integration.jl")
     # Tensor equation solver
     include("test_solve.jl")
+    # Symbolic components (Symbolics.jl)
+    include("test_symbolic_components.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
 end
