@@ -185,7 +185,19 @@ end
 
 function _apply_lorentzian_sign(t::Tensor, fol::FoliationProperties,
                                 signature::Symbol)
-    # NOTE: Stub — should count temporal/spatial raised indices and apply
-    # metric sign. Not yet implemented; returns tensor unchanged.
-    t
+    # Count temporal/spatial raised (Up) component indices.
+    # In mostly_plus (-+++): each temporal Up contributes a factor of -1
+    # In mostly_minus (+---): each spatial Up contributes a factor of -1
+    sign_flips = 0
+    for idx in t.indices
+        _is_component_index(idx) || continue
+        idx.position == Up || continue
+        if signature == :mostly_plus
+            is_temporal_component(idx, fol) && (sign_flips += 1)
+        else  # mostly_minus
+            is_spatial_component(idx, fol) && (sign_flips += 1)
+        end
+    end
+    sign_flips == 0 && return t
+    iseven(sign_flips) ? t : tproduct(-1 // 1, TensorExpr[t])
 end

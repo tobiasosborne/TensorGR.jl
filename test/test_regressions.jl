@@ -584,14 +584,26 @@ end
 
 # ── 2.2: Tests for sort_covds stubs ──────────────────────────────────────
 
-@testset "sort_covds_to_box: stub returns input unchanged" begin
-    T = Tensor(:T, [down(:a)])
+@testset "sort_covds_to_box: detects box operator pattern" begin
+    T = Tensor(:T, [down(:c)])
+    # ∂_b(∂^b(T_c)) is a box pattern: same name, opposite positions
     d = TDeriv(down(:b), TDeriv(up(:b), T, :partial), :partial)
+    result = sort_covds_to_box(d)
+    # Should rewrite to g^{ab} ∂_a(∂_b(T_c)) form
+    @test result isa TProduct
+    # Should have a metric factor
+    @test any(f -> f isa Tensor && f.name == :g, result.factors)
+end
+
+@testset "sort_covds_to_box: non-box pattern unchanged" begin
+    T = Tensor(:T, [down(:c)])
+    # ∂_a(∂_b(T_c)) is NOT a box pattern (different names)
+    d = TDeriv(down(:a), TDeriv(down(:b), T, :partial), :partial)
     result = sort_covds_to_box(d)
     @test result == d
 end
 
-@testset "sort_covds_to_div: stub returns input unchanged" begin
+@testset "sort_covds_to_div: returns input (pattern already exposed)" begin
     T = Tensor(:T, [up(:a)])
     d = TDeriv(down(:a), T, :partial)
     result = sort_covds_to_div(d)

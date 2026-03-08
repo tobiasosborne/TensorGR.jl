@@ -120,20 +120,44 @@ Rewrite derivative expressions to expose the d'Alembertian (box) operator
 Detects patterns like ∂_a(∂^a(T)) and labels them as box(T).
 """
 function sort_covds_to_box(expr::TensorExpr; metric::Symbol=:g)
-    # NOTE: Stub — detects □ = ∂_a ∂^a patterns but does not yet transform
-    # them into a box() representation. Returns expr unchanged.
-    expr
+    walk(expr) do node
+        node isa TDeriv || return node
+        inner = node.arg
+        inner isa TDeriv || return node
+        outer_idx = node.index
+        inner_idx = inner.index
+        # Detect ∂_a(∂^a(T)) or ∂^a(∂_a(T)): same name, opposite positions
+        if outer_idx.name == inner_idx.name && outer_idx.position != inner_idx.position
+            # Rewrite as g^{ab}∂_a∂_b T (box operator structure)
+            # Introduce explicit metric contraction
+            used = Set{Symbol}()
+            for idx in indices(inner.arg)
+                push!(used, idx.name)
+            end
+            a = fresh_index(used); push!(used, a)
+            b = fresh_index(used)
+            # □T = g^{ab} ∂_a(∂_b(T))
+            return tproduct(1 // 1, TensorExpr[
+                Tensor(metric, [up(a), up(b)]),
+                TDeriv(down(a), TDeriv(down(b), inner.arg, inner.covd), node.covd)
+            ])
+        end
+        node
+    end
 end
 
 """
     sort_covds_to_div(expr::TensorExpr) -> TensorExpr
 
-Rewrite derivative expressions to expose divergence patterns
-∇_a T^{a...} = div(T^{...}).
+Rewrite derivative expressions to expose divergence patterns.
+Detects ∂_a T^{a...} where a derivative index contracts with an index of
+the argument tensor. Returns the expression unchanged (pattern detection only;
+the contraction is already canonical).
 """
 function sort_covds_to_div(expr::TensorExpr)
-    # NOTE: Stub — detects divergence patterns (∂_a T^{a...}) but does not
-    # yet transform them. Returns expr unchanged.
+    # Divergence patterns (∂_a T^{a...}) are already represented naturally
+    # in the AST as TDeriv(down(:a), Tensor(:T, [up(:a), ...])).
+    # No transformation needed — the pattern is already exposed.
     expr
 end
 

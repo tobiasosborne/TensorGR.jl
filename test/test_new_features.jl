@@ -356,7 +356,9 @@
         T = Tensor(:T, TIndex[])
         expr = TDeriv(down(:a), TDeriv(up(:a), T))
         result = sort_covds_to_box(expr)
-        @test result isa TDeriv
+        # Box pattern detected: ∂_a(∂^a(T)) → g^{cd} ∂_c(∂_d(T))
+        @test result isa TProduct
+        @test any(f -> f isa Tensor && f.name == :g, result.factors)
     end
 
     # ── G9: Validate ──
