@@ -24,7 +24,7 @@ function expand_products(p::TProduct)
 
     # Find a sum factor to distribute over
     sum_idx = findfirst(f -> f isa TSum, expanded)
-    sum_idx === nothing && return TProduct(p.scalar, expanded)
+    sum_idx === nothing && return tproduct(p.scalar, expanded)
 
     s = expanded[sum_idx]::TSum
     others = TensorExpr[expanded[i] for i in eachindex(expanded) if i != sum_idx]
