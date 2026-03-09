@@ -77,6 +77,10 @@ function TensorGR._simplify_scalar_val(ex::Expr)
     end
 end
 
+function TensorGR._simplify_scalar_val(num::Symbolics.Num)
+    Symbolics.simplify(num)
+end
+
 function TensorGR._try_simplify_entry(ex::Expr)
     try
         sym = _expr_to_symbolics(ex)

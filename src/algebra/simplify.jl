@@ -220,6 +220,61 @@ function _collect_terms_parallel(expr::TSum)
     tsum(terms)
 end
 
+# ── Scalar simplification ───────────────────────────────────────────────────
+
+"""
+    _simplify_scalars(expr) -> TensorExpr
+
+Consolidate non-Rational TScalar factors in TProduct terms and simplify via
+CAS hooks. Multiple TScalar values are combined using `_sym_mul` and passed
+through `_simplify_scalar_val` (which dispatches to Symbolics.simplify when
+that extension is loaded).
+"""
+function _simplify_scalars(expr::TProduct)
+    scalar_indices = Int[]
+    for (i, f) in enumerate(expr.factors)
+        if f isa TScalar && !(f.val isa Rational)
+            push!(scalar_indices, i)
+        end
+    end
+    isempty(scalar_indices) && return expr
+
+    vals = [expr.factors[i].val for i in scalar_indices]
+    combined = length(vals) == 1 ? vals[1] : reduce(_sym_mul, vals)
+    simplified = _simplify_scalar_val(combined)
+
+    # Fast path: single scalar, no change
+    if length(scalar_indices) == 1 && simplified === combined
+        return expr
+    end
+
+    # Rebuild factors: replace all non-Rational TScalars with single simplified
+    new_factors = TensorExpr[]
+    first_done = false
+    for (i, f) in enumerate(expr.factors)
+        if i ∈ scalar_indices
+            if !first_done
+                push!(new_factors, TScalar(simplified))
+                first_done = true
+            end
+        else
+            push!(new_factors, f)
+        end
+    end
+    tproduct(expr.scalar, new_factors)
+end
+
+function _simplify_scalars(s::TSum)
+    tsum(TensorExpr[_simplify_scalars(t) for t in s.terms])
+end
+
+function _simplify_scalars(d::TDeriv)
+    TDeriv(d.index, _simplify_scalars(d.arg), d.covd)
+end
+
+_simplify_scalars(t::Tensor) = t
+_simplify_scalars(s::TScalar) = s
+
 # ── Main simplify pipeline ──────────────────────────────────────────────────
 
 """
@@ -279,11 +334,13 @@ function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
         result = _pmap_over_tsum(contract_metrics, result)
         result = _pmap_over_tsum(contract_curvature, result)
         result = _pmap_over_tsum(canonicalize, result)
+        result = _pmap_over_tsum(_simplify_scalars, result)
     else
         result = expand_products(expr)
         result = contract_metrics(result)
         result = contract_curvature(result)
         result = canonicalize(result)
+        result = _simplify_scalars(result)
     end
 
     if covd_name !== nothing

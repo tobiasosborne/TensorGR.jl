@@ -74,8 +74,8 @@ and sums. Returns the scalar form factor (function of k²).
 `spin` is one of: `:spin2`, `:spin1`, `:spin0s`, `:spin0w`.
 """
 function spin_project(K::KineticKernel, spin::Symbol;
-                      dim::Int = 4, metric::Symbol = :η,
-                      k_name::Symbol = :k, k_sq::Symbol = :k²,
+                      dim::Int = 4, metric::Symbol = :g,
+                      k_name::Symbol = :k, k_sq = :k²,
                       registry = current_registry())
     projections = TensorExpr[]
 
@@ -116,7 +116,7 @@ end
 Contract momentum pairs `k_a k^a` → `TScalar(k²)` in product terms.
 Also simplifies `TScalar(1/k²) × TScalar(k²) → TScalar(1)`.
 """
-function contract_momenta(expr::TensorExpr; k_name::Symbol = :k, k_sq::Symbol = :k²)
+function contract_momenta(expr::TensorExpr; k_name::Symbol = :k, k_sq = :k²)
     _contract_momenta(expr, k_name, k_sq)
 end
 
@@ -164,6 +164,7 @@ function _contract_momenta(d::TDeriv, k_name, k_sq)
 end
 
 function _simplify_k_sq_pairs!(factors, k_sq)
+    k_sq isa Symbol || return  # non-Symbol k_sq handled by scalar simplification
     inv_expr = :(1 / $k_sq)
     i = 1
     while i <= length(factors)

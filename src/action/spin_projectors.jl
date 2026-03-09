@@ -22,11 +22,11 @@ Reference: Barnes & Rivers (1963); PSALTer (Barker+ 2024)
 Transverse projector: θ_{μν} = η_{μν} - k_μ k_ν / k²
 """
 function theta_projector(μ::TIndex, ν::TIndex;
-                          metric::Symbol=:η, k_name::Symbol=:k, k_sq::Symbol=:k²)
+                          metric::Symbol=:g, k_name::Symbol=:k, k_sq=:k²)
     η = Tensor(metric, [μ, ν])
     k_μ = Tensor(k_name, [μ])
     k_ν = Tensor(k_name, [ν])
-    η - TProduct(1 // 1, TensorExpr[TScalar(:(1 / $k_sq)), k_μ, k_ν])
+    η - TProduct(1 // 1, TensorExpr[TScalar(_sym_div(1, k_sq)), k_μ, k_ν])
 end
 
 """
@@ -35,10 +35,10 @@ end
 Longitudinal projector: ω_{μν} = k_μ k_ν / k²
 """
 function omega_projector(μ::TIndex, ν::TIndex;
-                          k_name::Symbol=:k, k_sq::Symbol=:k²)
+                          k_name::Symbol=:k, k_sq=:k²)
     k_μ = Tensor(k_name, [μ])
     k_ν = Tensor(k_name, [ν])
-    TProduct(1 // 1, TensorExpr[TScalar(:(1 / $k_sq)), k_μ, k_ν])
+    TProduct(1 // 1, TensorExpr[TScalar(_sym_div(1, k_sq)), k_μ, k_ν])
 end
 
 """
