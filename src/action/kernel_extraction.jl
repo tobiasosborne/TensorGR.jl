@@ -89,7 +89,17 @@ function spin_project(K::KineticKernel, spin::Symbol;
     end
 
     with_registry(registry) do
-        simplify(tsum(projections); registry = registry, maxiter = 40)
+        expr = tsum(projections)
+        # Iterate: simplify exposes momentum pairs, contract_momenta exposes
+        # scalar cancellations, until stable.
+        for _ in 1:5
+            expr = expand_products(expr)
+            expr = contract_momenta(expr; k_name, k_sq)
+            next = simplify(expr; registry = registry, maxiter = 40)
+            next == expr && break
+            expr = next
+        end
+        expr
     end
 end
 

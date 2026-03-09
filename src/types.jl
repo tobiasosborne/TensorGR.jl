@@ -93,7 +93,7 @@ struct TScalar <: TensorExpr
     val::Any
 end
 
-Base.:(==)(a::TScalar, b::TScalar) = a.val == b.val
+Base.:(==)(a::TScalar, b::TScalar) = isequal(a.val, b.val)
 Base.hash(a::TScalar, h::UInt) = hash(a.val, hash(:TScalar, h))
 
 # ── Symmetry types (defined early so TensorProperties can use the union) ──
