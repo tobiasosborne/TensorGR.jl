@@ -7,7 +7,7 @@ Typed AST for symbolic tensor expressions, Butler-Portugal canonicalization (xpe
 covariant derivative engine, perturbation theory, SVT/foliation decomposition, exterior calculus,
 component computation, and CAS integration via weak dependencies.
 
-- ~12,100 lines src (71 files), ~7,800 lines test (42 files), 3,600+ tests, 12 benchmarks (152 pass)
+- ~12,100 lines src (71 files), ~8,100 lines test (43 files), 4,100+ tests, 12 benchmarks (152 pass)
 - Extensions: ~400 lines (Symbolics.jl + SymEngine.jl weak deps, symbolic component pipeline)
 - Docs: 17 files (Documenter.jl setup + 10 API ref pages + tutorial + xperm internals + CLAUDE.md)
 - CI/CD: GitHub Actions for Julia 1.10/1.11

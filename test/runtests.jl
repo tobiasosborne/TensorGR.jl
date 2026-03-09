@@ -62,6 +62,8 @@ using TensorGR
     include("test_mapping.jl")
     # Product manifolds
     include("test_product_manifold.jl")
+    # Six-derivative gravity spectrum
+    include("test_6deriv_spectrum.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
 end
