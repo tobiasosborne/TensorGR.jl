@@ -7,9 +7,9 @@ Typed AST for symbolic tensor expressions, Butler-Portugal canonicalization (xpe
 covariant derivative engine, perturbation theory, SVT/foliation decomposition, exterior calculus,
 component computation, and CAS integration via weak dependencies.
 
-- ~11,300 lines src (68 files), ~7,100 lines test (39 files), 3,075+ tests, 12 benchmarks (152 pass)
-- Extensions: ~264 lines (Symbolics.jl + SymEngine.jl weak deps)
-- Docs: 13 files (Documenter.jl setup + API ref + tutorial + xperm internals)
+- ~12,000 lines src (69 files), ~7,500 lines test (40 files), 3,534 tests, 12 benchmarks (152 pass)
+- Extensions: ~400 lines (Symbolics.jl + SymEngine.jl weak deps, symbolic component pipeline)
+- Docs: 17 files (Documenter.jl setup + 10 API ref pages + tutorial + xperm internals + CLAUDE.md)
 - CI/CD: GitHub Actions for Julia 1.10/1.11
 
 ## Quick Commands
@@ -108,6 +108,7 @@ src/gr/                                      # GR objects
   lie.jl                                     #   Lie derivatives
   killing.jl                                 #   Killing vectors
   hypersurface.jl                            #   Hypersurface embedding
+  mapping.jl                                 #   Smooth maps, pullback, pushforward
   topological.jl                             #   Pontryagin, Euler, Chern-Simons
   conversions.jl                             #   Curvature basis conversions
 src/perturbation/                            # Perturbation theory
@@ -225,10 +226,25 @@ ext/                                         # Weak dependency extensions
 - `QuadraticForm`, `quadratic_form`, `propagator`, `determinant`
 - `spin2_projector`, `spin1_projector`, `spin0s_projector`, `spin0w_projector` -- Barnes-Rivers
 
+### Smooth Maps (Pullback/Pushforward)
+
+- `define_mapping!(reg, :φ; domain=:M, codomain=:N)` -- register map + Jacobian tensor
+- `pullback(T, :φ)` -- contract covariant indices with Jacobian dφ^i_a
+- `pushforward(U, :φ)` -- contract contravariant indices with inverse Jacobian
+- `pullback_metric(:φ, :g)` -- convenience for induced metric
+
+### Symbolic Components (Symbolics.jl extension)
+
+- `symbolic_diagonal_metric(coords, diag)` / `symbolic_metric(coords, g)` -- build SymbolicMetric
+- `symbolic_christoffel`, `symbolic_riemann`, `symbolic_ricci`, `symbolic_ricci_scalar`
+- `symbolic_einstein`, `symbolic_kretschmann`, `symbolic_curvature_from_metric`
+- All require `using Symbolics` (weak dependency, loaded via extension)
+
 ### Rules and Display
 
 - `make_rule(lhs, rhs; use_symmetries=true)` -- auto symmetry variants
-- `apply_rules`, `apply_rules_fixpoint`
+- Pattern indices: `down(:a_)` matches any index; `RewriteRule(Tensor(:T,[down(:a_),down(:b_)]), ...)`
+- `apply_rules`, `apply_rules_fixpoint`, `is_pattern_variable`
 - `set_vanishing!(reg, :T)` -- set tensor to zero
 - `to_latex(expr)`, `to_unicode(expr)`
 
@@ -292,7 +308,7 @@ These are hard-won lessons. Violating them causes subtle bugs or test regression
 
 ## Testing
 
-- 39 test files in `test/` loaded by `test/runtests.jl`
+- 40 test files in `test/` loaded by `test/runtests.jl`
 - 12 benchmarks in `benchmarks/` (run_all.jl, `--tier 1/2/3`)
 - 3 `@test_skip` benchmarks (stretch goals: spherical harmonics, bitensors)
 - Benchmark ground truth: pinned term counts (especially bench_12 for 6-deriv gravity on dS)

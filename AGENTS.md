@@ -1,6 +1,7 @@
 # Agent Instructions
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
+See CLAUDE.md for full architecture and API reference.
 
 ## Quick Reference
 
@@ -11,6 +12,33 @@ bd update <id> --status in_progress  # Claim work
 bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
+
+## Session Handoff (2026-03-09)
+
+### What was done this session
+- **solve_tensors**: Linear tensor equation solver (TGR-9lf closed)
+- **Documentation overhaul**: CLAUDE.md + 10 API docs + 7 tutorial sections (2,200+ lines)
+- **Symbolic components**: SymbolicMetric + Christoffel/Riemann/Ricci pipeline via Symbolics.jl (TGR-j6f closed)
+- **Wald verification**: 7 example scripts verifying GR identities (TGR-6v7 closed)
+- **Schwarzschild + FLRW**: Symbolic verification (31 checks total, TGR-8pk + TGR-3gm closed)
+- **Pattern indices**: `down(:a_)` pattern variables in RewriteRule (TGR-xd0 closed)
+- **Smooth maps**: define_mapping!, pullback, pushforward (TGR-6rp closed)
+- **Course verification**: 8 scripts covering lectures 7-22 (73+ checks)
+
+### Current state
+- **3,534 tests pass**, 152 benchmarks pass
+- 7 issues closed this session, 9 open (run `bd ready`)
+
+### Open issues (run `bd ready` for current list)
+- TGR-byb (P2): BinaryBuilder for xperm.c
+- TGR-erv (P2): Pkg registration
+- TGR-v4v (P3): Product manifolds
+- TGR-1kw (P3): Submanifolds/boundaries
+- TGR-38d (P4): Invar database
+- TGR-dhp (P3): TOV equation solver
+- TGR-61p (P3): Geodesic ODE integration
+- TGR-293h (P4): Symmetry-reduced metric ansatz
+- TGR-6rp: in_progress but closed — may show stale
 
 ## Landing the Plane (Session Completion)
 

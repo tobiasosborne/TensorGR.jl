@@ -27,7 +27,8 @@ TensorGR.jl provides a complete symbolic tensor calculus system for general rela
 | **Worldline/PN** | `Worldline` struct, PN order tracking, `truncate_pn` |
 | **CAS Integration** | Symbolics.jl and SymEngine.jl extensions for scalar simplification |
 | **Parallel Simplify** | `simplify(expr; parallel=true)` for TSum-level threading |
-| **Rewrite Rules** | Pattern-matching rule engine, Bianchi identities, background field equations |
+| **Smooth Maps** | `define_mapping!`, pullback/pushforward via Jacobian tensors, cross-manifold vbundles |
+| **Rewrite Rules** | Pattern-matching rule engine with pattern indices, Bianchi identities, background field equations |
 | **Display** | LaTeX and Unicode output |
 | **Macros** | `@tensor`, `@manifold`, `@define_tensor`, `@covd` |
 
@@ -168,7 +169,7 @@ julia --project=docs docs/make.jl
 julia --project -e 'using Pkg; Pkg.test()'
 ```
 
-The test suite has **3,075 tests** across 38 test files, plus 12 benchmarks (152 benchmark tests).
+The test suite has **3,534 tests** across 40 test files, plus 12 benchmarks (152 benchmark tests).
 
 ## Comparison with xAct
 
