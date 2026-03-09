@@ -7,7 +7,7 @@ Typed AST for symbolic tensor expressions, Butler-Portugal canonicalization (xpe
 covariant derivative engine, perturbation theory, SVT/foliation decomposition, exterior calculus,
 component computation, and CAS integration via weak dependencies.
 
-- ~12,000 lines src (69 files), ~7,500 lines test (40 files), 3,534 tests, 12 benchmarks (152 pass)
+- ~12,100 lines src (71 files), ~7,800 lines test (42 files), 3,600+ tests, 12 benchmarks (152 pass)
 - Extensions: ~400 lines (Symbolics.jl + SymEngine.jl weak deps, symbolic component pipeline)
 - Docs: 17 files (Documenter.jl setup + 10 API ref pages + tutorial + xperm internals + CLAUDE.md)
 - CI/CD: GitHub Actions for Julia 1.10/1.11
@@ -109,6 +109,7 @@ src/gr/                                      # GR objects
   killing.jl                                 #   Killing vectors
   hypersurface.jl                            #   Hypersurface embedding
   mapping.jl                                 #   Smooth maps, pullback, pushforward
+  product_manifold.jl                        #   Product manifolds M₁×M₂, curvature decomposition
   topological.jl                             #   Pontryagin, Euler, Chern-Simons
   conversions.jl                             #   Curvature basis conversions
 src/perturbation/                            # Perturbation theory
@@ -232,6 +233,17 @@ ext/                                         # Weak dependency extensions
 - `pullback(T, :φ)` -- contract covariant indices with Jacobian dφ^i_a
 - `pushforward(U, :φ)` -- contract contravariant indices with inverse Jacobian
 - `pullback_metric(:φ, :g)` -- convenience for induced metric
+
+### Product Manifolds
+
+- `define_product_manifold!(reg, :M; factors=[:M1, :M2])` -- register M = M₁ × M₂
+- `product_metric(:M)` -- block-diagonal metric g = g₁ ⊕ g₂
+- `product_scalar_curvature(:M)` -- R = R₁ + R₂ (additive)
+- `product_ricci(:M, :M1)` -- Ricci in factor sector (mixed = 0)
+- `product_riemann(:M, :M1)` -- Riemann in factor sector (mixed = 0)
+- `product_einstein(:M, :M1)` -- Einstein with cross-scalar: G₁_{ij} - ½R₂g₁_{ij}
+- `product_einstein_equations(:M)` -- Dict of all factor Einstein expressions
+- Factor curvature uses metric-suffixed names: `Riem_g1`, `Ric_g1`, `RicScalar_g1`, etc.
 
 ### Symbolic Components (Symbolics.jl extension)
 

@@ -60,6 +60,8 @@ using TensorGR
     include("test_symbolic_components.jl")
     # Smooth mappings (pullback/pushforward)
     include("test_mapping.jl")
+    # Product manifolds
+    include("test_product_manifold.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
 end

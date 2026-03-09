@@ -49,6 +49,7 @@ include("gr/lie.jl")
 include("gr/killing.jl")
 include("gr/hypersurface.jl")
 include("gr/mapping.jl")
+include("gr/product_manifold.jl")
 
 # Layer 4: Perturbation theory
 include("perturbation/partitions.jl")
@@ -174,6 +175,11 @@ export HypersurfaceProperties, define_hypersurface!
 export extrinsic_curvature_expr, induced_metric_expr, projector_expr
 export MappingProperties, define_mapping!, get_mapping, has_mapping
 export pullback, pushforward, pullback_metric
+export ProductManifoldProperties, define_product_manifold!
+export has_product_manifold, get_product_manifold
+export product_metric, product_scalar_curvature
+export product_ricci, product_riemann, product_einstein
+export product_einstein_equations
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det
