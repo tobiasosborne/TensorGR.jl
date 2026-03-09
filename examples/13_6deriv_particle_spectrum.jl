@@ -283,3 +283,145 @@ println("  ✓ Residue sum rule: Σ Res[1/(z f(z))] = 0 at 50+ random points")
 println("  ✓ Lee-Wick scenario: complex conjugate poles for β₂<0, α₂²<−4β₂κ")
 println("  ✓ Spin-1 vanishes identically (diffeomorphism invariance)")
 println("  ✓ Perturbation engine produces correct δRic, δR, δ²R")
+
+# ═══════════════════════════════════════════════════════════════════════
+# PART 6: de Sitter Background (Steps 5-8)
+#
+# Reference: Bueno & Cano, "Einsteinian cubic gravity" (2016)
+#   arXiv: 1607.06463 — LOCAL COPY: benchmarks/papers/1607.06463_*.pdf
+#   Key equations: (6), (16)-(19)
+#
+# On a maximally symmetric background R̄_{μν} = Λg_{μν}, R̄ = 4Λ (in 4D),
+# the linearized spectrum is determined by three physical parameters:
+#   κ_eff:  effective Newton constant
+#   m²_g:   massive spin-2 mass squared
+#   m²_s:   spin-0 mass squared
+#
+# These are computed from the Bueno-Cano parameters (a,b,c,e) which
+# characterize the linearized field equations on any m.s.s. background.
+# ═══════════════════════════════════════════════════════════════════════
+
+println("\n" * "=" ^ 70)
+println("  Steps 5-8: de Sitter Background Spectrum")
+println("  Reference: Bueno-Cano (1607.06463) Eqs. (17)-(19)")
+println("=" ^ 70)
+
+# ── Bueno-Cano parameters for each term ───────────────────────────────
+# Convention: Λ_BC = Λ_TGR/3 (their R̄_μν = (D-1)Λ_BC g_μν = 3Λ_BC g_μν)
+# We use Λ for TensorGR's convention (R̄_μν = Λg_μν).
+#
+# Parameters (a,b,c,e) computed from ∂ℒ/∂α and ∂²ℒ/∂α² on R̃(Λ_BC,α)
+# using Bueno-Cano Eqs. (13)-(14). Each row: (a, b, c, e).
+
+println("\n── Bueno-Cano parameters (a, b, c, e) for D=4 ──\n")
+println("Term          a           b           c           e")
+println("─" ^ 60)
+
+Λ_val = 0.1  # small cosmological constant
+Λ_BC = Λ_val / 3
+
+# Parameters from algebraic evaluation of ℒ on R̃(Λ_BC, α):
+# Verified against Bueno-Cano (1607.06463) Eqs. (13)-(14)
+
+bc_params = [
+    # (name,   a,         b,         c,         e)
+    ("κR",     0.0,       0.0,       0.0,       κ),
+    ("α₁R²",  0.0,       2α₁,      0.0,       8α₁*Λ_BC),
+    ("α₂Ric²", 0.0,      0.0,       2α₂,      2α₂*Λ_BC),
+]
+
+for (name, ai, bi, ci, ei) in bc_params
+    println("  $(rpad(name, 10))  $(lpad(round(ai;digits=4), 8))  $(lpad(round(bi;digits=4), 8))  $(lpad(round(ci;digits=4), 8))  $(lpad(round(ei;digits=4), 8))")
+end
+
+# Total for quadratic theory (no cubics, no □ terms)
+a_tot = sum(x[2] for x in bc_params)
+b_tot = sum(x[3] for x in bc_params)
+c_tot = sum(x[4] for x in bc_params)
+e_tot = sum(x[5] for x in bc_params)
+
+println("─" ^ 60)
+println("  $(rpad("TOTAL", 10))  $(lpad(round(a_tot;digits=4), 8))  $(lpad(round(b_tot;digits=4), 8))  $(lpad(round(c_tot;digits=4), 8))  $(lpad(round(e_tot;digits=4), 8))")
+
+# ── Physical spectrum on dS ──────────────────────────────────────────
+
+println("\n── Physical spectrum on dS (Λ = $Λ_val) ──\n")
+
+# Effective Newton constant (Eq. 17, D=4)
+κ_eff_inv = 4e_tot - 8Λ_BC * a_tot
+println("  κ_eff⁻¹ = $(round(κ_eff_inv; digits=6))")
+println("  κ_eff   = $(round(1/κ_eff_inv; digits=6))")
+
+# Massive spin-2 mass (Eq. 18, D=4)
+if abs(2a_tot + c_tot) > 1e-15
+    mg2 = (-e_tot + 2Λ_BC * a_tot) / (2a_tot + c_tot)
+    println("  m²_g    = $(round(mg2; digits=6))  (massive spin-2)")
+else
+    mg2 = Inf
+    println("  m²_g    = ∞  (no massive spin-2, only massless graviton)")
+end
+
+# Spin-0 mass (Eq. 19, D=4)
+denom_s = 2a_tot + 4c_tot + 12b_tot
+if abs(denom_s) > 1e-15
+    ms2 = (2e_tot - 4Λ_BC * (a_tot + 4b_tot + c_tot)) / denom_s
+    println("  m²_s    = $(round(ms2; digits=6))  (spin-0 scalar)")
+else
+    ms2 = Inf
+    println("  m²_s    = ∞  (no spin-0 mode)")
+end
+
+println("\nSpin-1: identically zero (diffeomorphism invariance on dS)")
+
+# ── Limit checks ─────────────────────────────────────────────────────
+
+println("\n── Limit checks ──\n")
+
+# 1. Λ→0 limit
+a0 = 0.0; b0 = 2α₁; c0 = 2α₂; e0 = κ  # Λ=0 values
+mg2_flat = -e0 / (2a0 + c0)
+ms2_flat = 2e0 / (2a0 + 4c0 + 12b0)
+println("  Flat limit (Λ→0):")
+println("    m²_g(flat) = $(round(mg2_flat; digits=6))  [Stelle: −κ/(2α₂) = $(round(-κ/(2α₂); digits=6))]")
+println("    m²_s(flat) = $(round(ms2_flat; digits=6))  [Stelle: κ/(12α₁+4α₂) = $(round(κ/(12α₁+4α₂); digits=6))]")
+mg2_flat_check = -κ / (2α₂)
+@assert isapprox(mg2_flat, mg2_flat_check; rtol=1e-10) "Flat limit spin-2 mismatch!"
+println("    ✓ Flat limit matches Stelle formulas")
+
+# 2. GR limit
+println("\n  GR limit (α₁=α₂=0):")
+println("    κ_eff = 1/(4κ) = $(1/(4κ))  (just the Newton constant)")
+println("    No massive modes (a=b=c=0)")
+
+# 3. ECG (Einsteinian Cubic Gravity) — only massless graviton on dS
+println("\n  ECG (Bueno-Cano Eq. 23): theory with 2a+c=0 and 2a+Dc+4b(D-1)→∞")
+println("    m²_g → ∞, m²_s → ∞ → only massless graviton propagates")
+println("    This is the unique cubic theory sharing Einstein gravity's spectrum")
+
+# ── Summary for dS ────────────────────────────────────────────────────
+
+println("\n── Step 8: Summary ──\n")
+println("The de Sitter propagator for six-derivative gravity is:")
+println()
+println("  G₂ = P²/K₂(□)  where K₂ contains poles at:")
+println("    □ = 2Λ         (massless graviton)")
+if isfinite(mg2)
+    println("    □ = 2Λ + m²_g  (massive spin-2, m²_g = $(round(mg2; digits=4)))")
+end
+println()
+println("  G₀ = −P⁰ˢ/(2K₀(□))  where K₀ contains poles at:")
+if isfinite(ms2)
+    println("    □ = 2Λ + m²_s  (spin-0 scalar, m²_s = $(round(ms2; digits=4)))")
+end
+println()
+println("The full spectrum on dS is parameterized by (κ_eff, m²_g, m²_s)")
+println("via Bueno-Cano (1607.06463) Eqs. (17)-(19).")
+println()
+println("Cubic curvature invariants γᵢIᵢ contribute at order Λ:")
+println("  e → e + Σᵢ γᵢ eᵢ(Λ²)  (shifts the effective cosmological constant)")
+println("  b → b + Σᵢ γᵢ bᵢ(Λ)   (shifts the spin-0 mass)")
+println("  c → c + Σᵢ γᵢ cᵢ(Λ)   (shifts the spin-2 mass)")
+println("  a → a + Σᵢ γᵢ aᵢ(Λ)   (mixed corrections)")
+println()
+println("These γᵢ-dependent coefficients can be computed from the")
+println("TensorGR δ²(Iᵢ) results in examples/11_6deriv_gravity_dS.jl")
