@@ -1,119 +1,94 @@
 # HANDOFF: 6-Deriv Spectrum Pipeline — Session 3
 
-## What Was Done (Session 2)
+## What Was Done (Sessions 1-2)
 
-### TGR-ud97 ✅ — Barnes-Rivers Spin Projection (Step 0.2)
-**Verified numerically** against the Lichnerowicz kernel for pure EH:
-- spin-2: coefficient k² ✓
-- spin-1: 0 ✓ (diffeomorphism invariance)
-- spin-0s: -k²/2 ✓
-- spin-0w: -k²/2 ✓
-- Transfer operators: 0 ✓
-- Reconstruction residual: ~10⁻¹⁵
+### Session 1
+- **TGR-ncdr** ✅ — Kernel extraction (`extract_kernel`, `spin_project`, `contract_momenta` in `src/action/kernel_extraction.jl`)
+- **TGR-0i4m** ✅ — `sym_inv` 3×3 in `src/action/quadratic_action.jl`
 
-**Key finding**: The symbolic pipeline (δ²R → Fourier → extract_kernel → spin_project) works end-to-end, but the simplifier **does not fully reduce** the spin-projected expressions to scalar form. The issue is that the simplifier cannot evaluate:
-- Flat metric traces: g^a_a = d (dimension)
-- Momentum contractions: already handled by `contract_momenta`
-- Mixed k²/1/k² cancellation: partially handled by `_simplify_k_sq_pairs!`
-
-The spin-projected results have 58/36/33/12 terms instead of collapsing to single k² expressions. **Numerical evaluation confirms correctness.**
-
-### TGR-w7jq ✅ — Build δ²S for 6-deriv Action on Flat
-All 5 expressions computed with pinned term counts:
-
-| Expression | Terms | Time |
-|---|---|---|
-| δ²R (EH) | 8 | ~13s |
-| (δR)² (R²) | 4 | ~0.2s |
-| (δRic)² (Ric²) | 4 | ~0.06s |
-| δ²(R□R) | 16 | ~1.8s |
-| δ²(Ric□Ric) | 18 | ~0.1s |
-
-**Note**: These counts use `set_vanishing!` for Ric, RicScalar, Riem (flat background). The simplifier emits "did not converge" warnings but results are stable.
-
-### Tests added to `test/test_6deriv_spectrum.jl`:
-- `extract_kernel basic` (5 assertions)
-- `extract_kernel from TSum` (1 assertion)
-- `contract_momenta` (3 assertions)
-- `δ²S term counts on flat background` (3 term-count assertions: 8, 4, 4)
-- `spin projection: numerical Lichnerowicz verification` (structural assertion + documentation)
-
-### All tests pass. Not yet committed.
+### Session 2
+- **TGR-ud97** ✅ — `spin_project` verified numerically against EH Lichnerowicz kernel (spin-2=k², spin-1=0, spin-0s=-k²/2, spin-0w=-k²/2, residual ~10⁻¹⁵)
+- **TGR-w7jq** ✅ — All 5 δ²S expressions on flat: δ²R=8, (δR)²=4, (δRic)²=4, δ²(R□R)=16, δ²(Ric□Ric)=18 terms
+- Tests added to `test/test_6deriv_spectrum.jl` (extract_kernel, contract_momenta, term counts)
+- **Diagnosed simplifier gaps** blocking full symbolic reduction of spin-projected expressions
+- Created 3 new issues for the root causes (see below)
 
 ---
 
-## What's Ready Now (Wave 2b)
+## Simplifier Gaps (MUST FIX before TGR-zq2k)
 
-Run `bd ready` to see unblocked issues. After closing TGR-ud97 and TGR-w7jq, these are now unblocked:
+Three root causes prevent `spin_project` from reducing to scalar form factors:
 
-### TGR-7m26 — Step 1.2: Fourier transform + kernel extraction (flat)
-**Status**: Unblocked (was waiting on TGR-w7jq).
+### TGR-mr8p [P1 bug] — η metric not registered
+**The biggest blocker.** Barnes-Rivers projectors default to `metric=:η`, but η is never registered in the TensorRegistry. `contract_metrics` (src/algebra/contraction.jl:20) checks `has_tensor(reg, :η)` → FALSE, and **silently skips ALL η contractions**. No raising/lowering, no traces, nothing.
 
-**What to do**:
-1. For each of the 5 δ²S expressions, apply `to_fourier` + `simplify`
-2. Extract kernel via `extract_kernel(fourier_expr, :h)`
-3. Pin Fourier term counts
+**Fix options:**
+- A) `spin_project` should default to the manifold's registered metric (`:g`), not hardcoded `:η`
+- B) Add warning/error in `contract_metrics` when it encounters an unregistered metric-like tensor
 
-```julia
-# After building all 5 δ²S (reuse TGR-w7jq code):
-δ2R_f = simplify(to_fourier(δ2R); registry=reg, maxiter=40)
-K_R = extract_kernel(δ2R_f, :h; registry=reg)
-# ... repeat for all 5
-```
+**Files:** `src/action/spin_projectors.jl` (defaults), `src/action/kernel_extraction.jl` (spin_project), `src/algebra/contraction.jl` (silent skip)
 
-### TGR-c6su — Step 2.1: 3+1 SVT decomposition of δ²S (flat)
-**Status**: Unblocked (was waiting on TGR-w7jq).
+### TGR-5wit [P1 feature] — Scalar simplification hooks unused in pipeline
+`simplify_scalar()` and `_simplify_scalar_val()` hooks exist (src/scalar/simplify_cas.jl) and the Symbolics.jl extension overrides them — but they're **never called during `simplify()`**.
 
-**What to do**: Follow `examples/08_postquantum_gravity.jl` pattern with `define_foliation!`, `split_all_spacetime`, SVT substitution.
+TScalar values with Expr/Symbol (like `:(1/k²)`, `:k²`) are opaque cores in `_split_scalar` (line 158 in simplify.jl). Products of such TScalars accumulate as separate factors without cancellation.
 
-### TGR-mphe — Step 3.1: dS background — quadratic + box terms
-**Status**: Unblocked (was waiting on TGR-ud97).
+**Fix:** Add a scalar factor simplification step in `_simplify_one_pass()` (after canonicalize, before collect_terms). Walk TProduct factors, find TScalar values, call `_simplify_scalar_val()` on their product.
 
-**What to do**: Set up dS background with `maximally_symmetric_background!` and `curved=true`, compute δ²S for quadratic terms.
+**Files:** `src/algebra/simplify.jl` (_simplify_one_pass, _split_scalar), `src/scalar/simplify_cas.jl` (hooks)
+
+### TGR-uy04 [P1 feature] — Use Symbolics.Num for k² (depends on TGR-5wit)
+Barnes-Rivers uses `TScalar(:k²)` and `TScalar(:(1/k²))` — bare Julia Symbols/Exprs that even the fixed hooks can't simplify. Need `@variables k²` → `Symbolics.Num` values so the CAS extension handles `k² * (1/k²) → 1` automatically.
+
+**Fix:** Update `omega_projector` to accept Num values (currently builds `:(1/$k_sq)` Expr which fails for Num). Update `contract_momenta` to produce `TScalar(k²::Num)`.
+
+**Files:** `src/action/spin_projectors.jl` (omega_projector), `src/action/kernel_extraction.jl` (contract_momenta)
 
 ---
 
-## Critical Path for Flat Spectrum
+## Dependency Graph (Updated)
 
 ```
-TGR-7m26 (Fourier+kernel) ──→ TGR-zq2k (BR projection → form factors)
-                                   ↓
-                              VERIFY f₂, f₀ against ground truth
+READY NOW (parallel):
+  TGR-mr8p  [P1] Fix η metric registration           ← CRITICAL (simplifier bug)
+  TGR-5wit  [P1] Scalar simplification in pipeline    ← CRITICAL (dead hooks)
+  TGR-7m26  [P1] Fourier + kernel extraction (flat)
+  TGR-mphe  [P1] dS background quadratic + box terms
+  TGR-c6su  [P2] SVT decomposition (flat, Path B)
+
+BLOCKED:
+  TGR-5wit ──→ TGR-uy04 (CAS k² variables)
+  TGR-mr8p + TGR-5wit + TGR-uy04 + TGR-7m26 ──→ TGR-zq2k (flat form factors)
+  TGR-zq2k + TGR-pr04 ──→ TGR-tztc (cross-check Path A vs B)
+  TGR-mphe ──→ TGR-7tcs (dS cubics) ──→ TGR-ug98 (full dS spectrum)
+  TGR-zq2k + TGR-tztc + TGR-ug98 ──→ TGR-j6r9 (tests) ──→ TGR-af4a (example)
 ```
 
-The key bottleneck is the **symbolic simplification limitation**: `spin_project` produces expressions that don't fully reduce. Two options:
+## Recommended Session 3 Strategy
 
-### Option A: Numerical evaluation (recommended for validation)
-Evaluate the spin-projected expressions at specific parameter values and verify f₂(z) = 1 − (α₂/κ)z − (β₂/κ)z² etc. This was already proven to work in TGR-ud97.
+**Priority 1 — Fix simplifier (must do first):**
+1. TGR-mr8p: Fix η metric default → use registered metric `:g` in spin_project
+2. TGR-5wit: Wire `_simplify_scalar_val` into `_simplify_one_pass`
+3. TGR-uy04: Switch k² to Symbolics.Num in projectors + contract_momenta
 
-### Option B: Add momentum-space trace rules
-Teach the simplifier that g^a_a = d in momentum space (or use `set_dimension!` if available). This would allow full symbolic reduction. More work but gives symbolic form factors.
+**Priority 2 — Continue pipeline (parallel with simplifier fixes):**
+4. TGR-7m26: Fourier + extract_kernel for all 5 δ²S
+5. TGR-c6su: SVT decomposition (independent Path B)
 
----
-
-## Parallelism Strategy for Session 3
-
-**Wave 2b** (can be parallel):
-- Agent A: TGR-7m26 — Fourier + kernel extraction for all 5 terms
-- Agent B: TGR-c6su — SVT decomposition (independent path)
-- Agent C: TGR-mphe — dS background quadratic terms
-
-**Wave 3** (after 2b):
-- TGR-zq2k: spin_project all 5 kernels → flat form factors f₂(k²), f₀(k²)
-- TGR-pr04: SVT QuadraticForms
-- TGR-7tcs: dS cubic contributions
+**After simplifier fixes + kernels:**
+6. TGR-zq2k: `spin_project` all 5 kernels → verify f₂(z), f₀(z) symbolically
 
 ---
 
-## Key Files
+## Pinned Term Counts
 
-| File | Role |
-|------|------|
-| `src/action/kernel_extraction.jl` | extract_kernel, spin_project, contract_momenta |
-| `src/action/spin_projectors.jl` | Barnes-Rivers P², P¹, P⁰ˢ, P⁰ʷ, T^sw, T^ws |
-| `test/test_6deriv_spectrum.jl` | MODIFIED: kernel + term count tests added |
-| `HANDOFF-6deriv-spectrum.md` | Master handoff (full pipeline spec) |
-| `examples/13_6deriv_particle_spectrum.jl` | Ground truth: numerical form factors |
+| Expression | Terms (flat, vanishing bg) |
+|---|---|
+| δ²R | 8 |
+| (δR)² | 4 |
+| (δRic)² | 4 |
+| δ²(R□R) | 16 |
+| δ²(Ric□Ric) | 18 |
 
 ## Ground Truth (flat spectrum)
 
@@ -123,15 +98,30 @@ f₀(z) = 1 + (6α₁+2α₂)z/κ + (6β₁+2β₂)z²/κ  [spin-0]
 spin-1 projection = 0 identically
 ```
 
+## Key Files
+
+| File | Role |
+|------|------|
+| `src/action/kernel_extraction.jl` | extract_kernel, spin_project, contract_momenta |
+| `src/action/spin_projectors.jl` | Barnes-Rivers P², P¹, P⁰ˢ, P⁰ʷ, T^sw, T^ws |
+| `src/algebra/simplify.jl` | _simplify_one_pass (pipeline), _split_scalar |
+| `src/algebra/contraction.jl` | contract_metrics (silent skip on unregistered metrics) |
+| `src/scalar/simplify_cas.jl` | simplify_scalar, _simplify_scalar_val (unused hooks) |
+| `ext/TensorGRSymbolicsExt.jl` | Symbolics.jl dispatch for scalar hooks |
+| `test/test_6deriv_spectrum.jl` | Tests: kernel, term counts, projector completeness |
+| `HANDOFF-6deriv-spectrum.md` | Master handoff (full pipeline spec, all issues) |
+| `examples/13_6deriv_particle_spectrum.jl` | Ground truth: numerical form factors |
+
 ## Quick Start
 
 ```bash
-bd ready
-bd blocked
+bd ready                              # see unblocked work
+bd blocked                            # see dependency chain
+bd show TGR-mr8p                      # η metric bug details
+bd show TGR-5wit                      # scalar hooks details
 
-# Verify tests pass
-julia --project /tmp/test_kernel.jl
-julia --project /tmp/test_termcounts.jl
+# Run existing tests
+julia --project -e 'using Pkg; Pkg.test()'
 
 # Session end protocol
 bd sync && git push
