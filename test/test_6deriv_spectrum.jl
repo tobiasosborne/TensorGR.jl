@@ -638,6 +638,264 @@ using Random
         end
     end
 
+    # ══════════════════════════════════════════════════════════════════
+    # Step 1.2: Fourier transform + kernel extraction (flat)
+    #
+    # Pipeline: δ²S → to_fourier(∂→k) → simplify → extract_kernel → KineticKernel
+    # Expected momentum degree: EH k², R² k⁴, Ric² k⁴, R□R k⁶, Ric□Ric k⁶
+    # ══════════════════════════════════════════════════════════════════
+
+    @testset "Step 1.2: Fourier + kernel (EH term)" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+            mp = define_metric_perturbation!(reg, :g, :h)
+            set_vanishing!(reg, :Ric)
+            set_vanishing!(reg, :RicScalar)
+            set_vanishing!(reg, :Riem)
+
+            # δ²R (EH term: κR)
+            δ2R = simplify(δricci_scalar(mp, 2); registry=reg)
+            @test δ2R isa TSum
+            @test length(δ2R.terms) == 8
+
+            # Fourier transform: ∂_a → k_a
+            fourier_δ2R = to_fourier(δ2R)
+            fourier_δ2R = simplify(fourier_δ2R; registry=reg)
+            @test fourier_δ2R isa TSum
+            @test length(fourier_δ2R.terms) > 0
+
+            # Extract kernel
+            K_EH = extract_kernel(fourier_δ2R, :h; registry=reg)
+            @test K_EH isa KineticKernel
+            @test K_EH.field == :h
+            @test length(K_EH.terms) > 0
+
+            # Each bilinear term should have 2 indices per h factor
+            for bt in K_EH.terms
+                @test length(bt.left) == 2
+                @test length(bt.right) == 2
+            end
+
+            # Momentum degree check: EH has ∂∂h, so kernel coefficients
+            # should contain k tensors (momentum degree 2 total from the two ∂'s)
+            # Count k-factors in coefficient of first term
+            function count_k_tensors(expr::TensorExpr)
+                if expr isa Tensor
+                    return expr.name == :k ? 1 : 0
+                elseif expr isa TProduct
+                    return sum(count_k_tensors(f) for f in expr.factors; init=0)
+                elseif expr isa TSum
+                    return maximum(count_k_tensors(t) for t in expr.terms; init=0)
+                elseif expr isa TScalar
+                    return 0
+                else
+                    return 0
+                end
+            end
+
+            # EH kernel: each term coeff should have exactly 2 k-factors
+            for bt in K_EH.terms
+                nk = count_k_tensors(bt.coeff)
+                @test nk == 2  # k² from ∂∂h
+            end
+        end
+    end
+
+    @testset "Step 1.2: Fourier + kernel (R² and Ric² terms)" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+            mp = define_metric_perturbation!(reg, :g, :h)
+            set_vanishing!(reg, :Ric)
+            set_vanishing!(reg, :RicScalar)
+            set_vanishing!(reg, :Riem)
+
+            # (δR)² term (R²: α₁R²)
+            δ1R = δricci_scalar(mp, 1)
+            δR_sq = simplify(δ1R * δ1R; registry=reg)
+            fourier_δR_sq = to_fourier(δR_sq)
+            fourier_δR_sq = simplify(fourier_δR_sq; registry=reg)
+            K_R2 = extract_kernel(fourier_δR_sq, :h; registry=reg)
+            @test K_R2 isa KineticKernel
+            @test length(K_R2.terms) > 0
+
+            # R² momentum degree: (∂∂h)² → k⁴ total, so 4 k-factors per term
+            function count_k_tensors(expr::TensorExpr)
+                if expr isa Tensor
+                    return expr.name == :k ? 1 : 0
+                elseif expr isa TProduct
+                    return sum(count_k_tensors(f) for f in expr.factors; init=0)
+                elseif expr isa TSum
+                    return maximum(count_k_tensors(t) for t in expr.terms; init=0)
+                elseif expr isa TScalar
+                    return 0
+                else
+                    return 0
+                end
+            end
+
+            for bt in K_R2.terms
+                nk = count_k_tensors(bt.coeff)
+                @test nk == 4  # k⁴ from (∂∂h)²
+            end
+
+            # (δRic)² term (Ric²: α₂RμνRμν)
+            δRic1 = δricci(mp, down(:a), down(:b), 1)
+            δRic2 = δricci(mp, down(:c), down(:d), 1)
+            δRic_sq = simplify(
+                δRic1 * δRic2 * Tensor(:g, [up(:a), up(:c)]) * Tensor(:g, [up(:b), up(:d)]);
+                registry=reg)
+            fourier_δRic_sq = to_fourier(δRic_sq)
+            fourier_δRic_sq = simplify(fourier_δRic_sq; registry=reg)
+            K_Ric2 = extract_kernel(fourier_δRic_sq, :h; registry=reg)
+            @test K_Ric2 isa KineticKernel
+            @test length(K_Ric2.terms) > 0
+
+            for bt in K_Ric2.terms
+                nk = count_k_tensors(bt.coeff)
+                @test nk == 4  # k⁴ from (∂∂h)²
+            end
+        end
+    end
+
+    @testset "Step 1.2: Fourier + kernel (box terms)" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+            mp = define_metric_perturbation!(reg, :g, :h)
+            set_vanishing!(reg, :Ric)
+            set_vanishing!(reg, :RicScalar)
+            set_vanishing!(reg, :Riem)
+
+            # δ²(R□R) on flat = 2(δR)(□δR) since R̄=0
+            δ1R = δricci_scalar(mp, 1)
+            δ1R_2 = δricci_scalar(mp, 1)  # fresh copy for box argument
+            box_δR = Tensor(:g, [up(:e), up(:f)]) *
+                     TDeriv(down(:e), TDeriv(down(:f), δ1R_2))
+            δ2_RboxR = simplify(TScalar(2) * δ1R * box_δR; registry=reg)
+
+            fourier_RboxR = to_fourier(δ2_RboxR)
+            fourier_RboxR = simplify(fourier_RboxR; registry=reg)
+            K_RboxR = extract_kernel(fourier_RboxR, :h; registry=reg)
+            @test K_RboxR isa KineticKernel
+            @test length(K_RboxR.terms) > 0
+
+            # R□R momentum degree: (∂∂h)(∂∂∂∂h) → k⁶, so 6 k-factors
+            function count_k_tensors(expr::TensorExpr)
+                if expr isa Tensor
+                    return expr.name == :k ? 1 : 0
+                elseif expr isa TProduct
+                    return sum(count_k_tensors(f) for f in expr.factors; init=0)
+                elseif expr isa TSum
+                    return maximum(count_k_tensors(t) for t in expr.terms; init=0)
+                elseif expr isa TScalar
+                    return 0
+                else
+                    return 0
+                end
+            end
+
+            for bt in K_RboxR.terms
+                nk = count_k_tensors(bt.coeff)
+                @test nk == 6  # k⁶ from (∂∂h)(∂⁴h)
+            end
+
+            # δ²(Ric□Ric) on flat = 2(δRic_{cd})(□δRic^{cd}) since Ric̄=0
+            δRic_left = δricci(mp, down(:p), down(:q), 1)
+            δRic_ij = δricci(mp, down(:i), down(:j), 1)
+            δRic_up = δRic_ij * Tensor(:g, [up(:p), up(:i)]) * Tensor(:g, [up(:q), up(:j)])
+            box_δRic = Tensor(:g, [up(:e), up(:f)]) *
+                       TDeriv(down(:e), TDeriv(down(:f), δRic_up))
+            δ2_RicBoxRic = simplify(TScalar(2) * δRic_left * box_δRic; registry=reg)
+
+            fourier_RicBoxRic = to_fourier(δ2_RicBoxRic)
+            fourier_RicBoxRic = simplify(fourier_RicBoxRic; registry=reg)
+            K_RicBoxRic = extract_kernel(fourier_RicBoxRic, :h; registry=reg)
+            @test K_RicBoxRic isa KineticKernel
+            @test length(K_RicBoxRic.terms) > 0
+
+            for bt in K_RicBoxRic.terms
+                nk = count_k_tensors(bt.coeff)
+                @test nk == 6  # k⁶ from (∂∂h)(∂⁴h)
+            end
+        end
+    end
+
+    @testset "Step 1.2: combined kernel structure" begin
+        # Verify that all 5 kernels can be built and combined
+        # with coupling constants κ, α₁, α₂, β₁, β₂
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+            mp = define_metric_perturbation!(reg, :g, :h)
+            set_vanishing!(reg, :Ric)
+            set_vanishing!(reg, :RicScalar)
+            set_vanishing!(reg, :Riem)
+
+            # Build all 5 δ²S, Fourier transform, extract kernels
+            # 1. EH
+            δ2R = simplify(δricci_scalar(mp, 2); registry=reg)
+            K_EH = extract_kernel(simplify(to_fourier(δ2R); registry=reg), :h; registry=reg)
+
+            # 2. R²
+            δ1R = δricci_scalar(mp, 1)
+            δR_sq = simplify(δ1R * δ1R; registry=reg)
+            K_R2 = extract_kernel(simplify(to_fourier(δR_sq); registry=reg), :h; registry=reg)
+
+            # 3. Ric²
+            δRic1 = δricci(mp, down(:a), down(:b), 1)
+            δRic2 = δricci(mp, down(:c), down(:d), 1)
+            δRic_sq = simplify(
+                δRic1 * δRic2 * Tensor(:g, [up(:a), up(:c)]) * Tensor(:g, [up(:b), up(:d)]);
+                registry=reg)
+            K_Ric2 = extract_kernel(simplify(to_fourier(δRic_sq); registry=reg), :h; registry=reg)
+
+            # 4. R□R
+            δ1R_2 = δricci_scalar(mp, 1)
+            box_δR = Tensor(:g, [up(:e), up(:f)]) *
+                     TDeriv(down(:e), TDeriv(down(:f), δ1R_2))
+            δ2_RboxR = simplify(TScalar(2) * δ1R * box_δR; registry=reg)
+            K_RboxR = extract_kernel(simplify(to_fourier(δ2_RboxR); registry=reg), :h; registry=reg)
+
+            # 5. Ric□Ric
+            δRic_left = δricci(mp, down(:p), down(:q), 1)
+            δRic_ij = δricci(mp, down(:i), down(:j), 1)
+            δRic_up = δRic_ij * Tensor(:g, [up(:p), up(:i)]) * Tensor(:g, [up(:q), up(:j)])
+            box_δRic = Tensor(:g, [up(:e), up(:f)]) *
+                       TDeriv(down(:e), TDeriv(down(:f), δRic_up))
+            δ2_RicBoxRic = simplify(TScalar(2) * δRic_left * box_δRic; registry=reg)
+            K_RicBoxRic = extract_kernel(simplify(to_fourier(δ2_RicBoxRic); registry=reg), :h; registry=reg)
+
+            # All 5 kernels extracted
+            @test length(K_EH.terms) > 0
+            @test length(K_R2.terms) > 0
+            @test length(K_Ric2.terms) > 0
+            @test length(K_RboxR.terms) > 0
+            @test length(K_RicBoxRic.terms) > 0
+
+            # Total kernel term count = sum of individual
+            n_total = sum(length(K.terms) for K in [K_EH, K_R2, K_Ric2, K_RboxR, K_RicBoxRic])
+            @test n_total > 0
+
+            # h index symmetry: left and right should each have 2 indices
+            for K in [K_EH, K_R2, K_Ric2, K_RboxR, K_RicBoxRic]
+                for bt in K.terms
+                    @test length(bt.left) == 2
+                    @test length(bt.right) == 2
+                end
+            end
+        end
+    end
+
     @testset "spin projection: numerical Lichnerowicz verification" begin
         # The Lichnerowicz kernel for pure EH is:
         #   K_{μν,ρσ} = k² P² - (k²/2) P⁰ˢ - (k²/2) P⁰ʷ
