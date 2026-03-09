@@ -77,6 +77,7 @@ include("foliation/sectors.jl")
 include("action/quadratic_action.jl")
 include("action/extract_quadratic.jl")
 include("action/spin_projectors.jl")
+include("action/kernel_extraction.jl")
 
 # Layer 4: CAS integration hooks (after QuadraticForm is defined)
 include("scalar/simplify_cas.jl")
@@ -223,6 +224,7 @@ export foliate_and_decompose
 # Exports: Quadratic action
 export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic_form
 export sym_det, sym_inv, sym_eval
+export KineticKernel, extract_kernel, spin_project, contract_momenta
 
 # Exports: CAS integration
 export simplify_scalar, simplify_quadratic_form

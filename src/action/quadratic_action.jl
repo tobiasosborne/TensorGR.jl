@@ -98,6 +98,16 @@ function sym_inv(M::Matrix)
         inv_det = _sym_div(1, det)
         return [_sym_mul(M[2,2], inv_det)   _sym_mul(_sym_neg(M[1,2]), inv_det);
                 _sym_mul(_sym_neg(M[2,1]), inv_det)  _sym_mul(M[1,1], inv_det)]
+    elseif n == 3
+        adj = Matrix{Any}(undef, 3, 3)
+        for i in 1:3, j in 1:3
+            rows = [r for r in 1:3 if r != j]
+            cols = [c for c in 1:3 if c != i]
+            minor = _sym_sub(_sym_mul(M[rows[1],cols[1]], M[rows[2],cols[2]]),
+                             _sym_mul(M[rows[1],cols[2]], M[rows[2],cols[1]]))
+            adj[i, j] = iseven(i + j) ? minor : _sym_neg(minor)
+        end
+        return [_sym_div(adj[i,j], det) for i in 1:3, j in 1:3]
     else
         error("sym_inv not implemented for $(n)×$(n)")
     end
