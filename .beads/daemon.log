@@ -2672,3 +2672,169 @@ time=2026-03-09T18:26:03.172Z level=INFO msg="   Consider running 'bd sync' to c
 time=2026-03-09T18:26:03.694Z level=INFO msg="Pulled from remote"
 time=2026-03-09T18:26:03.805Z level=INFO msg="Imported from JSONL"
 time=2026-03-09T18:26:03.814Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:26:13.806Z level=INFO msg="Git ref change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.git/refs/heads/master.lock
+time=2026-03-09T18:26:14.647Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:26:14.647Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:26:14.807Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:26:14.807Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:26:14.814Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:26:14.819Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:26:14.819Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T18:26:14.819Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T18:26:14.994Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:26:15.177Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:26:15.263Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:26:15.267Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:26:15.996Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:26:15.997Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:26:15.998Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:26:16.470Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:26:16.572Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:26:16.580Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:30:03.983Z level=INFO msg="Git ref change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.git/refs/heads/master.lock
+time=2026-03-09T18:30:04.984Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:30:04.985Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:30:04.986Z level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-03-09T18:32:11.003Z level=INFO msg="Mutation detected: %s %s" status=TGR-ncdr
+time=2026-03-09T18:32:11.058Z level=INFO msg="Mutation detected: %s %s" status=TGR-0i4m
+time=2026-03-09T18:32:11.559Z level=INFO msg="Export triggered by mutation events"
+time=2026-03-09T18:32:11.559Z level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-03-09T18:32:11.615Z level=INFO msg="Exported to JSONL"
+time=2026-03-09T18:32:11.615Z level=INFO msg="Export complete"
+time=2026-03-09T18:32:11.615Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:32:11.615Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:32:12.617Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:32:12.617Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:32:12.618Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:32:12.623Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:32:12.623Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T18:32:12.623Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T18:32:13.052Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:32:13.182Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:32:13.193Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:53:45.783Z level=INFO msg="Mutation detected: %s %s" status=TGR-0i4m
+time=2026-03-09T18:53:46.283Z level=INFO msg="Export triggered by mutation events"
+time=2026-03-09T18:53:46.284Z level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-03-09T18:53:46.285Z level=INFO msg="Pre-export validation failed: %v" !BADKEY="refusing to export: JSONL content has changed since last import (import first to avoid data loss)"
+time=2026-03-09T18:53:47.457Z level=INFO msg="Mutation detected: %s %s" status=TGR-ncdr
+time=2026-03-09T18:53:47.958Z level=INFO msg="Export triggered by mutation events"
+time=2026-03-09T18:53:47.958Z level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-03-09T18:53:47.960Z level=INFO msg="Pre-export validation failed: %v" !BADKEY="refusing to export: JSONL content has changed since last import (import first to avoid data loss)"
+time=2026-03-09T18:53:58.697Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:53:58.698Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:53:59.273Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:53:59.508Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:53:59.508Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:53:59.699Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:53:59.700Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:53:59.701Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:53:59.709Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:53:59.709Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T18:53:59.709Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T18:54:00.393Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:54:00.458Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:54:00.461Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:54:00.510Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:54:00.511Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:00.512Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:00.519Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:00.519Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T18:54:00.519Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T18:54:00.856Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:54:00.927Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:54:00.931Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:54:06.599Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:06.599Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:07.168Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:07.168Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:07.400Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:07.600Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:54:07.600Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:07.601Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:07.608Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:07.608Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T18:54:07.608Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T18:54:08.075Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:54:08.150Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:54:08.154Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:54:08.402Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:54:08.403Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:08.404Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:08.411Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T18:54:08.411Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T18:54:08.411Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T18:54:08.893Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:54:08.961Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:54:08.965Z level=INFO msg="Auto-import complete"
+time=2026-03-09T18:54:15.029Z level=INFO msg="Git ref change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.git/refs/heads/master.lock
+time=2026-03-09T18:54:16.029Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T18:54:16.030Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:16.031Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T18:54:16.499Z level=INFO msg="Pulled from remote"
+time=2026-03-09T18:54:16.561Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T18:54:16.564Z level=INFO msg="Auto-import complete"
+time=2026-03-09T20:44:18.504Z level=INFO msg="Git ref change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.git/refs/heads/master.lock
+time=2026-03-09T20:44:19.506Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T20:44:19.507Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T20:44:19.507Z level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-03-09T20:46:06.664Z level=INFO msg="Mutation detected: %s %s" status=TGR-ud97
+time=2026-03-09T20:46:06.772Z level=INFO msg="Mutation detected: %s %s" status=TGR-w7jq
+time=2026-03-09T20:46:07.273Z level=INFO msg="Export triggered by mutation events"
+time=2026-03-09T20:46:07.273Z level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-03-09T20:46:07.318Z level=INFO msg="Exported to JSONL"
+time=2026-03-09T20:46:07.318Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T20:46:07.318Z level=INFO msg="Export complete"
+time=2026-03-09T20:46:07.318Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T20:46:08.320Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T20:46:08.321Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T20:46:08.322Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T20:46:08.330Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T20:46:08.330Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T20:46:08.330Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T20:46:08.695Z level=INFO msg="Pulled from remote"
+time=2026-03-09T20:46:08.799Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T20:46:08.813Z level=INFO msg="Auto-import complete"
+time=2026-03-09T21:17:12.992Z level=INFO msg="Mutation detected: %s %s" status=TGR-ud97
+time=2026-03-09T21:17:13.108Z level=INFO msg="Mutation detected: %s %s" status=TGR-w7jq
+time=2026-03-09T21:17:13.609Z level=INFO msg="Export triggered by mutation events"
+time=2026-03-09T21:17:13.609Z level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-03-09T21:17:13.610Z level=INFO msg="Pre-export validation failed: %v" !BADKEY="refusing to export: JSONL content has changed since last import (import first to avoid data loss)"
+time=2026-03-09T21:18:13.976Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:13.976Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:14.752Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:14.752Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:14.977Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T21:18:14.978Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:14.981Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:14.986Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:14.986Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T21:18:14.986Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T21:18:15.063Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:15.670Z level=INFO msg="Pulled from remote"
+time=2026-03-09T21:18:15.767Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T21:18:15.772Z level=INFO msg="Auto-import complete"
+time=2026-03-09T21:18:16.065Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T21:18:16.065Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:16.066Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:16.074Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:16.074Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-09T21:18:16.074Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-09T21:18:16.433Z level=INFO msg="Pulled from remote"
+time=2026-03-09T21:18:16.534Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T21:18:16.541Z level=INFO msg="Auto-import complete"
+time=2026-03-09T21:18:25.913Z level=INFO msg="Git ref change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.git/refs/heads/master.lock
+time=2026-03-09T21:18:26.914Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T21:18:26.915Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:26.915Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:27.442Z level=INFO msg="Pulled from remote"
+time=2026-03-09T21:18:27.538Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T21:18:27.549Z level=INFO msg="Auto-import complete"
+time=2026-03-09T21:18:31.716Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:31.716Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:32.029Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-09T21:18:33.030Z level=INFO msg="Import triggered by file change"
+time=2026-03-09T21:18:33.031Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:33.031Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-09T21:18:33.587Z level=INFO msg="Pulled from remote"
+time=2026-03-09T21:18:33.719Z level=INFO msg="Imported from JSONL"
+time=2026-03-09T21:18:33.726Z level=INFO msg="Auto-import complete"
