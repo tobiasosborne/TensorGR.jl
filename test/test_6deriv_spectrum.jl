@@ -896,18 +896,124 @@ using Random
         end
     end
 
-    @testset "spin projection: numerical Lichnerowicz verification" begin
-        # The Lichnerowicz kernel for pure EH is:
-        #   K_{μν,ρσ} = k² P² - (k²/2) P⁰ˢ - (k²/2) P⁰ʷ
-        # Verified numerically against Barnes-Rivers decomposition.
-        #
-        # Reference: Buoninfante et al. (2012.11829) Eq. (2.13) with f₂=f₀=1:
-        #   G(k) = P²/k² - P⁰ˢ/(2k²)
-        # The spin-2 coefficient of the inverse propagator is k² (from f₂=1).
-        # The spin-0s coefficient is -k²/2 (from -1/(2f₀) with f₀=1).
-        # Spin-1 is zero (diffeomorphism invariance).
-        @test true  # Verified numerically in session 2, symbolic path needs
-                     # momentum-space metric trace rules (g^a_a=d) for full reduction.
+    @testset "fix_dummy_positions" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            # Build an expression with a same-position dummy pair
+            # h^{a b} h_{a c} has 'a' as (Up, Down) — valid
+            valid_expr = Tensor(:h, [up(:a), up(:b)]) * Tensor(:h, [down(:a), down(:c)])
+            fixed = fix_dummy_positions(valid_expr)
+            @test fixed == valid_expr  # no change needed
+
+            # Manually create a bad expression: h^{a b} h^{a c}
+            # where 'a' appears Up twice (invalid dummy pair)
+            bad_expr = TProduct(1//1, TensorExpr[
+                Tensor(:h, [up(:a), up(:b)]),
+                Tensor(:h, [up(:a), up(:c)])])
+            fixed = fix_dummy_positions(bad_expr)
+            # After fix, 'a' should have one Up and one Down
+            all_idxs = indices(fixed)
+            a_positions = [idx.position for idx in all_idxs if idx.name == :a]
+            @test length(a_positions) == 2
+            @test Up in a_positions && Down in a_positions
+
+            # Fix applied through TSum
+            sum_expr = tsum(TensorExpr[bad_expr])
+            fixed_sum = fix_dummy_positions(sum_expr)
+            @test fixed_sum isa TSum || fixed_sum isa TProduct
+
+            # TScalar and Tensor pass through
+            @test fix_dummy_positions(TScalar(1)) == TScalar(1)
+            @test fix_dummy_positions(Tensor(:T, [down(:a)])) == Tensor(:T, [down(:a)])
+        end
+    end
+
+    @testset "spin_project: identity kernel" begin
+        # h_{ab} k² h^{ab} → identity kernel K = k² I_sym
+        # Tr(K · P^J) = k² × dim(sector)
+        # Expected: spin2=5k², spin1=3k², spin0s=k², spin0w=k²
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            expr = TScalar(:k²) * Tensor(:h, [down(:a), down(:b)]) * Tensor(:h, [up(:a), up(:b)])
+            kernel = extract_kernel(expr, :h; registry=reg)
+            @test length(kernel.terms) == 1
+
+            r2  = spin_project(kernel, :spin2;  dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+            r1  = spin_project(kernel, :spin1;  dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+            r0s = spin_project(kernel, :spin0s; dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+            r0w = spin_project(kernel, :spin0w; dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+
+            # Check: each result should be N × k² (as TProduct or TScalar)
+            function extract_k2_coeff(r)
+                if r isa TProduct && length(r.factors) == 1 && r.factors[1] isa TScalar && r.factors[1].val == :k²
+                    return r.scalar
+                elseif r isa TScalar && r.val == :k²
+                    return 1 // 1  # collapsed tproduct(1//1, [TScalar(:k²)])
+                elseif r isa TScalar && (r.val == 0 || r.val == 0 // 1)
+                    return 0 // 1
+                else
+                    return nothing
+                end
+            end
+
+            @test extract_k2_coeff(r2) == 5 // 1
+            @test extract_k2_coeff(r1) == 3 // 1
+            @test extract_k2_coeff(r0s) == 1 // 1
+            @test extract_k2_coeff(r0w) == 1 // 1
+        end
+    end
+
+    @testset "spin_project: Fierz-Pauli EH kernel" begin
+        # Manual EH quadratic Lagrangian in Fourier space (Fierz-Pauli form):
+        # L = (1/2)k² h_{ab}h^{ab} - k_b k_c h^{ab}h^c_a
+        #     + k_a k_b h^{ab} h - (1/2)k² h²
+        # Expected form factors (Barnes-Rivers convention):
+        #   spin-2: 5k²/2  (= f₂ × dim(2) = (k²/2) × 5)
+        #   spin-1: 0       (gauge invariance)
+        #   spin-0-s: -k²   (= f₀s × dim(0s) = -k² × 1)
+        #   spin-0-w: 0     (gauge invariance)
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            t1 = (1//2) * TScalar(:k²) * Tensor(:h, [down(:a), down(:b)]) * Tensor(:h, [up(:a), up(:b)])
+            t2 = (-1//1) * Tensor(:k, [down(:b)]) * Tensor(:k, [down(:c)]) * Tensor(:h, [up(:a), up(:b)]) * Tensor(:h, [up(:c), down(:a)])
+            t3 = (1//1) * Tensor(:k, [down(:a)]) * Tensor(:k, [down(:b)]) * Tensor(:h, [up(:a), up(:b)]) * Tensor(:h, [up(:c), down(:c)])
+            t4 = (-1//2) * TScalar(:k²) * Tensor(:h, [up(:a), down(:a)]) * Tensor(:h, [up(:b), down(:b)])
+
+            eh_expr = t1 + t2 + t3 + t4
+            kernel = extract_kernel(eh_expr, :h; registry=reg)
+            @test length(kernel.terms) == 4
+
+            r2  = spin_project(kernel, :spin2;  dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+            r1  = spin_project(kernel, :spin1;  dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+            r0s = spin_project(kernel, :spin0s; dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+            r0w = spin_project(kernel, :spin0w; dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+
+            function extract_k2_coeff(r)
+                if r isa TProduct && length(r.factors) == 1 && r.factors[1] isa TScalar && r.factors[1].val == :k²
+                    return r.scalar
+                elseif r isa TScalar && r.val == :k²
+                    return 1 // 1
+                elseif r isa TScalar && (r.val == 0 || r.val == 0 // 1)
+                    return 0 // 1
+                else
+                    return nothing
+                end
+            end
+
+            @test extract_k2_coeff(r2) == 5 // 2   # f₂ = k²/2
+            @test extract_k2_coeff(r1) == 0 // 1   # gauge: no spin-1
+            @test extract_k2_coeff(r0s) == -1 // 1  # f₀s = -k²
+            @test extract_k2_coeff(r0w) == 0 // 1   # gauge: no spin-0-w
+        end
     end
 
 end
