@@ -99,16 +99,22 @@ function _normalize_dummies(expr::TensorExpr)
     dummy_names = [p[1].name for p in pairs]
     sort!(dummy_names, by = n -> get(first_occurrence, n, 0))
 
-    # Rename to canonical names
-    result = normalized
-    used = Set(idx.name for idx in free)
+    # Two-phase renaming to avoid collision when canonical names (_d1, _d2, ...)
+    # overlap with existing dummy names. Phase 1: old → temp. Phase 2: temp → canonical.
+    phase1 = Dict{Symbol,Symbol}()
     for (i, old_name) in enumerate(dummy_names)
-        new_name = Symbol("_d", i)
-        if old_name != new_name && new_name ∉ used
-            result = rename_dummy(result, old_name, new_name)
-        end
+        tmp_name = Symbol("__ndtmp", i)
+        old_name != tmp_name && (phase1[old_name] = tmp_name)
     end
-    result
+    result = isempty(phase1) ? normalized : rename_dummies(normalized, phase1)
+
+    phase2 = Dict{Symbol,Symbol}()
+    for (i, _) in enumerate(dummy_names)
+        tmp_name = Symbol("__ndtmp", i)
+        new_name = Symbol("_d", i)
+        tmp_name != new_name && (phase2[tmp_name] = new_name)
+    end
+    isempty(phase2) ? result : rename_dummies(result, phase2)
 end
 
 """Sort partial derivative chains for normalization (partials commute)."""
