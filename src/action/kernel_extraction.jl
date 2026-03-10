@@ -62,13 +62,14 @@ function extract_kernel(expr::TensorExpr, field::Symbol;
 end
 
 """
-    spin_project(K::KineticKernel, spin; dim=4, metric=:η, k_name=:k, k_sq=:k²,
+    spin_project(K::KineticKernel, spin; dim=4, metric=:g, k_name=:k, k_sq=:k²,
                  registry=current_registry()) -> TensorExpr
 
 Project the kinetic kernel onto a spin sector using Barnes-Rivers projectors.
 
-For each bilinear term, builds the projector P^J with the h factors' actual
-index labels (ensuring correct contraction), multiplies by the coefficient,
+For each bilinear term, standardizes h indices to all-down position with fresh
+names (to prevent projector self-contraction from shared indices), builds the
+projector P^J, contracts with the coefficient via inserted metric tensors,
 and sums. Returns the scalar form factor (function of k²).
 
 `spin` is one of: `:spin2`, `:spin1`, `:spin0s`, `:spin0w`.
@@ -80,12 +81,22 @@ function spin_project(K::KineticKernel, spin::Symbol;
     projections = TensorExpr[]
 
     for bt in K.terms
-        μ, ν = bt.left[1], bt.left[2]
-        ρ, σ = bt.right[1], bt.right[2]
+        # Standardize h indices: lower all to Down with fresh names.
+        # This prevents projector self-contraction when left/right share names.
+        new_left, new_right, metric_factors = _standardize_h_indices(
+            bt.left, bt.right, metric)
+
+        μ, ν = new_left[1], new_left[2]
+        ρ, σ = new_right[1], new_right[2]
 
         P = _kernel_build_projector(spin, μ, ν, ρ, σ; dim, metric, k_name, k_sq)
-        P = ensure_no_dummy_clash(bt.coeff, P)
-        push!(projections, P * bt.coeff)
+
+        # Combine projector + metric connectors + coefficient
+        all_factors = TensorExpr[P]
+        append!(all_factors, metric_factors)
+        combined = tproduct(1 // 1, all_factors)
+        combined = ensure_no_dummy_clash(bt.coeff, combined)
+        push!(projections, combined * bt.coeff)
     end
 
     with_registry(registry) do
@@ -101,6 +112,72 @@ function spin_project(K::KineticKernel, spin::Symbol;
         end
         expr
     end
+end
+
+"""
+    _standardize_h_indices(left, right, metric) -> (new_left, new_right, metric_factors)
+
+Lower all h indices to Down position, inserting metric tensors to preserve
+contractions. Returns fresh all-Down indices and the metric connectors.
+
+After lowering, left and right are guaranteed to have disjoint index names
+(since Up indices get fresh names, and originally-Down indices are untouched).
+"""
+function _standardize_h_indices(left::Vector{TIndex}, right::Vector{TIndex},
+                                metric::Symbol)
+    # Collect all index names to avoid when generating fresh names
+    all_names = Set{Symbol}()
+    for idx in left
+        push!(all_names, idx.name)
+    end
+    for idx in right
+        push!(all_names, idx.name)
+    end
+
+    metric_factors = TensorExpr[]
+    new_left = TIndex[]
+    new_right = TIndex[]
+
+    # Lower left indices: Up → fresh Down, with metric connector
+    for idx in left
+        if idx.position == Up
+            fn = fresh_index(all_names)
+            push!(all_names, fn)
+            push!(new_left, TIndex(fn, Down, idx.vbundle))
+            # g^{old, fresh} connects original Up index to new Down index
+            push!(metric_factors, Tensor(metric, [idx, TIndex(fn, Up, idx.vbundle)]))
+        else
+            push!(new_left, idx)
+        end
+    end
+
+    # Lower right indices: Up → fresh Down, with metric connector
+    for idx in right
+        if idx.position == Up
+            fn = fresh_index(all_names)
+            push!(all_names, fn)
+            push!(new_right, TIndex(fn, Down, idx.vbundle))
+            push!(metric_factors, Tensor(metric, [idx, TIndex(fn, Up, idx.vbundle)]))
+        else
+            push!(new_right, idx)
+        end
+    end
+
+    # Handle case where left and right still share Down index names
+    # (from same-position pairs that fix_dummy_positions didn't catch)
+    left_names = Set(i.name for i in new_left)
+    for (j, idx) in enumerate(new_right)
+        if idx.name in left_names
+            fn = fresh_index(all_names)
+            push!(all_names, fn)
+            # Connect old Down name to fresh Down name via g^{old, fresh}
+            push!(metric_factors, Tensor(metric,
+                [TIndex(idx.name, Up, idx.vbundle), TIndex(fn, Up, idx.vbundle)]))
+            new_right[j] = TIndex(fn, Down, idx.vbundle)
+        end
+    end
+
+    new_left, new_right, metric_factors
 end
 
 function _kernel_build_projector(spin::Symbol, μ, ν, ρ, σ; dim, metric, k_name, k_sq)

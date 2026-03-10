@@ -317,3 +317,116 @@ function _factor_sort_key(f::TensorExpr)
         return (3, "", "")
     end
 end
+
+# ─── Fix same-position dummy pairs ───────────────────────────────────
+#
+# The all-free xperm mode can produce expressions where a dummy index
+# name appears twice with the same position (e.g. both Down), when a
+# symmetry generator swaps names between slots of different positions.
+# This is a valid canonical form for merging purposes, but the resulting
+# expression has invalid dummy structure.
+#
+# fix_dummy_positions repairs this by flipping the position of one
+# occurrence so that each dummy pair has one Up and one Down.
+
+"""
+    fix_dummy_positions(expr::TensorExpr) -> TensorExpr
+
+Fix same-position dummy pairs in an expression. When canonicalization
+produces a term where a dummy index appears twice with the same position
+(both Up or both Down), flip one occurrence to restore valid (Up, Down)
+pairing. This preserves the mathematical meaning because the affected
+slots are always related by a tensor symmetry.
+
+Use this after simplification when downstream operations (e.g. Fourier
+transform, spin projection) require valid dummy pairs.
+"""
+fix_dummy_positions(s::TScalar) = s
+fix_dummy_positions(t::Tensor) = t
+fix_dummy_positions(d::TDeriv) = TDeriv(d.index, fix_dummy_positions(d.arg), d.covd)
+
+function fix_dummy_positions(s::TSum)
+    tsum(TensorExpr[fix_dummy_positions(t) for t in s.terms])
+end
+
+function fix_dummy_positions(p::TProduct)
+    # Collect all indices with their slot locations
+    all_idxs = TIndex[]
+    slot_offsets = Int[]  # which factor each slot belongs to
+    slot_locals = Int[]   # local index within the factor
+    for (fi, f) in enumerate(p.factors)
+        idxs = indices(f)
+        for (li, idx) in enumerate(idxs)
+            push!(all_idxs, idx)
+            push!(slot_offsets, fi)
+            push!(slot_locals, li)
+        end
+    end
+
+    # Find same-position pairs
+    name_slots = Dict{Symbol, Vector{Tuple{Int, IndexPosition}}}()
+    for (slot, idx) in enumerate(all_idxs)
+        push!(get!(Vector{Tuple{Int,IndexPosition}}, name_slots, idx.name), (slot, idx.position))
+    end
+
+    # Identify violated slots and the position they should have
+    fixes = Dict{Int, IndexPosition}()  # slot => corrected position
+    for (sym, occs) in name_slots
+        length(occs) == 2 || continue
+        s1, p1 = occs[1]
+        s2, p2 = occs[2]
+        p1 == p2 || continue  # only fix same-position violations
+        # Flip the second occurrence
+        fixes[s2] = (p2 == Up ? Down : Up)
+    end
+
+    isempty(fixes) && return p
+
+    # Apply fixes: rebuild the factors with corrected positions
+    new_factors = TensorExpr[]
+    slot = 1
+    for (fi, f) in enumerate(p.factors)
+        idxs = indices(f)
+        needs_fix = false
+        for li in 1:length(idxs)
+            if haskey(fixes, slot + li - 1)
+                needs_fix = true
+                break
+            end
+        end
+        if needs_fix
+            push!(new_factors, _apply_position_fixes(f, slot, fixes))
+        else
+            push!(new_factors, f)
+        end
+        slot += length(idxs)
+    end
+
+    tproduct(p.scalar, new_factors)
+end
+
+function _apply_position_fixes(t::Tensor, base_slot::Int, fixes::Dict{Int, IndexPosition})
+    new_indices = TIndex[]
+    for (li, idx) in enumerate(t.indices)
+        slot = base_slot + li - 1
+        if haskey(fixes, slot)
+            push!(new_indices, TIndex(idx.name, fixes[slot], idx.vbundle))
+        else
+            push!(new_indices, idx)
+        end
+    end
+    Tensor(t.name, new_indices)
+end
+
+function _apply_position_fixes(d::TDeriv, base_slot::Int, fixes::Dict{Int, IndexPosition})
+    if haskey(fixes, base_slot)
+        new_idx = TIndex(d.index.name, fixes[base_slot], d.index.vbundle)
+        TDeriv(new_idx, _apply_position_fixes(d.arg, base_slot + 1, fixes), d.covd)
+    else
+        TDeriv(d.index, _apply_position_fixes(d.arg, base_slot + 1, fixes), d.covd)
+    end
+end
+
+function _apply_position_fixes(s::TScalar, base_slot::Int, fixes::Dict{Int, IndexPosition})
+    s
+end
