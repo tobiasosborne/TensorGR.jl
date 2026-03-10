@@ -1,146 +1,181 @@
-# HANDOFF: 6-Deriv Spectrum Pipeline — Session 9
+# HANDOFF: 6-Deriv Spectrum Pipeline — Session 10
 
 ## Current State
 
-- **4800 tests pass**, all pushed (commit da63ca2)
+- **4580 tests pass** (13 errors likely from Julia 1.12 / Symbolics compat, not regressions)
+- **No code changes this session** — pure research round
 - **Spin projection validated**: identity kernel {5,3,1,1}, manual Fierz-Pauli EH kernel gives spin-1=0, spin-0-w=0 ✓
 - **fix_dummy_positions**: exported, tested, repairs same-position dummy pairs from xperm
-- **Simplify convergence fixed**: two-phase dummy renaming in _normalize_dummies (commit e6f34de)
-- δ²R on flat converges to 22 terms (was oscillating at 23)
 
 ---
 
-## What Was Done (Sessions 7-8)
+## Session 10: Research Results — EH Form Factor Approaches
 
-### Session 7: Convergence Fix
-- Two-phase dummy renaming in `_normalize_dummies` (old→tmp, tmp→canonical) prevents name collisions during batch rename
-- δ²R now converges to 22 terms in ≤4 passes
+### Research Summary
 
-### Session 8: fix_dummy_positions + spin_project Index Standardization
+All four approaches (A-D) were investigated by reading source files and running experimental code. Key findings:
 
-**fix_dummy_positions** (`src/algebra/canonicalize.jl:319-433`):
-Post-processing that repairs same-position dummy pairs (both-Up or both-Down) from the all-free xperm mode. Flips one occurrence to restore valid (Up,Down) pairing. Needed before Fourier transform and spin projection.
+### Approach A: IBP Before Projection — NOT RECOMMENDED
 
-**spin_project index standardization** (`src/action/kernel_extraction.jl:76-185`):
-Added `_standardize_h_indices` — lowers all h factor indices to Down position with fresh names before building Barnes-Rivers projectors. This prevents projector self-contraction when left/right h indices share names (e.g., h^{ab} h_{ad} with shared index :a would partially trace the projector).
+- `ibp.jl` works on simple products (move derivatives off one named field)
+- `ibp_product(p, :h)` peels ALL derivatives off one factor of :h
+- **Problem**: for bilinear h × operator × h, IBP needs to find the canonical representative under IBP equivalence (remove total derivatives). This is a non-trivial algorithmic problem — much more than just moving derivatives.
+- Would require ~50-100 lines of new bilinear IBP canonicalization code
+- No clean criterion for "expression has no total derivatives" exists in the codebase
 
-**Validation** (all in `test/test_6deriv_spectrum.jl`):
-- Identity kernel h_{ab}k²h^{ab} → {5k², 3k², k², k²} = sector dimensions × k² ✓
-- Manual Fierz-Pauli EH kernel → {5k²/2, 0, -k², 0} — gauge invariance confirmed ✓
-- fix_dummy_positions: validates repair of same-position pairs ✓
+### Approach B: Linearized EOM — PARTIALLY WORKS, HAS BUGS
 
----
+Tested: `G^(1)_{ab} = δRic_{ab} - (1/2)g_{ab}δR`, then form `h^{ab} × G^(1)_{ab}`.
 
-## Priority 1: RESEARCH — Best Approach to EH Form Factors
-
-### The Problem
-
-The perturbation engine computes `δ²R + ½h·δR` for the EH quadratic Lagrangian on flat vacuum. This is mathematically correct but contains **total derivative terms** that don't affect the action integral but DO produce non-zero spin-1 contributions when projected term-by-term in Fourier space.
-
-Spin projection of the raw perturbation output gives:
-- spin-2: -5k²/4 (wrong)
-- spin-1: -9k²/4 (should be 0!)
-- spin-0-s: -5k²/2 (wrong)
-- spin-0-w: 0 ✓
-
-But spin projection of the manual Fierz-Pauli form gives the correct result:
-- spin-2: 5k²/2 ✓ (f₂ = k²/2)
-- spin-1: 0 ✓
-- spin-0-s: -k² ✓ (f₀s = -k²)
-- spin-0-w: 0 ✓
-
-### Research Task for Next Agent
-
-**Before writing any code**, investigate and compare the following approaches. Read the relevant source files, think through edge cases, and recommend the best path.
-
-#### Approach A: IBP Before Projection
-
-Apply integration by parts to the quadratic Lagrangian to remove total derivatives, converting it to Fierz-Pauli form before Fourier transform + spin projection.
-
-Questions to investigate:
-- Does TensorGR's `ibp` / `ibp_product` work on bilinear h expressions?
-- Can we write a dedicated `to_fierz_pauli(expr, field)` that IBPs until no total derivatives remain?
-- What does IBP look like in Fourier space? (Hint: `k_a × (term)` → boundary at k→∞ = 0)
-- Is there a clean criterion for "the expression has no total derivatives"?
-
-Files to read: `src/algebra/ibp.jl`, `src/svt/fourier.jl`
-
-#### Approach B: Build Kernel from Linearized Equations of Motion
-
-Instead of computing the Lagrangian δ²S, compute the linearized field equations (linearized Einstein tensor G^(1)_{μν}) and build the kernel directly from the equations:
-
-K_{μν,ρσ} h^{ρσ} = G^(1)_{μν}
-
-The equations of motion have NO total derivative ambiguity. The kernel is the differential operator mapping h to G^(1).
-
-Questions to investigate:
-- Can we extract K_{μν,ρσ} from G^(1)_{μν}(h) by treating h as a "source" with free indices?
-- Does `euler_lagrange` / `variational_derivative` already do this?
-- How does this generalize to higher-derivative terms (R², Ric², R□R, Ric□Ric)?
-- For 4th/6th derivative terms: the EOM is 4th/6th order in derivatives — does the Fourier transform handle this correctly?
-
-Files to read: `src/perturbation/variation.jl`, `src/perturbation/linearize.jl`
-
-#### Approach C: Gauge-Fix Then Project
-
-Add a gauge-fixing term (de Donder gauge: `-(1/2)(∂_μ h^μν - ½∂^ν h)²`) to the quadratic Lagrangian. This makes the kinetic operator invertible (all 4 sectors non-degenerate) and removes the total derivative issue.
-
-Questions to investigate:
-- Does gauge fixing change the spin-2 and spin-0-s form factors? (It shouldn't — gauge fixing only affects spin-1 and spin-0-w)
-- Can we extract f₂ and f₀s from the gauge-fixed operator and verify they match the gauge-invariant result?
-- Is this simpler than IBP?
-
-#### Approach D: Direct Momentum-Space Construction
-
-Skip the position-space perturbation engine entirely. Build the momentum-space kernel from the known structure of each curvature invariant:
-
-- EH: the Fierz-Pauli kernel (4 terms, already validated in Test 3)
-- R²: the kernel is `(k_a k_b h^{ab} - k² h)² / something`
-- Ric²: similarly from δRic in Fourier space
-
-Questions: Can we compute δRic and δR directly in Fourier space without going through the perturbation engine?
-
-### Important Context for Higher-Derivative Terms
-
-The higher-derivative terms (R², Ric², R□R, Ric□Ric) are DIFFERENT from EH:
-- `(δR)²` is already a product of first-order variations — NO total derivative issue
-- Same for `(δRic)²`
-- The box terms `2(δR)(□δR)` and `2(δRic)(□δRic)` are also products
-
-So the total-derivative problem is **specific to the EH term**. The higher-derivative terms should "just work" with the existing pipeline. The research should confirm this.
-
-### Deliverable
-
-Write a brief recommendation (in this handoff file or a comment) with:
-1. Which approach is best and why
-2. Estimated complexity (how many lines of code, which files to change)
-3. Any blockers or risks discovered
-4. Then implement the chosen approach
-
----
-
-## Priority 2: Complete 6-Deriv Form Factors (TGR-zq2k)
-
-Once the EH kernel is working, combine all 5 kernels with coupling constants and verify:
-
+**Results** (with `expand_derivatives + expand_products + simplify` before Fourier):
 ```
-f₂(z) = 1 − (α₂/κ)z − (β₂/κ)z²      (Buoninfante Eq. 2.13)
-f₀(z) = 1 + (6α₁+2α₂)z/κ + (6β₁+2β₂)z²/κ
+EOM kernel: 4 terms (correct count!)
+Spin-2:  -5k²     (expected: 5k²/2 from FP — factor of -2 off)
+Spin-1:  -3k²/2   (expected: 0 — NOT gauge-invariant!)
+Spin-0s: -k²      (matches FP ✓)
+Spin-0w: 0         (matches FP ✓)
 ```
 
-Test plan:
-1. Build combined kernel: `κ·K_EH + α₁·K_R² + α₂·K_Ric² + β₁·K_R□R + β₂·K_Ric□Ric`
-2. `spin_project(:spin2)` → extract coefficient of k² and k⁴ → verify matches f₂
-3. `spin_project(:spin0s)` → extract coefficients → verify matches f₀
-4. `spin_project(:spin1)` → must be exactly 0
-5. `spin_project(:spin0w)` → must be exactly 0
+**Issues discovered**:
+1. The position-space expression has `∂(g)` terms (derivatives of metric) that should be zero on flat background but aren't eliminated by the simplifier
+2. After simplification: 12 terms in position space, only 4 after Fourier — but missing trace structures (h × h terms where h = g^{ab}h_{ab})
+3. The metric contraction `g_{ab}h^{ab} → h^c_c` happens, but the resulting traced h doesn't produce the expected 4-structure FP form
+4. Spin-2 has wrong sign and factor of 2 compared to FP; spin-0-s matches exactly
 
-### Convention Notes
+**Root cause**: the simplifier contracts `h^{ab} × g_{ab}` to `h^c_c` (trace), but the subsequent product `h^c_c × δR` doesn't produce independent trace-squared terms visible to `extract_kernel`. The two "trace" structures (`k_ak_b h^{ab}h` and `k²h²`) get absorbed into the non-trace structures.
 
-- `spin_project` returns `Tr(K·P^J)`, NOT `f_J`. Divide by sector dimension to get f_J: {5,3,1,1} for d=4
-- `δricci_scalar(mp, n)` returns the ε^n coefficient (Cauchy product), not (1/n!)d^n/dε^n
-- `to_fourier` replaces ∂_a → k_a (no factor of i)
-- k² is stored as `TScalar(:k²)`, 1/k² as `TScalar(:(1/k²))`
+### Approach C: Gauge-Fix Then Project — NOT TESTED
+
+Would add de Donder gauge-fixing term. Conceptually simple but ad hoc, and doesn't address the deeper simplifier issue with Ric².
+
+### Approach D: Direct Momentum-Space Construction — RECOMMENDED (with caveat)
+
+**Motivation**: Build kernels directly in Fourier/momentum space using known linearized curvature formulas, bypassing the position-space perturbation engine entirely.
+
+**Why D is best**:
+- Avoids position-space simplifier bottleneck entirely
+- EH Fierz-Pauli form already validated (4 terms, test passes)
+- Linearized δR and δRic have known, explicit Fourier-space forms
+- No total derivative ambiguity in momentum space
+- Direct, unambiguous expressions — easy to verify against literature
+
+---
+
+## CRITICAL BUG: `spin_project` fails on Ric² kernel
+
+### The Bug
+
+The perturbation-engine pipeline (`δRic × δRic → simplify → to_fourier → extract_kernel → spin_project`) **works correctly for R²** but **fails for Ric²**:
+
+**R² spin projections** (CORRECT ✓):
+```
+Spin-2:  0         ✓ (R² only affects scalar sector)
+Spin-1:  0         ✓
+Spin-0s: 3k⁴       ✓ (expected k⁴ contribution)
+Spin-0w: 0         ✓
+```
+
+**Ric² spin projections** (BROKEN ✗):
+```
+Spin-2:  15 terms with un-contracted k[c]*k[_d4] and g[_d2,_d2]  ✗
+Spin-1:  5 terms with un-contracted momenta  ✗
+Spin-0s: 4 terms with un-contracted momenta  ✗
+Spin-0w: 2 terms with un-contracted momenta  ✗
+```
+
+### Root Cause
+
+After spin projection, the result contains:
+1. **Same-position dummy pairs**: `k[_d3] * k[_d3]` (both Up) that `contract_momenta` can't handle (requires opposite positions)
+2. **Un-contracted metrics**: `g[_d2, _d2]` that should contract to dimension 4
+3. **Orphan momentum indices**: `k[c] * k[_d4]` that should have been contracted by the projector
+
+Applying `fix_dummy_positions` after spin projection resolves items 1 and 2, but item 3 persists. The orphan indices `c` and `_d4` appear to be dummies from the kernel coefficient that should pair with projector indices but don't.
+
+**Hypothesis**: the `_standardize_h_indices` step in `spin_project` renames h indices with fresh names, but the kernel coefficient's dummy indices (from the Ric² contraction) still carry the original names. When the projector is built with the fresh h-index names, the coefficient's dummies don't connect to anything.
+
+**Specific mechanics**: The Ric² kernel has terms like:
+```
+coeff = k[-_d1] * k[_d3]   (momentum indices from δRic contraction)
+left  = [_d1, _d2]          (h indices)
+right = [-_d2, -_d3]        (h indices)
+```
+The coefficient has a `k[_d3]` that contracts with `right[2] = -_d3`. But `_standardize_h_indices` renames the right indices to fresh names, breaking this contraction.
+
+### Fix Required
+
+**In `spin_project` (`src/action/kernel_extraction.jl:77-115`)**: when `_standardize_h_indices` renames h indices, it must ALSO propagate those renames into the coefficient expression. Currently it only inserts metric connectors for Up→Down lowering but doesn't update the coefficient's dummy references.
+
+This is the **#1 blocker** for the form factor pipeline. Once fixed, both the perturbation-engine approach and the direct momentum-space approach should work for all terms.
+
+**Estimated fix**: ~20 lines in `_standardize_h_indices` or the calling code in `spin_project`. The coefficient's indices that share names with the original h indices need to be updated when h indices get fresh names.
+
+---
+
+## Priority 1: Fix spin_project Dummy Propagation (BLOCKER)
+
+1. Read `_standardize_h_indices` in `src/action/kernel_extraction.jl:126-181`
+2. When h indices are renamed (Up→fresh Down), track the old→new mapping
+3. Apply the same rename to the coefficient expression (`bt.coeff`)
+4. Also apply `fix_dummy_positions` to the final spin_project result before returning
+5. Test: Ric² kernel should give clean scalar results (no orphan indices)
+
+### Validation After Fix
+
+Once spin_project works for Ric², verify:
+- R² spin-2 = 0, spin-0-s = 3k⁴ (unchanged) ✓
+- Ric² all sectors give clean k⁴ scalars
+- Identity kernel {5,3,1,1} still passes
+- FP EH kernel {5k²/2, 0, -k², 0} still passes
+
+---
+
+## Priority 2: Build Full 6-Deriv Form Factors (TGR-zq2k)
+
+### Approach: Hybrid (FP for EH + perturbation engine for rest)
+
+1. **EH kernel**: Use the manual Fierz-Pauli form (already validated, 4 terms)
+2. **R² kernel**: Use `(δR)²` from perturbation engine (already works ✓)
+3. **Ric² kernel**: Use `(δRic)²` from perturbation engine (needs spin_project fix)
+4. **R□R kernel**: Use `2(δR)(□δR)` from perturbation engine
+5. **Ric□Ric kernel**: Use `2(δRic)(□δRic)` from perturbation engine
+
+### Normalization
+
+The action `S = ∫ [κR + α₁R² + α₂Ric² + β₁R□R + β₂Ric□Ric]` gives quadratic Lagrangian:
+```
+L^(2) = κ × L_FP + 2α₁(δR)² + 2α₂(δRic)² + 2β₁(δR)(□δR) + 2β₂(δRic)(□δRic)
+```
+(Factor of 2 from δ²(X²) = 2(δX)² when background X̄=0)
+
+### Form Factor Extraction
+
+```
+f₂ = Tr(K_total · P²) / (5 × κ × k²)   →  should give 1 - (α₂/κ)k² - (β₂/κ)k⁴
+f₀ = Tr(K_total · P⁰ˢ) / (1 × (-κk²))  →  should give 1 + (6α₁+2α₂)k²/κ + (6β₁+2β₂)k⁴/κ
+```
+
+The normalization divisors ensure f₂(0) = f₀(0) = 1 for pure EH.
+
+---
+
+## Alternative: Direct Momentum-Space Construction (Approach D)
+
+If the spin_project fix proves too complex, build ALL kernels directly in momentum space:
+
+```julia
+# Linearized curvature in Fourier space (known, explicit formulas):
+# δR = k^a k^b h_{ab} - k² h
+# δRic_{μν} = (1/2)(k^ρ k_μ h_{νρ} + k^ρ k_ν h_{μρ} - k² h_{μν} - k_μ k_ν h)
+#
+# Build bilinear forms directly as TensorExpr:
+# (δR)² = (k^a k^b h_{ab} - k²h)²   → 3 bilinear terms
+# (δRic)² = δRic^{ab} δRic_{ab}      → 16 bilinear terms (4×4)
+# Then extract_kernel + spin_project (which should work since the
+# expressions are already in momentum space with clean index structure)
+```
+
+This bypasses the position-space simplifier entirely. The only risk is that spin_project still needs to handle the Ric² contraction complexity.
 
 ---
 
@@ -151,16 +186,23 @@ Test plan:
 | `src/action/kernel_extraction.jl` | `extract_kernel`, `spin_project`, `_standardize_h_indices`, `contract_momenta` |
 | `src/action/spin_projectors.jl` | Barnes-Rivers P2/P1/P0s/P0w/θ/ω projectors |
 | `src/algebra/canonicalize.jl:319-433` | `fix_dummy_positions` |
-| `src/algebra/ibp.jl` | `ibp`, `ibp_product` (potential approach A) |
-| `src/perturbation/variation.jl` | `variational_derivative`, `euler_lagrange` (potential approach B) |
+| `src/algebra/ibp.jl` | `ibp`, `ibp_product` |
+| `src/perturbation/variation.jl` | `variational_derivative`, `euler_lagrange` |
 | `src/perturbation/expand.jl` | `δricci_scalar`, `δricci`, `expand_perturbation` |
 | `src/svt/fourier.jl` | `to_fourier` (∂ → k replacement) |
-| `test/test_6deriv_spectrum.jl` | All spectrum tests (1194 pass) |
+| `test/test_6deriv_spectrum.jl` | All spectrum tests |
 
 ## Test Commands
 
 ```bash
-julia --project -e 'using Pkg; Pkg.test()'                    # full suite (4800 pass)
-julia --project=benchmarks benchmarks/run_all.jl --tier 1      # tier 1 benchmarks (53 pass)
+julia --project -e 'using Pkg; Pkg.test()'                    # full suite
+julia --project=benchmarks benchmarks/run_all.jl --tier 1      # tier 1 benchmarks
 bd show TGR-zq2k                                               # flat form factors issue
+bd show TGR-60sx                                                # canonicalize dummy bug
 ```
+
+## Beads Issues
+
+- **TGR-60sx** [P1 bug]: canonicalize same-position dummy pairs — related to spin_project bug
+- **TGR-zq2k** [P1 task]: Barnes-Rivers projection → flat form factors — BLOCKED by spin_project bug
+- **TGR-mphe** [P1 task]: dS background quadratic + box terms — BLOCKED by TGR-zq2k
