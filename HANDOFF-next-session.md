@@ -1,210 +1,146 @@
-# HANDOFF: 6-Deriv Spectrum Pipeline — Session 7
+# HANDOFF: 6-Deriv Spectrum Pipeline — Session 9
 
 ## Current State
 
-- **All 4819+ tests pass** (commit 0c6dd02, pushed)
-- **Canonicalization bug FIXED** (commit 1faf32f): generator conjugation + cperm reconstruction
-- **Beads TGR-60sx still open** — close it (the bug is fixed)
-- **TGR-zq2k now unblocked** — Barnes-Rivers spin projection ready to attempt
+- **4800 tests pass**, all pushed (commit da63ca2)
+- **Spin projection validated**: identity kernel {5,3,1,1}, manual Fierz-Pauli EH kernel gives spin-1=0, spin-0-w=0 ✓
+- **fix_dummy_positions**: exported, tested, repairs same-position dummy pairs from xperm
+- **Simplify convergence fixed**: two-phase dummy renaming in _normalize_dummies (commit e6f34de)
+- δ²R on flat converges to 22 terms (was oscillating at 23)
 
 ---
 
-## What Was Done (Session 6)
+## What Was Done (Sessions 7-8)
 
-### Fixed: Invalid Dummy Index Pairs in Canonicalization
+### Session 7: Convergence Fix
+- Two-phase dummy renaming in `_normalize_dummies` (old→tmp, tmp→canonical) prevents name collisions during batch rename
+- δ²R now converges to 22 terms in ≤4 passes
 
-**Root cause**: xperm.c uses LEFT-action on generators (`cperm = gen ∘ perm`), but the code
-passed unconjugated slot generators. This caused names to be reassigned as NAME permutations
-(not slot permutations), corrupting Up/Down dummy pairing in multi-tensor products.
+### Session 8: fix_dummy_positions + spin_project Index Standardization
 
-**Fix** (in `src/algebra/canonicalize.jl:197-296`):
+**fix_dummy_positions** (`src/algebra/canonicalize.jl:319-433`):
+Post-processing that repairs same-position dummy pairs (both-Up or both-Down) from the all-free xperm mode. Flips one occurrence to restore valid (Up,Down) pairing. Needed before Fourier transform and spin projection.
 
-1. **Conjugate generators** (lines 201-228): Before passing to xperm, slot generators are
-   conjugated by the name-assignment permutation:
-   ```
-   perm = Perm(perm_data)           # slot → name mapping
-   perm_inv = perm_inverse(perm)    # name → slot mapping
-   # For each slot generator g_slot:
-   g_conj[i] = perm[g_slot[perm_inv[i]]]   # = perm ∘ g_slot ∘ perm⁻¹
-   ```
-   This ensures `g_conj ∘ perm = perm ∘ g_slot` — left-action by the conjugated
-   generator produces the physically correct slot swap.
+**spin_project index standardization** (`src/action/kernel_extraction.jl:76-185`):
+Added `_standardize_h_indices` — lowers all h factor indices to Down position with fresh names before building Barnes-Rivers projectors. This prevents projector self-contraction when left/right h indices share names (e.g., h^{ab} h_{ad} with shared index :a would partially trace the projector).
 
-2. **Use cperm directly for reconstruction** (lines 261-274): With conjugated generators,
-   `cperm[slot] = name` gives the canonical name at each slot position. The old code used
-   `cperm_inv` which was wrong (the inverse undoes the name assignment instead of reading it).
-   ```julia
-   name_to_sym = Dict{Int, Symbol}()
-   for (slot, name) in slot_to_name
-       name_to_sym[name] = all_indices[slot].name
-   end
-   for slot in 1:nslots
-       cname = Int(cperm.data[slot])
-       sym = name_to_sym[cname]
-       new_all_indices[slot] = TIndex(sym, all_indices[slot].position, ...)
-   end
-   ```
-
-**Why the old code "worked" for simple cases**: `cperm_inv` was accidentally self-inverse for
-single tensors and simple products (where the permutation is trivial or an involution). It only
-broke for complex products with dummies spanning multiple tensors (which is exactly what
-perturbation expressions produce).
-
-### What Failed First
-
-Before the conjugation fix, I tried `perm[cperm_inv[slot]]` for reconstruction — this fixed
-dummy pairs but broke index sorting (5 test failures: derivative canonicalization didn't sort
-tensor indices, term counts wrong, ansatz tests failed). The full fix required BOTH generator
-conjugation AND using cperm directly.
+**Validation** (all in `test/test_6deriv_spectrum.jl`):
+- Identity kernel h_{ab}k²h^{ab} → {5k², 3k², k², k²} = sector dimensions × k² ✓
+- Manual Fierz-Pauli EH kernel → {5k²/2, 0, -k², 0} — gauge invariance confirmed ✓
+- fix_dummy_positions: validates repair of same-position pairs ✓
 
 ---
 
-## Priority 1: Fix Simplify Non-Convergence for δ²R
+## Priority 1: RESEARCH — Best Approach to EH Form Factors
 
 ### The Problem
 
-`simplify(δricci_scalar(mp, 2))` on a flat background (Ric=0, RicScalar=0, Riem=0) oscillates
-between two 23-term forms that never converge. The simplify loop hits `maxiter=20` and warns.
+The perturbation engine computes `δ²R + ½h·δR` for the EH quadratic Lagrangian on flat vacuum. This is mathematically correct but contains **total derivative terms** that don't affect the action integral but DO produce non-zero spin-1 contributions when projected term-by-term in Fourier space.
 
-**Oscillation pattern** (confirmed by diagnostic):
-```
-Pass 1: 23 terms, hash=1011663297007838076
-Pass 2: 23 terms, hash=16954686195903400317
-Pass 3: 23 terms, hash=17604360525189615673
-Pass 4: 23 terms, hash=16954686195903400317   ← period-2 cycle
-Pass 5: 23 terms, hash=17604360525189615673
-Pass 6: 23 terms, hash=16954686195903400317
-```
+Spin projection of the raw perturbation output gives:
+- spin-2: -5k²/4 (wrong)
+- spin-1: -9k²/4 (should be 0!)
+- spin-0-s: -5k²/2 (wrong)
+- spin-0-w: 0 ✓
 
-### Root Cause Analysis
+But spin projection of the manual Fierz-Pauli form gives the correct result:
+- spin-2: 5k²/2 ✓ (f₂ = k²/2)
+- spin-1: 0 ✓
+- spin-0-s: -k² ✓ (f₀s = -k²)
+- spin-0-w: 0 ✓
 
-The oscillation involves **20 out of 23 terms** (only 3 are stable). The 20 differing terms
-are structurally identical between forms A and B — they differ only in dummy name assignments.
+### Research Task for Next Agent
 
-**Two `∂(TSum)` terms** are the root cause. Example from form A:
-```
--g^{_d2 _d4} ∂_{_d4}(
-    (-1/2) g^{_d5 _d2} g^{_d6 _d4} h_{_d2 _d4} ∂_{_d5}(h_{_d2 _d6})
-  + (-1/2) g^{_d5 _d2} g^{_d6 _d4} h_{_d2 _d4} ∂_{_d2}(h_{_d5 _d6})
-  + (1/2) g^{_d5 _d2} g^{_d6 _d4} h_{_d2 _d4} ∂_{_d6}(h_{_d5 _d2})
-)
-```
+**Before writing any code**, investigate and compare the following approaches. Read the relevant source files, think through edge cases, and recommend the best path.
 
-The inner TSum has 3 terms that can be reordered. Each simplify pass:
-1. `expand_products` leaves `∂(TSum)` alone (only distributes `*` over `+`, not `∂` over `+`)
-2. `canonicalize` cannot see inside `∂(TSum)` — the implode/explode only handles `∂(Tensor)`
-3. `collect_terms` → `_normalize_dummies` renumbers dummies by first-occurrence order, but
-   the inner TSum terms shift positions, changing dummy ordering → different hash → no convergence
+#### Approach A: IBP Before Projection
 
-The **old 8-term result was WRONG** — the buggy canonicalization merged structurally different
-terms by assigning them the same (invalid) dummy names. The 23-term result is mathematically
-correct but over-expanded.
+Apply integration by parts to the quadratic Lagrangian to remove total derivatives, converting it to Fierz-Pauli form before Fourier transform + spin projection.
 
-### Approaches to Fix
+Questions to investigate:
+- Does TensorGR's `ibp` / `ibp_product` work on bilinear h expressions?
+- Can we write a dedicated `to_fierz_pauli(expr, field)` that IBPs until no total derivatives remain?
+- What does IBP look like in Fourier space? (Hint: `k_a × (term)` → boundary at k→∞ = 0)
+- Is there a clean criterion for "the expression has no total derivatives"?
 
-**A. Distribute partial derivatives over sums** (most promising):
+Files to read: `src/algebra/ibp.jl`, `src/svt/fourier.jl`
 
-Add `∂(A+B) → ∂A + ∂B` as a pipeline step in `_simplify_one_pass`, ONLY for partial
-derivatives (`:partial`, not covariant). This eliminates `∂(TSum)` entirely, so all terms
-become flat products that canonicalize/collect properly.
+#### Approach B: Build Kernel from Linearized Equations of Motion
 
-A naive version was tried (session 6) and produced 30 terms — worse because it expanded BEFORE
-metric contraction could clean up. The fix: distribute THEN contract metrics THEN canonicalize,
-as a sub-pipeline within each simplify pass:
-```julia
-result = expand_products(expr)
-result = _distribute_partial_derivs(result)   # NEW: ∂(A+B) → ∂A + ∂B
-result = contract_metrics(result)              # clean up after distribution
-result = contract_curvature(result)
-result = canonicalize(result)
-result = collect_terms(result)
-```
+Instead of computing the Lagrangian δ²S, compute the linearized field equations (linearized Einstein tensor G^(1)_{μν}) and build the kernel directly from the equations:
 
-**B. Normalize TSum inside _normalize_dummies** (harder):
+K_{μν,ρσ} h^{ρσ} = G^(1)_{μν}
 
-Sort inner TSum terms canonically before computing hash, so `∂(A+B+C)` and `∂(B+C+A)` hash
-the same. Tricky because the inner terms share dummies with the outer expression.
+The equations of motion have NO total derivative ambiguity. The kernel is the differential operator mapping h to G^(1).
 
-**C. Period detection in simplify loop** (workaround, not a fix):
+Questions to investigate:
+- Can we extract K_{μν,ρσ} from G^(1)_{μν}(h) by treating h as a "source" with free indices?
+- Does `euler_lagrange` / `variational_derivative` already do this?
+- How does this generalize to higher-derivative terms (R², Ric², R□R, Ric□Ric)?
+- For 4th/6th derivative terms: the EOM is 4th/6th order in derivatives — does the Fourier transform handle this correctly?
 
-Detect that hashes cycle and return the shorter form. Doesn't reduce term count but stops the
-warning and makes `simplify` deterministic. Quick to implement:
-```julia
-# In _simplify_fixpoint: track last N hashes, detect cycle
-seen_hashes = Dict{UInt, TensorExpr}()
-# if h_next ∈ keys(seen_hashes), return the form with fewer terms
-```
+Files to read: `src/perturbation/variation.jl`, `src/perturbation/linearize.jl`
 
-**Recommendation**: Try A first. If the distributed form still has too many terms, combine with
-C as a safety net.
+#### Approach C: Gauge-Fix Then Project
 
-### Test Impact
+Add a gauge-fixing term (de Donder gauge: `-(1/2)(∂_μ h^μν - ½∂^ν h)²`) to the quadratic Lagrangian. This makes the kinetic operator invertible (all 4 sectors non-degenerate) and removes the total derivative issue.
 
-`test/test_6deriv_spectrum.jl:621-662`: Term count assertions relaxed from `== 8` / `== 4`
-to `>= 8` / `>= 4`. Once convergence is fixed, tighten these back to exact counts.
+Questions to investigate:
+- Does gauge fixing change the spin-2 and spin-0-s form factors? (It shouldn't — gauge fixing only affects spin-1 and spin-0-w)
+- Can we extract f₂ and f₀s from the gauge-fixed operator and verify they match the gauge-invariant result?
+- Is this simpler than IBP?
 
----
+#### Approach D: Direct Momentum-Space Construction
 
-## Priority 2: TGR-zq2k — Barnes-Rivers Flat Form Factors
+Skip the position-space perturbation engine entirely. Build the momentum-space kernel from the known structure of each curvature invariant:
 
-### Goal
+- EH: the Fierz-Pauli kernel (4 terms, already validated in Test 3)
+- R²: the kernel is `(k_a k_b h^{ab} - k² h)² / something`
+- Ric²: similarly from δRic in Fourier space
 
-Compute spin-2 and spin-0 form factors for 6-derivative gravity on flat background.
-Ground truth: Buoninfante 2012.11829 Eq.2.13:
-- Spin-2: `f₂(z) = 1 − (α₂/κ)z − (β₂/κ)z²`
-- Spin-0: `f₀(z) = 1 + (6α₁+2α₂)z/κ + (6β₁+2β₂)z²/κ`
-- Spin-1: identically zero (diffeomorphism invariance check)
+Questions: Can we compute δRic and δR directly in Fourier space without going through the perturbation engine?
 
-### Pipeline
+### Important Context for Higher-Derivative Terms
 
-```
-δ²S → simplify → to_fourier(∂→k) → simplify → extract_kernel → spin_project
-```
+The higher-derivative terms (R², Ric², R□R, Ric□Ric) are DIFFERENT from EH:
+- `(δR)²` is already a product of first-order variations — NO total derivative issue
+- Same for `(δRic)²`
+- The box terms `2(δR)(□δR)` and `2(δRic)(□δRic)` are also products
 
-1. Build `δ²S` from each invariant (EH: `κR`, R²: `α₁R²`, Ric²: `α₂Ric²`, etc.)
-2. `to_fourier` replaces `∂_a → k_a` (already working, test at line 648)
-3. `extract_kernel` decomposes bilinear into `KineticKernel` (working, test at line 671)
-4. `spin_project` contracts with Barnes-Rivers projectors (implemented in `kernel_extraction.jl:76-104`)
-5. `contract_momenta` replaces `k_a k^a → k²` (working, test at line 585)
+So the total-derivative problem is **specific to the EH term**. The higher-derivative terms should "just work" with the existing pipeline. The research should confirm this.
 
-### What's Implemented
+### Deliverable
 
-- `spin_project` function: `src/action/kernel_extraction.jl:76-104`
-- Barnes-Rivers projectors: `src/action/spin_projectors.jl` (theta/omega/P2/P1/P0s/P0w/Tsw/Tws)
-- `extract_kernel`: `src/action/kernel_extraction.jl:42-62`
-- `contract_momenta`: `src/action/kernel_extraction.jl:129-168`
-- `to_fourier`: `src/svt/fourier.jl`
-
-### Blocking Issue
-
-The convergence issue (Priority 1) means `simplify(δ²R)` gives 23 terms with a warning instead
-of 8 clean terms. The downstream pipeline (extract_kernel, spin_project) may still work
-with more terms — they just process more data. **Try it first** and see if results are correct.
-
-If spin_project produces the right form factors despite 23 terms, the convergence fix becomes
-cosmetic (performance, not correctness). If it fails, fix convergence first.
-
-### Test Plan
-
-Write tests in `test/test_6deriv_spectrum.jl` after the existing Step 1.2 tests:
-```julia
-@testset "Step 1.3: spin_project form factors" begin
-    # Setup same as Step 1.2 tests (line 648)
-    # For each invariant (EH, R², Ric², R□R, Ric□Ric, Riem□Riem):
-    #   1. Build δ²S, Fourier transform, extract kernel
-    #   2. spin_project with :spin2, :spin1, :spin0s, :spin0w
-    #   3. Assert spin-1 = 0 (gauge invariance)
-    #   4. Compare f₂, f₀ polynomial coefficients against ground truth
-end
-```
+Write a brief recommendation (in this handoff file or a comment) with:
+1. Which approach is best and why
+2. Estimated complexity (how many lines of code, which files to change)
+3. Any blockers or risks discovered
+4. Then implement the chosen approach
 
 ---
 
-## Priority 3: TGR-mphe — dS Background Quadratic + Box Terms
+## Priority 2: Complete 6-Deriv Form Factors (TGR-zq2k)
 
-Independent of Priorities 1-2. Requires expanding perturbations on a de Sitter background
-(non-zero Riemann/Ricci) and computing box terms (`□h`, `□²h`). This is ready to start
-but has no blocking dependency on the flat convergence fix.
+Once the EH kernel is working, combine all 5 kernels with coupling constants and verify:
+
+```
+f₂(z) = 1 − (α₂/κ)z − (β₂/κ)z²      (Buoninfante Eq. 2.13)
+f₀(z) = 1 + (6α₁+2α₂)z/κ + (6β₁+2β₂)z²/κ
+```
+
+Test plan:
+1. Build combined kernel: `κ·K_EH + α₁·K_R² + α₂·K_Ric² + β₁·K_R□R + β₂·K_Ric□Ric`
+2. `spin_project(:spin2)` → extract coefficient of k² and k⁴ → verify matches f₂
+3. `spin_project(:spin0s)` → extract coefficients → verify matches f₀
+4. `spin_project(:spin1)` → must be exactly 0
+5. `spin_project(:spin0w)` → must be exactly 0
+
+### Convention Notes
+
+- `spin_project` returns `Tr(K·P^J)`, NOT `f_J`. Divide by sector dimension to get f_J: {5,3,1,1} for d=4
+- `δricci_scalar(mp, n)` returns the ε^n coefficient (Cauchy product), not (1/n!)d^n/dε^n
+- `to_fourier` replaces ∂_a → k_a (no factor of i)
+- k² is stored as `TScalar(:k²)`, 1/k² as `TScalar(:(1/k²))`
 
 ---
 
@@ -212,61 +148,19 @@ but has no blocking dependency on the flat convergence fix.
 
 | File | Role |
 |------|------|
-| `src/algebra/canonicalize.jl:197-296` | Fixed: generator conjugation + cperm reconstruction |
-| `src/algebra/simplify.jl:310-370` | Simplify fixpoint loop + one-pass pipeline |
-| `src/algebra/simplify.jl:84-112` | `_normalize_dummies` (dummy renaming for term comparison) |
-| `src/algebra/simplify.jl:114-148` | `_sort_partial_chains` (commuting ∂ chains) |
-| `src/algebra/simplify.jl:48-76` | `collect_terms` / `_collect_terms_impl` |
-| `src/action/kernel_extraction.jl` | `extract_kernel`, `spin_project`, `contract_momenta` |
+| `src/action/kernel_extraction.jl` | `extract_kernel`, `spin_project`, `_standardize_h_indices`, `contract_momenta` |
 | `src/action/spin_projectors.jl` | Barnes-Rivers P2/P1/P0s/P0w/θ/ω projectors |
+| `src/algebra/canonicalize.jl:319-433` | `fix_dummy_positions` |
+| `src/algebra/ibp.jl` | `ibp`, `ibp_product` (potential approach A) |
+| `src/perturbation/variation.jl` | `variational_derivative`, `euler_lagrange` (potential approach B) |
+| `src/perturbation/expand.jl` | `δricci_scalar`, `δricci`, `expand_perturbation` |
 | `src/svt/fourier.jl` | `to_fourier` (∂ → k replacement) |
-| `test/test_6deriv_spectrum.jl:607-680` | δ²S term counts + Step 1.2 Fourier/kernel tests |
-| `src/perturbation/expand.jl` | `δricci_scalar`, `δricci`, `δriemann` |
+| `test/test_6deriv_spectrum.jl` | All spectrum tests (1194 pass) |
 
-## Key Test Commands
+## Test Commands
 
 ```bash
-julia --project -e 'using Pkg; Pkg.test()'  # full test suite (all 4819+ pass)
-bd ready                                      # see unblocked work
-bd show TGR-zq2k                              # flat form factors (unblocked!)
-bd show TGR-60sx                              # canonicalization bug (FIXED, close it)
-bd show TGR-mphe                              # dS background (independent)
-```
-
-## Diagnostic Script
-
-Save as `/tmp/diag_convergence.jl` and run `julia --project /tmp/diag_convergence.jl`:
-```julia
-using TensorGR
-reg = TensorRegistry()
-with_registry(reg) do
-    @manifold M4 dim=4 metric=g
-end
-define_curvature_tensors!(reg, :M4, :g)
-with_registry(reg) do
-    @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
-end
-mp = define_metric_perturbation!(reg, :g, :h)
-set_vanishing!(reg, :Ric)
-set_vanishing!(reg, :RicScalar)
-set_vanishing!(reg, :Riem)
-
-formA, formB = with_registry(reg) do
-    current = δricci_scalar(mp, 2)
-    for i in 1:4
-        current = expand_products(current)
-        current = contract_metrics(current)
-        current = contract_curvature(current)
-        current = canonicalize(current)
-        current = collect_terms(current)
-    end
-    fA = current
-    current = expand_products(current)
-    current = contract_metrics(current)
-    current = contract_curvature(current)
-    current = canonicalize(current)
-    current = collect_terms(current)
-    (fA, current)
-end
-# Compare: 3 common terms, 20 differ only in dummy names
+julia --project -e 'using Pkg; Pkg.test()'                    # full suite (4800 pass)
+julia --project=benchmarks benchmarks/run_all.jl --tier 1      # tier 1 benchmarks (53 pass)
+bd show TGR-zq2k                                               # flat form factors issue
 ```
