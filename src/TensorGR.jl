@@ -225,6 +225,8 @@ export foliate_and_decompose
 export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic_form
 export sym_det, sym_inv, sym_eval
 export KineticKernel, extract_kernel, spin_project, contract_momenta
+export build_FP_momentum_kernel, build_R2_momentum_kernel, build_Ric2_momentum_kernel
+export _eval_spin_scalar
 
 # Exports: CAS integration
 export simplify_scalar, simplify_quadratic_form

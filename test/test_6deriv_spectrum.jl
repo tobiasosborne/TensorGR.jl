@@ -1016,4 +1016,145 @@ using Random
         end
     end
 
+    # ══════════════════════════════════════════════════════════════════
+    # Direct momentum-space kernel construction (Approach D)
+    # Bypasses position-space perturbation engine to avoid index bugs
+    # ══════════════════════════════════════════════════════════════════
+
+    @testset "momentum-space R² kernel" begin
+        # (δR)² = (k^a k^b h_{ab} - k² h)²
+        # Expected: spin2=0, spin1=0, spin0s=3k⁴, spin0w=0
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            K = build_R2_momentum_kernel(reg)
+            @test length(K.terms) == 3
+            kw = (dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+
+            r2  = spin_project(K, :spin2;  kw...)
+            r1  = spin_project(K, :spin1;  kw...)
+            r0s = spin_project(K, :spin0s; kw...)
+            r0w = spin_project(K, :spin0w; kw...)
+
+            # Numerical check at multiple k² values
+            for k2 in [1.0, 2.0, 0.5, 3.7]
+                @test abs(_eval_spin_scalar(r2, k2))  < 1e-10
+                @test abs(_eval_spin_scalar(r1, k2))  < 1e-10
+                @test abs(_eval_spin_scalar(r0s, k2) - 3k2^2) < 1e-10
+                @test abs(_eval_spin_scalar(r0w, k2)) < 1e-10
+            end
+        end
+    end
+
+    @testset "momentum-space Ric² kernel" begin
+        # (δRic)² = g^{μα}g^{νβ} δRic_{αβ} δRic_{μν}
+        # Expected: spin2=5k⁴/4, spin1=0, spin0s=k⁴, spin0w=0
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            K = build_Ric2_momentum_kernel(reg)
+            @test length(K.terms) == 16
+            kw = (dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+
+            r2  = spin_project(K, :spin2;  kw...)
+            r1  = spin_project(K, :spin1;  kw...)
+            r0s = spin_project(K, :spin0s; kw...)
+            r0w = spin_project(K, :spin0w; kw...)
+
+            for k2 in [1.0, 2.0, 0.5, 3.7]
+                @test abs(_eval_spin_scalar(r2, k2) - 5k2^2/4) < 1e-10
+                @test abs(_eval_spin_scalar(r1, k2))  < 1e-10
+                @test abs(_eval_spin_scalar(r0s, k2) - k2^2)   < 1e-10
+                @test abs(_eval_spin_scalar(r0w, k2)) < 1e-10
+            end
+        end
+    end
+
+    @testset "6-deriv flat form factors (Buoninfante Eq.2.13)" begin
+        # K_total = κ K_FP + 2(α₁-β₁k²) K_R² + 2(α₂-β₂k²) K_Ric²
+        # f₂ = 1 + (α₂/κ)k² - (β₂/κ)k⁴
+        # f₀ = 1 - (6α₁+2α₂)/κ k² + (6β₁+2β₂)/κ k⁴
+        # Spin-1 = 0 (gauge invariance)
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+            kw = (dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+
+            # Build kernels
+            K_FP   = build_FP_momentum_kernel(reg)
+            K_R2   = build_R2_momentum_kernel(reg)
+            K_Ric2 = build_Ric2_momentum_kernel(reg)
+
+            # Project once (reusable)
+            P = Dict{Symbol,Dict{Symbol,TensorExpr}}()
+            for (name, K) in [(:FP,K_FP), (:R2,K_R2), (:Ric2,K_Ric2)]
+                P[name] = Dict(s => spin_project(K, s; kw...) for s in [:spin2,:spin1,:spin0s,:spin0w])
+            end
+
+            # 100 random parameter points
+            rng = MersenneTwister(42)
+            for _ in 1:100
+                κ  = rand(rng)*10+0.1
+                α₁ = (rand(rng)-0.5)*2
+                α₂ = (rand(rng)-0.5)*2
+                β₁ = (rand(rng)-0.5)*0.5
+                β₂ = (rand(rng)-0.5)*0.5
+                k2 = rand(rng)*5+0.1
+
+                c_R2   = 2(α₁ - β₁*k2)
+                c_Ric2 = 2(α₂ - β₂*k2)
+
+                ev(name, spin) = _eval_spin_scalar(P[name][spin], k2)
+
+                # Spin-2 form factor
+                tot2 = κ*ev(:FP,:spin2) + c_R2*ev(:R2,:spin2) + c_Ric2*ev(:Ric2,:spin2)
+                f2 = tot2 / (κ*ev(:FP,:spin2))
+                f2_exp = 1 + (α₂/κ)*k2 - (β₂/κ)*k2^2
+                @test abs(f2 - f2_exp) < 1e-10
+
+                # Spin-0 form factor
+                tot0 = κ*ev(:FP,:spin0s) + c_R2*ev(:R2,:spin0s) + c_Ric2*ev(:Ric2,:spin0s)
+                f0 = tot0 / (κ*ev(:FP,:spin0s))
+                f0_exp = 1 - (6α₁+2α₂)/κ * k2 + (6β₁+2β₂)/κ * k2^2
+                @test abs(f0 - f0_exp) < 1e-10
+
+                # Spin-1 total vanishes
+                tot1 = κ*ev(:FP,:spin1) + c_R2*ev(:R2,:spin1) + c_Ric2*ev(:Ric2,:spin1)
+                @test abs(tot1) < 1e-10
+            end
+        end
+    end
+
+    @testset "Stelle limit mass formulas" begin
+        rng = MersenneTwister(123)
+        for _ in 1:20
+            κ  = rand(rng)*10+1
+            α₁ = (rand(rng)-0.5)*2
+            α₂ = rand(rng)*2+0.1
+            # m₂² = κ/α₂ → f₂ at k²=-m₂² should vanish
+            @test abs(1 + (α₂/κ)*(-κ/α₂)) < 1e-10
+            # m₀² pole: f₀(κ/(6α₁+2α₂)) = 0
+            k2p = κ/(6α₁+2α₂)
+            @test abs(1 - (6α₁+2α₂)/κ * k2p) < 1e-10
+        end
+    end
+
+    @testset "Residue sum rule" begin
+        rng = MersenneTwister(456)
+        for _ in 1:20
+            a = (rand(rng)-0.5)*2
+            b = rand(rng)*2+0.1
+            disc = Complex(a^2 - 4b)
+            r1 = (-a + sqrt(disc)) / (2b)
+            r2 = (-a - sqrt(disc)) / (2b)
+            fp(z) = a + 2b*z
+            @test abs(real(1 + 1/(r1*fp(r1)) + 1/(r2*fp(r2)))) < 1e-10
+        end
+    end
+
 end

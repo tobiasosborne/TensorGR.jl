@@ -287,3 +287,125 @@ function _kernel_term_parts(t::TSum)
     # Single-term sum (shouldn't happen, but handle gracefully)
     length(t.terms) == 1 ? _kernel_term_parts(t.terms[1]) : (1 // 1, TensorExpr[t])
 end
+
+# ─── Direct momentum-space kernel builders ──────────────────────────
+# These construct bilinear kernels directly in Fourier space using known
+# linearized curvature formulas, avoiding the position-space perturbation
+# engine and its index normalization issues.
+
+"""
+    build_FP_momentum_kernel(reg) -> KineticKernel
+
+Fierz-Pauli EH quadratic Lagrangian in Fourier space:
+L_FP = (1/2)k² h_{ab}h^{ab} - k_bk_c h^{ab}h^c_a + k_ak_b h^{ab}h - (1/2)k²h²
+"""
+function build_FP_momentum_kernel(reg)
+    t1 = (1//2) * TScalar(:k²) * Tensor(:h, [down(:a), down(:b)]) * Tensor(:h, [up(:a), up(:b)])
+    t2 = (-1//1) * Tensor(:k, [down(:b)]) * Tensor(:k, [down(:c)]) * Tensor(:h, [up(:a), up(:b)]) * Tensor(:h, [up(:c), down(:a)])
+    t3 = (1//1) * Tensor(:k, [down(:a)]) * Tensor(:k, [down(:b)]) * Tensor(:h, [up(:a), up(:b)]) * Tensor(:h, [up(:c), down(:c)])
+    t4 = (-1//2) * TScalar(:k²) * Tensor(:h, [up(:a), down(:a)]) * Tensor(:h, [up(:b), down(:b)])
+    extract_kernel(t1 + t2 + t3 + t4, :h; registry = reg)
+end
+
+"""
+    build_R2_momentum_kernel(reg) -> KineticKernel
+
+(δR)² in Fourier space on flat background.
+δR = k^a k^b h_{ab} - k² h, so (δR)² = 3 bilinear terms.
+All h indices are Down with disjoint names (a,b for left; c,d for right).
+"""
+function build_R2_momentum_kernel(reg)
+    a, b, c, d = down(:a), down(:b), down(:c), down(:d)
+    t1 = tproduct(1 // 1, TensorExpr[
+        Tensor(:k, [up(:a)]), Tensor(:k, [up(:b)]),
+        Tensor(:k, [up(:c)]), Tensor(:k, [up(:d)]),
+        Tensor(:h, [a, b]), Tensor(:h, [c, d])])
+    t2 = tproduct(-2 // 1, TensorExpr[
+        TScalar(:k²), Tensor(:g, [up(:a), up(:b)]),
+        Tensor(:k, [up(:c)]), Tensor(:k, [up(:d)]),
+        Tensor(:h, [a, b]), Tensor(:h, [c, d])])
+    t3 = tproduct(1 // 1, TensorExpr[
+        TScalar(:k²), TScalar(:k²),
+        Tensor(:g, [up(:a), up(:b)]), Tensor(:g, [up(:c), up(:d)]),
+        Tensor(:h, [a, b]), Tensor(:h, [c, d])])
+    extract_kernel(t1 + t2 + t3, :h; registry = reg)
+end
+
+"""
+    build_Ric2_momentum_kernel(reg) -> KineticKernel
+
+(δRic)² = g^{μα}g^{νβ} δRic_{αβ} δRic_{μν} in Fourier space on flat background.
+δRic_{μν} = (1/2)(k^ρ k_μ h_{νρ} + k^ρ k_ν h_{μρ} - k² h_{μν} - k_μ k_ν g^{ρσ} h_{ρσ}).
+Produces 4×4 = 16 bilinear terms with all-Down h indices and disjoint names.
+"""
+function build_Ric2_momentum_kernel(reg)
+    kup(x) = Tensor(:k, [up(x)])
+    kdn(x) = Tensor(:k, [down(x)])
+    guu(x, y) = Tensor(:g, [up(x), up(y)])
+    h_dd(x, y) = Tensor(:h, [down(x), down(y)])
+    ksq = TScalar(:k²)
+
+    # δRic_{αβ} (copy 1, α→e, β→f, dummy→a,b), h uses {a,b,e,f}
+    T = [
+        (1 // 4, [kup(:a), kdn(:e)],             (:f, :a)),
+        (1 // 4, [kup(:a), kdn(:f)],             (:e, :a)),
+        (-1 // 4, [ksq],                          (:e, :f)),
+        (-1 // 4, [kdn(:e), kdn(:f), guu(:a, :b)], (:a, :b)),
+    ]
+    # δRic_{μν} (copy 2, μ→i, ν→j, dummy→c,d), h uses {c,d,i,j}
+    U = [
+        (1 // 1, [kup(:c), kdn(:i)],             (:j, :c)),
+        (1 // 1, [kup(:c), kdn(:j)],             (:i, :c)),
+        (-1 // 1, [ksq],                          (:i, :j)),
+        (-1 // 1, [kdn(:i), kdn(:j), guu(:c, :d)], (:c, :d)),
+    ]
+    common = [guu(:i, :e), guu(:j, :f)]
+
+    terms = TensorExpr[]
+    for (s_t, f_t, (l1, l2)) in T
+        for (s_u, f_u, (r1, r2)) in U
+            push!(terms, tproduct(s_t * s_u,
+                TensorExpr[common..., f_t..., f_u..., h_dd(l1, l2), h_dd(r1, r2)]))
+        end
+    end
+    extract_kernel(tsum(terms), :h; registry = reg)
+end
+
+# ─── Numerical evaluation of spin projection results ────────────────
+
+"""
+    _eval_spin_scalar(expr, k2_val) -> Float64
+
+Evaluate a fully-contracted spin projection result (TScalar/TProduct/TSum
+tree containing :k² symbols) at a numeric k² value.
+"""
+function _eval_spin_scalar(expr::TScalar, k2)
+    _eval_ksq_val(expr.val, k2)
+end
+function _eval_spin_scalar(expr::TProduct, k2)
+    Float64(expr.scalar) * prod(_eval_spin_scalar(f, k2) for f in expr.factors)
+end
+function _eval_spin_scalar(expr::TSum, k2)
+    sum(_eval_spin_scalar(t, k2) for t in expr.terms)
+end
+function _eval_spin_scalar(expr::Tensor, k2)
+    error("Uncontracted tensor in spin projection result: $expr")
+end
+
+function _eval_ksq_val(v, k2)
+    v isa Rational && return Float64(v)
+    v isa Integer && return Float64(v)
+    v isa AbstractFloat && return Float64(v)
+    v === :k² && return Float64(k2)
+    v isa Expr || return Float64(v)
+    if v.head == :call
+        op = v.args[1]
+        args = [_eval_ksq_val(a, k2) for a in v.args[2:end]]
+        op === :* && return prod(args)
+        op === :+ && return sum(args)
+        op === :- && return length(args) == 1 ? -args[1] : args[1] - args[2]
+        op === :/ && return args[1] / args[2]
+        op === :^ && return args[1]^args[2]
+    end
+    error("Cannot evaluate TScalar value: $v (type=$(typeof(v)))")
+end
