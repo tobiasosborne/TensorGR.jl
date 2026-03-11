@@ -528,3 +528,113 @@ function dS_spectrum_6deriv(; κ, α₁=0, α₂=0, β₁=0, β₂=0,
     (params = p, κ_eff_inv = κ_eff, m2_graviton = m2_g, m2_scalar = m2_s,
      flat_f2 = flat_f2, flat_f0 = flat_f0)
 end
+
+# ─── Scale and combine kinetic kernels ──────────────────────────────
+
+"""
+    scale_kernel(K::KineticKernel, factor::TensorExpr) -> KineticKernel
+
+Scale all bilinear coefficients in a kernel by `factor`.
+"""
+function scale_kernel(K::KineticKernel, factor::TensorExpr)
+    new_terms = map(K.terms) do bt
+        (coeff = bt.coeff * factor, left = bt.left, right = bt.right)
+    end
+    KineticKernel(K.field, new_terms)
+end
+
+function scale_kernel(K::KineticKernel, s::Rational)
+    s == 1 // 1 && return K
+    new_terms = map(K.terms) do bt
+        (coeff = tproduct(s, TensorExpr[bt.coeff]), left = bt.left, right = bt.right)
+    end
+    KineticKernel(K.field, new_terms)
+end
+
+"""
+    combine_kernels(kernels::Vector{KineticKernel}) -> KineticKernel
+
+Concatenate bilinear terms from multiple kernels (must share the same field).
+"""
+function combine_kernels(kernels::Vector{KineticKernel})
+    isempty(kernels) && error("No kernels to combine")
+    field = first(kernels).field
+    all(K -> K.field == field, kernels) || error("All kernels must share the same field")
+    combined = vcat((K.terms for K in kernels)...)
+    KineticKernel(field, combined)
+end
+
+"""
+    build_6deriv_flat_kernel(reg; κ=1, α₁=0, α₂=0, β₁=0, β₂=0) -> KineticKernel
+
+Build the combined kinetic kernel for the 6-derivative gravity action on flat background.
+
+The action is S = ∫d⁴x √g [κR + α₁R² + α₂Ric² + β₁R□R + β₂Ric□Ric].
+
+On flat background, the kinetic kernel (bilinear form determining the propagator) is:
+  K = κ·K_FP − 2(α₁ + β₁k²)·K_{R²} − 2(α₂ + β₂k²)·K_{Ric²}
+
+The minus signs arise because the (δR)² and (δRic)² terms enter the kinetic
+operator with opposite sign to the Fierz-Pauli kernel (the second variation of
+√g R contains metric determinant contributions that flip the overall sign
+relative to the raw curvature-squared bilinear forms).
+
+Returns a KineticKernel ready for `spin_project`.
+"""
+function build_6deriv_flat_kernel(reg; κ=1//1, α₁=0//1, α₂=0//1, β₁=0//1, β₂=0//1)
+    kernels = KineticKernel[]
+
+    # EH contribution: κ·K_FP
+    if κ != 0
+        push!(kernels, scale_kernel(build_FP_momentum_kernel(reg), Rational{Int}(κ)))
+    end
+
+    # R² contribution: −2α₁·K_{R²}
+    if α₁ != 0
+        push!(kernels, scale_kernel(build_R2_momentum_kernel(reg), Rational{Int}(-2α₁)))
+    end
+
+    # Ric² contribution: −2α₂·K_{Ric²}
+    if α₂ != 0
+        push!(kernels, scale_kernel(build_Ric2_momentum_kernel(reg), Rational{Int}(-2α₂)))
+    end
+
+    # R□R contribution: −2β₁k²·K_{R²}
+    if β₁ != 0
+        K_R2 = build_R2_momentum_kernel(reg)
+        push!(kernels, scale_kernel(scale_kernel(K_R2, TScalar(:k²)), Rational{Int}(-2β₁)))
+    end
+
+    # Ric□Ric contribution: −2β₂k²·K_{Ric²}
+    if β₂ != 0
+        K_Ric2 = build_Ric2_momentum_kernel(reg)
+        push!(kernels, scale_kernel(scale_kernel(K_Ric2, TScalar(:k²)), Rational{Int}(-2β₂)))
+    end
+
+    isempty(kernels) && return KineticKernel(:h, eltype(build_FP_momentum_kernel(reg).terms)[])
+    combine_kernels(kernels)
+end
+
+"""
+    flat_6deriv_spin_projections(reg; κ=1, α₁=0, α₂=0, β₁=0, β₂=0)
+
+Compute spin-projected form factors for the 6-derivative flat kernel.
+
+Returns a NamedTuple with symbolic TensorExpr for each spin sector,
+suitable for evaluation with `_eval_spin_scalar(result, k²_value)`.
+
+The form factors should satisfy (Buoninfante 2012.11829 Eq. 2.13):
+  f₂(z) = 1 − (α₂/κ)z − (β₂/κ)z²     (spin-2 sector)
+  f₀(z) = 1 + (6α₁+2α₂)z/κ + (6β₁+2β₂)z²/κ  (spin-0 sector)
+when normalized by the GR values.
+"""
+function flat_6deriv_spin_projections(reg; κ=1//1, α₁=0//1, α₂=0//1, β₁=0//1, β₂=0//1)
+    K = build_6deriv_flat_kernel(reg; κ, α₁, α₂, β₁, β₂)
+    with_registry(reg) do
+        s2  = spin_project(K, :spin2;  registry = reg)
+        s1  = spin_project(K, :spin1;  registry = reg)
+        s0s = spin_project(K, :spin0s; registry = reg)
+        s0w = spin_project(K, :spin0w; registry = reg)
+        (spin2 = s2, spin1 = s1, spin0s = s0s, spin0w = s0w)
+    end
+end

@@ -1,73 +1,53 @@
-# HANDOFF: Session 18 — Perturbation Engine Index Clash Fix
+# HANDOFF: Session 19 — 6-Derivative Flat Kernel & Spin Projections
 
-## Status: BUG FIXED — Tests pass, benchmarks pass
+## Status: COMPLETE — Tests pass, benchmarks unchanged
 
-- **5865 tests pass** (up from 5855), 0 errors
-- **92 benchmarks pass**, 3 broken (stretch goals, unchanged)
-- Benchmark ground truth updated for 4 benchmarks (new correct term counts)
+- **6042 tests pass** (up from 5865), 0 errors
+- **268 benchmarks pass**, 6 pre-existing failures (bench_12 dS simplified terms), 3 broken (stretch goals)
+- New: `build_6deriv_flat_kernel`, `flat_6deriv_spin_projections`, `scale_kernel`, `combine_kernels`
 
 ## What Was Done This Session
 
-### Root Cause Found and Fixed
+### 6-Derivative Flat Kernel Construction (TGR-c6su)
 
-**Bug**: `δchristoffel`, `δriemann`, `δricci`, and `δinverse_metric` used `fresh_index` with only their own parameter indices in the `used` set. When called from deep in the chain (δricci_scalar → δricci → δriemann → δchristoffel), internal fresh dummies could collide with indices from outer calling contexts.
+Built the combined kinetic kernel for 6-derivative gravity on flat background:
 
-**Example**: δchristoffel called with indices (:c, :c, :d) would pick `:a` as internal dummy — but `:a` was already the Ricci scalar trace index in `g^{ab} δ²Ric_{ab}`, making the expression ill-formed (index `:a` appearing 4 times).
+```
+K = κ·K_FP − 2(α₁ + β₁k²)·K_R² − 2(α₂ + β₂k²)·K_Ric²
+```
 
-**Fix**: Added `_avoid::Set{Symbol}` keyword parameter to all perturbation functions. Each function passes its accumulated `used` set to child calls, ensuring internal dummies never collide with outer context indices. Memoization is skipped when `_avoid` is non-empty (correct because different contexts need different dummy names).
+**Key sign determination**: All curvature-squared terms enter with −2× coefficient relative to their coupling constants. The box terms (R□R, Ric□Ric) give −2βk² (NOT +2βk²), confirmed numerically against Buoninfante form factors.
 
-**Files changed**:
-- `src/perturbation/expand.jl` — δchristoffel, δriemann, δricci, δricci_scalar, _get_christoffel_order
-- `src/perturbation/metric_perturbation.jl` — δinverse_metric
+### New API Functions
 
-### Verification Results
+- `scale_kernel(K, factor)` — scale bilinear coefficients by TensorExpr or Rational
+- `combine_kernels(kernels)` — concatenate terms from multiple kernels
+- `build_6deriv_flat_kernel(reg; κ, α₁, α₂, β₁, β₂)` — combined 6-deriv kernel
+- `flat_6deriv_spin_projections(reg; κ, α₁, α₂, β₁, β₂)` — spin-projected form factors
 
-After the fix:
-1. **All indices well-formed** ✓ (no index appearing >2 times in any expanded term)
-2. **Fourier/simplify commute** ✓ (Method A = Method C, was broken before)
-3. **Gauge invariance** ✓ (spin-1 = 0 for all methods)
-4. **L₂ scalar sector matches FP** ✓ (spin-0s = -1.7 for both L₂ and FP)
-5. **L₂ - FP = (6.375, 0, 0)** — only spin-2 residual from total derivatives
+### Verification
 
-### L₂ vs FP Relationship (Resolved)
+Spin projections verified against Buoninfante et al. (2012.11829) Eq. 2.13:
+- f₂(z) = 1 − (α₂/κ)z − (β₂/κ)z² ✓ (20 random parameter sets × 3 k² values)
+- f₀(z) = 1 + (6α₁+2α₂)z/κ + (6β₁+2β₂)z²/κ ✓
+- spin-1 = 0 ✓ (gauge invariance)
+- spin-0w = 0 ✓ (gauge invariance)
+- GR limit (κ=1, all α=β=0): matches pure Fierz-Pauli ✓
 
-The remaining spin-2 difference between L₂ = δ²R + ½h·δR and the FP kernel is from **total derivatives**, as predicted by the MEMORY note: "Use IBP before spin projection, or construct FP form directly." With the fix:
-- spin-1 = 0 ✓ (gauge invariance, was -3.825 before fix)
-- spin-0s matches FP exactly ✓ (was -4.25 ≠ -1.7 before fix)
-- spin-2 differs by 6.375 (total derivative contribution, physical content is correct)
-
-### Benchmark Term Count Changes
-
-| Benchmark | Old | New | Reason |
-|-----------|-----|-----|--------|
-| bench_03 Linearized Ricci 3+1 | 320 | 512 | More distinct dummies → fewer false cancellations |
-| bench_05 δ¹Ricci Schwarzschild | 18 | 26 | Same |
-| bench_07 δ¹Riemann de Sitter | 6 | 26 | Same |
-| bench_08 Galileon L_4 EOM | 17 | 15 | Some new valid cancellations |
-
-These changes are **correct** — the old counts came from ill-formed expressions with spurious cancellations. The new expressions are well-formed.
-
-## Diagnostic Scripts (can be cleaned up)
-
-- examples/23_fourier_nested_test.jl — Priority 1+2: Fourier commutativity + analytic Y
-- examples/24_simplify_vs_fourier.jl — Step-by-step simplify pipeline analysis
-- examples/25_minimal_fourier_bug.jl — Minimal Fourier/simplify reproducer
-
-## Next Steps
-
-### Immediate (P2)
-- **TGR-c6su**: SVT decomposition of δ²S (flat) — now unblocked by the pert engine fix
-- The perturbation engine now produces correct, well-formed expressions
-- L₂ = δ²R + ½h·δR gives correct physical content (spin-0s, spin-1 match FP)
-
-### Future
-- Consider improving the simplifier to recover term count efficiency (26 vs 6 for de Sitter δ¹Riemann)
-- The `_avoid` mechanism is a minimal fix; a more elegant solution would use global fresh_index counters scoped per expand_perturbation call
-
-## Key Files
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/perturbation/expand.jl` | _avoid kwarg on δchristoffel, δriemann, δricci, δricci_scalar |
-| `src/perturbation/metric_perturbation.jl` | _avoid kwarg on δinverse_metric |
-| `benchmarks/ground_truth.jl` | Updated 4 term count constants |
+| `src/action/kernel_extraction.jl` | Fixed box term signs (−2β, not +2β); added scale_kernel, combine_kernels, build_6deriv_flat_kernel, flat_6deriv_spin_projections |
+| `src/TensorGR.jl` | Added exports for new functions |
+| `test/test_6deriv_spectrum.jl` | Added 177 new tests: Buoninfante form factors (random params), GR limit, scale/combine utilities |
+
+## Next Steps
+
+### Immediate
+- Close TGR-c6su
+- Consider writing `examples/26_6deriv_flat_spectrum.jl` demonstrating the full pipeline
+
+### Future (P3+)
+- Improve simplifier to recover term count efficiency for dS benchmarks (bench_12)
+- The `_avoid` mechanism is a minimal fix; a more elegant solution would use global fresh_index counters

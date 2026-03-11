@@ -1349,4 +1349,98 @@ using Random
         end
     end
 
+    # ══════════════════════════════════════════════════════════════════
+    # build_6deriv_flat_kernel: combined kernel construction
+    # Verifies K = κ·K_FP − 2(α₁+β₁k²)·K_R² − 2(α₂+β₂k²)·K_Ric²
+    # ══════════════════════════════════════════════════════════════════
+
+    @testset "build_6deriv_flat_kernel: Buoninfante form factors" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            # GR normalization
+            K_GR = build_FP_momentum_kernel(reg)
+            kw = (dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+            gr2  = spin_project(K_GR, :spin2;  kw...)
+            gr0s = spin_project(K_GR, :spin0s; kw...)
+
+            rng = MersenneTwister(789)
+            for _ in 1:20
+                κ  = Rational{Int}(rand(rng, 1:10))
+                α₁ = Rational{Int}(rand(rng, -3:3), 10)
+                α₂ = Rational{Int}(rand(rng, -3:3), 10)
+                β₁ = Rational{Int}(rand(rng, -3:3), 20)
+                β₂ = Rational{Int}(rand(rng, -3:3), 20)
+
+                sp = flat_6deriv_spin_projections(reg; κ, α₁, α₂, β₁, β₂)
+                κf = Float64(κ)
+
+                for k2 in [0.5, 1.0, 2.0]
+                    # Expected: Buoninfante 2012.11829 Eq. 2.13
+                    f2_exp = 1.0 - Float64(α₂/κ)*k2 - Float64(β₂/κ)*k2^2
+                    f0_exp = 1.0 + Float64((6α₁+2α₂)/κ)*k2 + Float64((6β₁+2β₂)/κ)*k2^2
+
+                    # Normalize by κ × (κ=1 GR projection) since the kernel scales linearly with κ
+                    f2_got = _eval_spin_scalar(sp.spin2, k2) / (κf * _eval_spin_scalar(gr2, k2))
+                    f0_got = _eval_spin_scalar(sp.spin0s, k2) / (κf * _eval_spin_scalar(gr0s, k2))
+
+                    @test abs(f2_got - f2_exp) < 1e-10
+                    @test abs(f0_got - f0_exp) < 1e-10
+                end
+
+                # Gauge invariance: spin-1 and spin-0w vanish
+                @test abs(_eval_spin_scalar(sp.spin1, 1.0))  < 1e-10
+                @test abs(_eval_spin_scalar(sp.spin0w, 1.0)) < 1e-10
+            end
+        end
+    end
+
+    @testset "build_6deriv_flat_kernel: GR limit" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            # Pure GR: all higher-derivative couplings zero
+            sp = flat_6deriv_spin_projections(reg; κ=1//1)
+
+            for k2 in [0.5, 1.0, 2.0]
+                @test abs(_eval_spin_scalar(sp.spin2, k2) - 5k2/2) < 1e-10
+                @test abs(_eval_spin_scalar(sp.spin1, k2))         < 1e-10
+                @test abs(_eval_spin_scalar(sp.spin0s, k2) + k2)   < 1e-10
+                @test abs(_eval_spin_scalar(sp.spin0w, k2))        < 1e-10
+            end
+        end
+    end
+
+    @testset "scale_kernel and combine_kernels" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+            kw = (dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
+
+            K = build_FP_momentum_kernel(reg)
+            n = length(K.terms)
+
+            # scale_kernel preserves term count
+            K2 = scale_kernel(K, 3//1)
+            @test length(K2.terms) == n
+
+            # Scalar scaling: 3×FP should give 3× the spin projection
+            r2  = spin_project(K2, :spin2; kw...)
+            r0s = spin_project(K2, :spin0s; kw...)
+            @test abs(_eval_spin_scalar(r2, 1.0) - 3*5/2) < 1e-10
+            @test abs(_eval_spin_scalar(r0s, 1.0) + 3*1.0) < 1e-10
+
+            # combine_kernels: K + K should give 2×K
+            K_double = combine_kernels([K, K])
+            @test length(K_double.terms) == 2n
+            r2d = spin_project(K_double, :spin2; kw...)
+            @test abs(_eval_spin_scalar(r2d, 1.0) - 2*5/2) < 1e-10
+        end
+    end
+
 end
