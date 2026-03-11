@@ -54,6 +54,8 @@ using TensorGR
     include("test_foliation.jl")
     # CAS integration (Symbolics.jl)
     include("test_cas_integration.jl")
+    # Resolve simplify name collision (TensorGR vs Symbolics)
+    import TensorGR: simplify
     # Tensor equation solver
     include("test_solve.jl")
     # Symbolic components (Symbolics.jl)

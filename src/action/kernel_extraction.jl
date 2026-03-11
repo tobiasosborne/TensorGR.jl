@@ -401,11 +401,12 @@ function _eval_ksq_val(v, k2)
     if v.head == :call
         op = v.args[1]
         args = [_eval_ksq_val(a, k2) for a in v.args[2:end]]
-        op === :* && return prod(args)
-        op === :+ && return sum(args)
-        op === :- && return length(args) == 1 ? -args[1] : args[1] - args[2]
-        op === :/ && return args[1] / args[2]
-        op === :^ && return args[1]^args[2]
+        # Handle both symbol ops (:*) and function-ref ops (*)
+        (op === :* || op === *) && return prod(args)
+        (op === :+ || op === +) && return sum(args)
+        (op === :- || op === -) && return length(args) == 1 ? -args[1] : args[1] - args[2]
+        (op === :/ || op === /) && return args[1] / args[2]
+        (op === :^ || op === ^) && return args[1]^args[2]
     end
     error("Cannot evaluate TScalar value: $v (type=$(typeof(v)))")
 end
