@@ -1,28 +1,28 @@
-#= Cross-check: covariant perturbation engine on MSS background
+#= Cross-check: verify Bueno-Cano parameters via TGR perturbation engine on MSS.
 #
-# Demonstrates the covariant_output=true mode, which produces ∇h instead of
-# ∂h + Γ₀h in the perturbation expansion. This enables the full pipeline:
-#   expand_perturbation → commute_covds → to_fourier → extract_kernel → spin_project
-# on maximally symmetric (de Sitter) backgrounds.
+# Computes δ²(√g·L) for L = κ(R - 2Λ) + γ·I_i via the perturbation engine
+# and compares spin-projected form factors against BC mass predictions.
 #
-# Verifications:
-#   1. Pipeline runs end-to-end without errors (no Γ₀g tensors in output)
-#   2. Raw term counts match non-covariant path (same number of partitions)
-#   3. Simplified term counts are pinned (fewer than ∂+Γ₀ path)
-#   4. Λ→0 limit: form factors vanish for cubic invariants (correct: O(Λ) contribution)
-#   5. Structure check: form factors are polynomials in k² and Λ
+# The full quadratic Lagrangian including √g determinant is:
+#   Q = δ²L + ½h·δL + (⅛h² - ¼hh)·L₀
+# where h = g^{ab}h_{ab} (trace), L₀ = L|_{MSS}, δL = first-order perturbation.
 #
-# NOTE: Spin projection of δ²(L) (without √g determinant) gives non-zero gauge
-# sectors (spin-1, spin-0w) on MSS because the full gauge-invariant Lagrangian
-# is δ²(√g · L). For BC parameter verification, see examples/14 (parametric Riemann).
+# CRITICAL: The cosmological constant -2Λ is needed for gauge invariance on MSS.
+#   L₀(EH) = R₀ - 2Λ = 4Λ - 2Λ = 2Λ  (NOT 4Λ!)
+#
+# Pipeline: expand_perturbation → commute_covds → to_fourier → extract_kernel
+#           → spin_project → compare mass poles vs dS_spectrum_6deriv
+#
+# Reference: Bueno & Cano (1607.06463) Eqs. (17)-(19)
 =#
 
 using TensorGR
 
 # ═══════════════════════════════════════════════════════════════════════
-# Helper: substitute Tensor(:Λ, []) → TScalar(Λ_val) for numeric eval
+# Helpers
 # ═══════════════════════════════════════════════════════════════════════
 
+"""Substitute Tensor(:Λ, []) → TScalar(Λ_val) for numeric evaluation."""
 function _subst_lambda(expr::Tensor, Λ_val)
     expr.name == :Λ && isempty(expr.indices) && return TScalar(Λ_val)
     expr
@@ -38,8 +38,21 @@ function _subst_lambda(d::TDeriv, Λ_val)
     TDeriv(d.index, _subst_lambda(d.arg, Λ_val), d.covd)
 end
 
+"""Build √g correction: ½h·δL + (⅛h² - ¼h_{ab}h^{ab})·L₀.
+Uses indices :z1-:z8 to avoid clashes."""
+function sqrt_g_correction(L0::TensorExpr, δL::TensorExpr, metric::Symbol)
+    h_A = Tensor(metric, [up(:z1), up(:z2)]) * Tensor(:h, [down(:z1), down(:z2)])
+    h_B = Tensor(metric, [up(:z3), up(:z4)]) * Tensor(:h, [down(:z3), down(:z4)])
+    hh  = Tensor(:h, [down(:z5), down(:z6)]) * Tensor(:h, [up(:z5), up(:z6)])
+    h_C = Tensor(metric, [up(:z7), up(:z8)]) * Tensor(:h, [down(:z7), down(:z8)])
+
+    tproduct(1 // 8, TensorExpr[h_A * h_B]) * L0 +
+    tproduct(-1 // 4, TensorExpr[hh]) * L0 +
+    tproduct(1 // 2, TensorExpr[h_C]) * δL
+end
+
 # ═══════════════════════════════════════════════════════════════════════
-# Setup: MSS background with covariant_output=true
+# Setup
 # ═══════════════════════════════════════════════════════════════════════
 
 reg = TensorRegistry()
@@ -50,113 +63,164 @@ with_registry(reg) do
     @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
     @define_tensor k on=M4 rank=(0,1)
 
-    mp_cov = define_metric_perturbation!(reg, :g, :h; curved=true, covariant_output=true)
+    mp = define_metric_perturbation!(reg, :g, :h; curved=true, covariant_output=true)
+    Λ_tensor = Tensor(:Λ, TIndex[])
 
     println("=" ^ 70)
-    println("  Covariant Perturbation Engine on de Sitter")
-    println("  covariant_output=true: derivatives are ∇g, no Γ₀g tensors")
+    println("  BC Parameter Cross-Check via Perturbation Engine")
+    println("  Action: S = κ∫√g(R - 2Λ) + γ∫√g·I_i")
     println("=" ^ 70)
 
     # ═══════════════════════════════════════════════════════════════════
-    # Test 1: δ²R (Ricci scalar) — simplest case
+    # Step 1: EH action L = R - 2Λ on MSS (Λ→0 sanity check: FP kernel)
     # ═══════════════════════════════════════════════════════════════════
 
-    println("\n── Test 1: δ²R (Ricci scalar perturbation) ──")
-    δ2R = δricci_scalar(mp_cov, 2)
-    n_raw = δ2R isa TSum ? length(δ2R.terms) : 1
-    println("  Raw terms: $n_raw")
+    println("\n── Step 1: EH + Λ on MSS ──")
+    R_expr = Tensor(:RicScalar, TIndex[])
 
-    simp = simplify(δ2R; registry=reg, commute_covds_name=:∇g)
-    n_simp = simp isa TSum ? length(simp.terms) : 1
-    println("  Simplified: $n_simp terms")
+    # EH perturbation orders (Λ is constant, so δΛ=0, only R contributes)
+    println("  Computing δR (order 1)...")
+    δR = simplify(expand_perturbation(R_expr, mp, 1); registry=reg, commute_covds_name=:∇g, maxiter=200)
+    n_δR = δR isa TSum ? length(δR.terms) : 1
+    println("  δR: $n_δR terms")
 
-    fourier = to_fourier(simp; covd_names=Set([:∇g]))
-    fourier = simplify(fourier; registry=reg)
-    n_f = fourier isa TSum ? length(fourier.terms) : 1
-    println("  Fourier: $n_f terms")
-    println("  ✓ Pipeline complete (no Γ₀g errors)")
+    println("  Computing δ²R (order 2)...")
+    δ2R = simplify(δricci_scalar(mp, 2); registry=reg, commute_covds_name=:∇g, maxiter=200)
+    n_δ2R = δ2R isa TSum ? length(δ2R.terms) : 1
+    println("  δ²R: $n_δ2R terms")
 
-    # ═══════════════════════════════════════════════════════════════════
-    # Test 2: R³ — cubic invariant I₁
-    # ═══════════════════════════════════════════════════════════════════
+    # Background: L₀ = R₀ - 2Λ = 4Λ - 2Λ = 2Λ (ON-SHELL condition!)
+    L0_EH = tproduct(2 // 1, TensorExpr[Λ_tensor])
+    println("  L₀(EH) = R₀ - 2Λ = 2Λ  (on-shell)")
 
-    println("\n── Test 2: δ²(R³) — cubic invariant I₁ ──")
-    R = Tensor(:RicScalar, TIndex[])
-    raw_R3 = expand_perturbation(R * R * R, mp_cov, 2)
-    n_raw_R3 = raw_R3 isa TSum ? length(raw_R3.terms) : 1
-    println("  Raw terms: $n_raw_R3")
-    @assert n_raw_R3 == 6 "R³ raw terms should be 6, got $n_raw_R3"
+    # Full quadratic EH Lagrangian including √g
+    println("  Assembling Q_EH = δ²R + √g correction(2Λ, δR)...")
+    corr_EH = sqrt_g_correction(L0_EH, δR, :g)
+    Q_EH = δ2R + corr_EH
+    Q_EH = simplify(Q_EH; registry=reg, commute_covds_name=:∇g, maxiter=200)
+    n_Q = Q_EH isa TSum ? length(Q_EH.terms) : 1
+    println("  Q_EH: $n_Q terms")
 
-    simp_R3 = simplify(raw_R3; registry=reg, commute_covds_name=:∇g, maxiter=200)
-    n_simp_R3 = simp_R3 isa TSum ? length(simp_R3.terms) : 1
-    println("  Simplified: $n_simp_R3 terms")
+    # Fourier → kernel → spin project
+    println("  Fourier transforming...")
+    Qf = to_fourier(Q_EH; covd_names=Set([:∇g]))
+    Qf = simplify(Qf; registry=reg)
+    Qf = fix_dummy_positions(Qf)
+    K_EH = extract_kernel(Qf, :h; registry=reg)
+    println("  Kernel: $(length(K_EH.terms)) bilinear terms")
 
-    fourier_R3 = to_fourier(simp_R3; covd_names=Set([:∇g]))
-    fourier_R3 = simplify(fourier_R3; registry=reg)
-    n_f_R3 = fourier_R3 isa TSum ? length(fourier_R3.terms) : 1
-    println("  Fourier: $n_f_R3 terms")
+    println("  Spin projecting...")
+    s2_EH  = spin_project(K_EH, :spin2;  registry=reg)
+    s1_EH  = spin_project(K_EH, :spin1;  registry=reg)
+    s0s_EH = spin_project(K_EH, :spin0s; registry=reg)
+    s0w_EH = spin_project(K_EH, :spin0w; registry=reg)
+    println("  ✓ All 4 sectors projected")
 
-    fourier_R3 = fix_dummy_positions(fourier_R3)
-    K = extract_kernel(fourier_R3, :h; registry=reg)
-    println("  Kernel: $(length(K.terms)) bilinear terms")
+    # At Λ→0, should recover FP: Tr(K·P²)=(5/2)k², Tr(K·P¹)=0, Tr(K·P⁰ˢ)=-k², Tr(K·P⁰ʷ)=0
+    Λ_flat = 1e-12
+    k2 = 1.7
+    v2  = _eval_spin_scalar(_subst_lambda(s2_EH,  Λ_flat), k2)
+    v1  = _eval_spin_scalar(_subst_lambda(s1_EH,  Λ_flat), k2)
+    v0s = _eval_spin_scalar(_subst_lambda(s0s_EH, Λ_flat), k2)
+    v0w = _eval_spin_scalar(_subst_lambda(s0w_EH, Λ_flat), k2)
 
-    s2  = spin_project(K, :spin2;  registry=reg)
-    s0s = spin_project(K, :spin0s; registry=reg)
-    println("  Spin projections computed")
+    println("\n  Λ→0 limit (k²=$k2):")
+    println("    Tr(K·P²)  = $(round(v2; digits=6)),  expected $(round(2.5*k2; digits=6))")
+    println("    Tr(K·P¹)  = $(round(v1; digits=6)),  expected 0")
+    println("    Tr(K·P⁰ˢ) = $(round(v0s; digits=6)), expected $(round(-k2; digits=6))")
+    println("    Tr(K·P⁰ʷ) = $(round(v0w; digits=6)), expected 0")
 
-    # Λ→0 limit: R³ only contributes at O(Λ), so form factors vanish
-    Λ_small = 1e-10
-    k2_test = 1.7
-    v2_flat  = _eval_spin_scalar(_subst_lambda(s2,  Λ_small), k2_test)
-    v0s_flat = _eval_spin_scalar(_subst_lambda(s0s, Λ_small), k2_test)
-    println("  Λ→0 limit: f₂=$(round(v2_flat; sigdigits=3)), f₀=$(round(v0s_flat; sigdigits=3))")
-    @assert abs(v2_flat)  < 1e-4 "R³ f₂ should vanish at Λ→0, got $v2_flat"
-    @assert abs(v0s_flat) < 1e-4 "R³ f₀ should vanish at Λ→0, got $v0s_flat"
-    println("  ✓ Form factors vanish at Λ→0 (R³ contributes only at O(Λ))")
+    fp_pass = abs(v2 - 2.5*k2) < 0.01 && abs(v1) < 0.01 &&
+              abs(v0s - (-k2)) < 0.01 && abs(v0w) < 0.01
+    println("  FP kernel: $(fp_pass ? "✓ PASS" : "✗ FAIL")")
+    if !fp_pass
+        println("    Ratios: spin-2/expected=$(round(v2/(2.5*k2); digits=4)), spin-0s/expected=$(round(v0s/(-k2); digits=4))")
+    end
 
-    # Nonzero at finite Λ
+    # Gauge check at finite Λ
     Λ_test = 0.3
-    v2_dS  = _eval_spin_scalar(_subst_lambda(s2,  Λ_test), k2_test)
-    v0s_dS = _eval_spin_scalar(_subst_lambda(s0s, Λ_test), k2_test)
-    println("  At Λ=$Λ_test, k²=$k2_test: Tr(K·P²)=$(round(v2_dS; digits=4)), Tr(K·P⁰ˢ)=$(round(v0s_dS; digits=4))")
-    @assert abs(v2_dS) > 1e-6 || abs(v0s_dS) > 1e-6 "R³ should be nonzero at finite Λ"
-    println("  ✓ Nonzero at finite Λ (correct)")
+    v1_dS  = _eval_spin_scalar(_subst_lambda(s1_EH,  Λ_test), k2)
+    v0w_dS = _eval_spin_scalar(_subst_lambda(s0w_EH, Λ_test), k2)
+    println("\n  Gauge sectors at Λ=$Λ_test:")
+    println("    Tr(K·P¹)  = $(round(v1_dS; digits=6))  (should be 0)")
+    println("    Tr(K·P⁰ʷ) = $(round(v0w_dS; digits=6))  (should be 0)")
 
     # ═══════════════════════════════════════════════════════════════════
-    # Test 3: R·Ric² — cubic invariant I₂
+    # Step 2: R³ (if EH passes, extend to cubic)
     # ═══════════════════════════════════════════════════════════════════
 
-    println("\n── Test 3: δ²(R·Ric²) — cubic invariant I₂ ──")
-    Ric1 = Tensor(:Ric, [down(:a), down(:b)])
-    Ric2 = Tensor(:Ric, [down(:c), down(:d)])
-    RicSq = Ric1 * Ric2 * Tensor(:g, [up(:a), up(:c)]) * Tensor(:g, [up(:b), up(:d)])
-    I2 = R * RicSq
+    if fp_pass
+        println("\n── Step 2: Adding R³ cubic ──")
+        R3_expr = R_expr * R_expr * R_expr
 
-    raw_I2 = expand_perturbation(I2, mp_cov, 2)
-    n_raw_I2 = raw_I2 isa TSum ? length(raw_I2.terms) : 1
-    println("  Raw terms: $n_raw_I2")
-    @assert n_raw_I2 == 13 "R·Ric² raw terms should be 13, got $n_raw_I2"
+        println("  Computing δ(R³) (order 1)...")
+        δR3 = simplify(expand_perturbation(R3_expr, mp, 1); registry=reg, commute_covds_name=:∇g, maxiter=200)
+        n_δR3 = δR3 isa TSum ? length(δR3.terms) : 1
+        println("  δ(R³): $n_δR3 terms")
 
-    simp_I2 = simplify(raw_I2; registry=reg, commute_covds_name=:∇g, maxiter=200)
-    n_simp_I2 = simp_I2 isa TSum ? length(simp_I2.terms) : 1
-    println("  Simplified: $n_simp_I2 terms")
+        println("  Computing δ²(R³) (order 2)...")
+        t0 = time()
+        δ2R3 = simplify(expand_perturbation(R3_expr, mp, 2); registry=reg, commute_covds_name=:∇g, maxiter=200)
+        n_δ2R3 = δ2R3 isa TSum ? length(δ2R3.terms) : 1
+        dt = round(time() - t0; digits=1)
+        println("  δ²(R³): $n_δ2R3 terms ($(dt)s)")
 
-    fourier_I2 = to_fourier(simp_I2; covd_names=Set([:∇g]))
-    fourier_I2 = simplify(fourier_I2; registry=reg)
-    n_f_I2 = fourier_I2 isa TSum ? length(fourier_I2.terms) : 1
-    println("  Fourier: $n_f_I2 terms")
-    println("  ✓ Pipeline complete")
+        # R³|_{MSS} = (4Λ)³ = 64Λ³
+        L0_R3 = tproduct(64 // 1, TensorExpr[Λ_tensor, Λ_tensor, Λ_tensor])
 
-    # ═══════════════════════════════════════════════════════════════════
-    # Summary
-    # ═══════════════════════════════════════════════════════════════════
+        corr_R3 = sqrt_g_correction(L0_R3, δR3, :g)
+        Q_R3 = δ2R3 + corr_R3
+        Q_R3 = simplify(Q_R3; registry=reg, commute_covds_name=:∇g, maxiter=200)
+        n_QR3 = Q_R3 isa TSum ? length(Q_R3.terms) : 1
+        println("  Q_R3: $n_QR3 terms")
+
+        Qf3 = to_fourier(Q_R3; covd_names=Set([:∇g]))
+        Qf3 = simplify(Qf3; registry=reg)
+        Qf3 = fix_dummy_positions(Qf3)
+        K_R3 = extract_kernel(Qf3, :h; registry=reg)
+        println("  R³ Kernel: $(length(K_R3.terms)) bilinear terms")
+
+        s2_R3  = spin_project(K_R3, :spin2;  registry=reg)
+        s0s_R3 = spin_project(K_R3, :spin0s; registry=reg)
+        println("  ✓ R³ spin-2, spin-0s projected")
+
+        # BC prediction for κR - 2κΛ + γ₁R³
+        κ = 1.0; γ₁ = 0.01
+        bc_pred = dS_spectrum_6deriv(κ=κ, γ₁=γ₁, Λ=Λ_test)
+        println("\n  BC predictions (κ=$κ, γ₁=$γ₁, Λ=$Λ_test):")
+        println("    m²_g = $(bc_pred.m2_graviton)")
+        println("    m²_s = $(round(bc_pred.m2_scalar; digits=6))")
+
+        # Evaluate combined form factors
+        k2_vals = [0.5, 1.0, 2.0, 4.0]
+        println("\n  Combined f₀(k²) = κ·f₀_EH + γ₁·f₀_R³:")
+        f0_vals = Float64[]
+        for k2v in k2_vals
+            eh  = _eval_spin_scalar(_subst_lambda(s0s_EH, Λ_test), k2v)
+            r3  = _eval_spin_scalar(_subst_lambda(s0s_R3, Λ_test), k2v)
+            total = κ * eh + γ₁ * r3
+            push!(f0_vals, total)
+            println("    k²=$(rpad(k2v, 4)) : $(round(total; digits=6))")
+        end
+
+        # Linear fit: f₀(k²) = A·k² + B → mass pole at k² = -B/A
+        A = (f0_vals[2] - f0_vals[1]) / (k2_vals[2] - k2_vals[1])
+        B = f0_vals[1] - A * k2_vals[1]
+        m2_s_meas = -B / A
+        println("\n  Spin-0 mass from linear fit:")
+        println("    f₀ ≈ $(round(A; digits=4))·k² + $(round(B; digits=4))")
+        println("    m²_s (measured)  = $(round(m2_s_meas; digits=6))")
+        println("    m²_s (predicted) = $(round(bc_pred.m2_scalar; digits=6))")
+        if isfinite(bc_pred.m2_scalar)
+            rel = abs(m2_s_meas - bc_pred.m2_scalar) / abs(bc_pred.m2_scalar)
+            println("    $(rel < 0.05 ? "✓" : "✗") Relative error: $(round(100*rel; digits=1))%")
+        end
+    else
+        println("\n  Skipping Step 2 (R³): EH sanity check failed, debug needed")
+        println("  See HANDOFF-next-session.md for diagnosis notes")
+    end
 
     println("\n" * "=" ^ 70)
-    println("  SUMMARY: Covariant perturbation pipeline validated")
-    println("  - δ²R:      $n_raw raw → $n_simp simplified → $n_f Fourier terms")
-    println("  - δ²(R³):   $n_raw_R3 raw → $n_simp_R3 simplified → $n_f_R3 Fourier terms")
-    println("  - δ²(R·Ric²): $n_raw_I2 raw → $n_simp_I2 simplified → $n_f_I2 Fourier terms")
-    println("  - Λ→0 limits correct, nonzero at finite Λ")
-    println("  - No Γ₀g tensors in pipeline (covariant_output working)")
+    println("  DONE")
     println("=" ^ 70)
 end
