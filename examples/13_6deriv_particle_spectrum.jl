@@ -323,38 +323,78 @@ println("─" ^ 60)
 # Parameters from algebraic evaluation of ℒ on R̃(Λ_BC, α):
 # Verified against Bueno-Cano (1607.06463) Eqs. (13)-(14)
 
-bc_params = [
-    # (name,   a,         b,         c,         e)
-    ("κR",     0.0,       0.0,       0.0,       κ),
-    ("α₁R²",  0.0,       2α₁,      0.0,       8α₁*Λ_BC),
-    ("α₂Ric²", 0.0,      0.0,       2α₂,      2α₂*Λ_BC),
-]
+# ── Bueno-Cano parameter functions for each Lagrangian term ──────────
+# Convention: Λ is TGR's cosmological constant (R̄_μν = Λ g_μν).
+# Bueno-Cano uses Λ_BC = Λ/3 (R̄_μν = (D-1)Λ_BC g_μν).
+# Parameters (a,b,c,e) computed from ∂ℒ/∂α and ∂²ℒ/∂α² on R̃(Λ_BC, α),
+# verified via Bueno-Cano (1607.06463) Eqs. (13)-(14).
 
-for (name, ai, bi, ci, ei) in bc_params
-    println("  $(rpad(name, 10))  $(lpad(round(ai;digits=4), 8))  $(lpad(round(bi;digits=4), 8))  $(lpad(round(ci;digits=4), 8))  $(lpad(round(ei;digits=4), 8))")
+bc_EH_(κ, Λ) = (a=0.0, b=0.0, c=0.0, e=κ)
+bc_R2_(α₁, Λ) = (a=0.0, b=2α₁, c=0.0, e=8α₁*Λ)
+bc_RicSq_(α₂, Λ) = (a=0.0, b=0.0, c=2α₂, e=2α₂*Λ)
+bc_R3_(γ₁, Λ) = (a=0.0, b=24γ₁*Λ, c=0.0, e=48γ₁*Λ^2)
+bc_RRicSq_(γ₂, Λ) = (a=0.0, b=4γ₂*Λ, c=2γ₂*Λ, e=12γ₂*Λ^2)
+bc_Ric3_(γ₃, Λ) = (a=0.0, b=0.0, c=6γ₃*Λ, e=3γ₃*Λ^2)
+bc_RRiem2_(γ₄, Λ) = (a=4γ₄*Λ, b=(8/3)*γ₄*Λ, c=0.0, e=8γ₄*Λ^2)
+bc_RicRiem2_(γ₅, Λ) = (a=(4/3)*γ₅*Λ, b=0.0, c=(2/3)*γ₅*Λ, e=2γ₅*Λ^2)
+bc_Riem3_(γ₆, Λ) = (a=2γ₆*Λ, b=0.0, c=0.0, e=(4/3)*γ₆*Λ^2)
+
+function bc_total_6deriv(κ, α₁, α₂, γ₁, γ₂, γ₃, γ₄, γ₅, γ₆, Λ)
+    terms = [bc_EH_(κ, Λ), bc_R2_(α₁, Λ), bc_RicSq_(α₂, Λ),
+             bc_R3_(γ₁, Λ), bc_RRicSq_(γ₂, Λ), bc_Ric3_(γ₃, Λ),
+             bc_RRiem2_(γ₄, Λ), bc_RicRiem2_(γ₅, Λ), bc_Riem3_(γ₆, Λ)]
+    (a = sum(t.a for t in terms),
+     b = sum(t.b for t in terms),
+     c = sum(t.c for t in terms),
+     e = sum(t.e for t in terms))
 end
 
-# Total for quadratic theory (no cubics, no □ terms)
-a_tot = sum(x[2] for x in bc_params)
-b_tot = sum(x[3] for x in bc_params)
-c_tot = sum(x[4] for x in bc_params)
-e_tot = sum(x[5] for x in bc_params)
+# Bueno-Cano mass formulas (D=4): Eqs. (17)-(19) of 1607.06463
+κ_eff_inv_(a, e, Λ_BC) = 4e - 8Λ_BC * a
+m2_g_(a, c, e, Λ_BC) = (-e + 2Λ_BC * a) / (2a + c)
+m2_s_(a, b, c, e, Λ_BC) = (2e - 4Λ_BC*(a + 4b + c)) / (2a + 4c + 12b)
 
-println("─" ^ 60)
-println("  $(rpad("TOTAL", 10))  $(lpad(round(a_tot;digits=4), 8))  $(lpad(round(b_tot;digits=4), 8))  $(lpad(round(c_tot;digits=4), 8))  $(lpad(round(e_tot;digits=4), 8))")
+# ── Print parameter table ────────────────────────────────────────────
+
+# Generic 6-deriv couplings (examples only — no cubics for this demo)
+γ₁ = 0.01; γ₂ = -0.005; γ₃ = 0.003; γ₄ = 0.002; γ₅ = -0.001; γ₆ = 0.001
+
+bc_rows = [
+    ("κR",        bc_EH_(κ, Λ_val)),
+    ("α₁R²",     bc_R2_(α₁, Λ_val)),
+    ("α₂Ric²",   bc_RicSq_(α₂, Λ_val)),
+    ("γ₁R³",     bc_R3_(γ₁, Λ_val)),
+    ("γ₂R·Ric²", bc_RRicSq_(γ₂, Λ_val)),
+    ("γ₃Ric³",   bc_Ric3_(γ₃, Λ_val)),
+    ("γ₄R·Riem²",bc_RRiem2_(γ₄, Λ_val)),
+    ("γ₅Ric·R²", bc_RicRiem2_(γ₅, Λ_val)),
+    ("γ₆Riem³",  bc_Riem3_(γ₆, Λ_val)),
+]
+
+println("\n── Bueno-Cano parameters (a, b, c, e) for D=4 ──\n")
+println("Term           a           b           c           e")
+println("─" ^ 65)
+for (name, p) in bc_rows
+    println("  $(rpad(name, 12))  $(lpad(round(p.a;digits=6), 10))  $(lpad(round(p.b;digits=6), 10))  $(lpad(round(p.c;digits=6), 10))  $(lpad(round(p.e;digits=6), 10))")
+end
+
+p_tot = bc_total_6deriv(κ, α₁, α₂, γ₁, γ₂, γ₃, γ₄, γ₅, γ₆, Λ_val)
+println("─" ^ 65)
+println("  $(rpad("TOTAL", 12))  $(lpad(round(p_tot.a;digits=6), 10))  $(lpad(round(p_tot.b;digits=6), 10))  $(lpad(round(p_tot.c;digits=6), 10))  $(lpad(round(p_tot.e;digits=6), 10))")
 
 # ── Physical spectrum on dS ──────────────────────────────────────────
 
+Λ_BC = Λ_val / 3
+
 println("\n── Physical spectrum on dS (Λ = $Λ_val) ──\n")
 
-# Effective Newton constant (Eq. 17, D=4)
-κ_eff_inv = 4e_tot - 8Λ_BC * a_tot
-println("  κ_eff⁻¹ = $(round(κ_eff_inv; digits=6))")
-println("  κ_eff   = $(round(1/κ_eff_inv; digits=6))")
+κ_eff_val = κ_eff_inv_(p_tot.a, p_tot.e, Λ_BC)
+println("  κ_eff⁻¹ = $(round(κ_eff_val; digits=6))")
+println("  κ_eff   = $(round(1/κ_eff_val; digits=6))")
 
 # Massive spin-2 mass (Eq. 18, D=4)
-if abs(2a_tot + c_tot) > 1e-15
-    mg2 = (-e_tot + 2Λ_BC * a_tot) / (2a_tot + c_tot)
+if abs(2p_tot.a + p_tot.c) > 1e-15
+    mg2 = m2_g_(p_tot.a, p_tot.c, p_tot.e, Λ_BC)
     println("  m²_g    = $(round(mg2; digits=6))  (massive spin-2)")
 else
     mg2 = Inf
@@ -362,9 +402,9 @@ else
 end
 
 # Spin-0 mass (Eq. 19, D=4)
-denom_s = 2a_tot + 4c_tot + 12b_tot
+denom_s = 2p_tot.a + 4p_tot.c + 12p_tot.b
 if abs(denom_s) > 1e-15
-    ms2 = (2e_tot - 4Λ_BC * (a_tot + 4b_tot + c_tot)) / denom_s
+    ms2 = m2_s_(p_tot.a, p_tot.b, p_tot.c, p_tot.e, Λ_BC)
     println("  m²_s    = $(round(ms2; digits=6))  (spin-0 scalar)")
 else
     ms2 = Inf
@@ -377,19 +417,18 @@ println("\nSpin-1: identically zero (diffeomorphism invariance on dS)")
 
 println("\n── Limit checks ──\n")
 
-# 1. Λ→0 limit
-a0 = 0.0; b0 = 2α₁; c0 = 2α₂; e0 = κ  # Λ=0 values
-mg2_flat = -e0 / (2a0 + c0)
-ms2_flat = 2e0 / (2a0 + 4c0 + 12b0)
+# 1. Λ→0 limit: cubic contributions vanish, recover Stelle
+p0 = bc_total_6deriv(κ, α₁, α₂, γ₁, γ₂, γ₃, γ₄, γ₅, γ₆, 0.0)
+mg2_flat = -p0.e / (2p0.a + p0.c)
+ms2_flat = 2p0.e / (2p0.a + 4p0.c + 12p0.b)
 println("  Flat limit (Λ→0):")
 println("    m²_g(flat) = $(round(mg2_flat; digits=6))  [Stelle: −κ/(2α₂) = $(round(-κ/(2α₂); digits=6))]")
 println("    m²_s(flat) = $(round(ms2_flat; digits=6))  [Stelle: κ/(12α₁+4α₂) = $(round(κ/(12α₁+4α₂); digits=6))]")
-mg2_flat_check = -κ / (2α₂)
-@assert isapprox(mg2_flat, mg2_flat_check; rtol=1e-10) "Flat limit spin-2 mismatch!"
-println("    ✓ Flat limit matches Stelle formulas")
+@assert isapprox(mg2_flat, -κ/(2α₂); rtol=1e-10) "Flat limit spin-2 mismatch!"
+println("    ✓ Flat limit matches Stelle formulas (cubics vanish at Λ=0)")
 
 # 2. GR limit
-println("\n  GR limit (α₁=α₂=0):")
+println("\n  GR limit (all higher-derivative couplings zero):")
 println("    κ_eff = 1/(4κ) = $(1/(4κ))  (just the Newton constant)")
 println("    No massive modes (a=b=c=0)")
 
@@ -398,30 +437,19 @@ println("\n  ECG (Bueno-Cano Eq. 23): theory with 2a+c=0 and 2a+Dc+4b(D-1)→∞
 println("    m²_g → ∞, m²_s → ∞ → only massless graviton propagates")
 println("    This is the unique cubic theory sharing Einstein gravity's spectrum")
 
-# ── Summary for dS ────────────────────────────────────────────────────
+# ── Summary ──────────────────────────────────────────────────────────
 
-println("\n── Step 8: Summary ──\n")
-println("The de Sitter propagator for six-derivative gravity is:")
+println("\n── Summary ──\n")
+println("The complete dS spectrum of 6-derivative gravity (9 couplings):")
 println()
-println("  G₂ = P²/K₂(□)  where K₂ contains poles at:")
-println("    □ = 2Λ         (massless graviton)")
-if isfinite(mg2)
-    println("    □ = 2Λ + m²_g  (massive spin-2, m²_g = $(round(mg2; digits=4)))")
-end
+println("  S = ∫d⁴x√g [κR + α₁R² + α₂Ric² + Σᵢ γᵢIᵢ]")
 println()
-println("  G₀ = −P⁰ˢ/(2K₀(□))  where K₀ contains poles at:")
-if isfinite(ms2)
-    println("    □ = 2Λ + m²_s  (spin-0 scalar, m²_s = $(round(ms2; digits=4)))")
-end
+println("is determined by the Bueno-Cano parameters (a,b,c,e):")
+println("  κ_eff⁻¹ = 4e − 8Λ_BC a                            [Eq.17]")
+println("  m²_g   = (−e + 2Λ_BC a) / (2a + c)                [Eq.18]")
+println("  m²_s   = (2e − 4Λ_BC(a + 4b + c)) / (2a + 4c + 12b) [Eq.19]")
 println()
-println("The full spectrum on dS is parameterized by (κ_eff, m²_g, m²_s)")
-println("via Bueno-Cano (1607.06463) Eqs. (17)-(19).")
+println("where each coupling contributes additively to (a,b,c,e).")
+println("Cubic invariants contribute at O(Λ) to a,b,c and O(Λ²) to e.")
 println()
-println("Cubic curvature invariants γᵢIᵢ contribute at order Λ:")
-println("  e → e + Σᵢ γᵢ eᵢ(Λ²)  (shifts the effective cosmological constant)")
-println("  b → b + Σᵢ γᵢ bᵢ(Λ)   (shifts the spin-0 mass)")
-println("  c → c + Σᵢ γᵢ cᵢ(Λ)   (shifts the spin-2 mass)")
-println("  a → a + Σᵢ γᵢ aᵢ(Λ)   (mixed corrections)")
-println()
-println("These γᵢ-dependent coefficients can be computed from the")
-println("TensorGR δ²(Iᵢ) results in examples/11_6deriv_gravity_dS.jl")
+println("Reference: Bueno & Cano, 1607.06463, Eqs. (17)-(19)")

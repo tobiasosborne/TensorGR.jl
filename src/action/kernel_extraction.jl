@@ -409,3 +409,121 @@ function _eval_ksq_val(v, k2)
     end
     error("Cannot evaluate TScalar value: $v (type=$(typeof(v)))")
 end
+
+# ─── Bueno-Cano dS spectrum for 6-derivative gravity ─────────────────
+# Reference: Bueno & Cano, "Einsteinian cubic gravity" (2016)
+#   arXiv: 1607.06463, Eqs. (6), (13)-(14), (17)-(19)
+#
+# Convention: Λ is TGR's cosmological constant (R̄_μν = Λ g_μν, D=4).
+# Bueno-Cano uses Λ_BC = Λ/(D-1) = Λ/3.
+
+"""
+    BuenoCanoParams
+
+Bueno-Cano parameters (a, b, c, e) characterizing the linearized field
+equations of a gravity theory on a maximally symmetric background.
+
+From these, the physical spectrum is (Eqs. 17-19 of 1607.06463):
+- `κ_eff⁻¹ = 4e − 8Λ_BC a`
+- `m²_g = (−e + 2Λ_BC a) / (2a + c)`  (massive spin-2)
+- `m²_s = (2e − 4Λ_BC(a + 4b + c)) / (2a + 4c + 12b)`  (spin-0)
+"""
+struct BuenoCanoParams{T}
+    a::T
+    b::T
+    c::T
+    e::T
+end
+
+# Additive composition
+function Base.:+(p1::BuenoCanoParams, p2::BuenoCanoParams)
+    BuenoCanoParams(p1.a + p2.a, p1.b + p2.b, p1.c + p2.c, p1.e + p2.e)
+end
+
+function Base.show(io::IO, p::BuenoCanoParams)
+    print(io, "BC(a=$(p.a), b=$(p.b), c=$(p.c), e=$(p.e))")
+end
+
+# ── BC parameters for each Lagrangian term ──
+
+"""BC parameters for Einstein-Hilbert: κR"""
+bc_EH(κ, Λ) = BuenoCanoParams(zero(Λ), zero(Λ), zero(Λ), oftype(Λ, κ))
+
+"""BC parameters for R²"""
+bc_R2(α₁, Λ) = BuenoCanoParams(zero(Λ), oftype(Λ, 2α₁), zero(Λ), 8α₁*Λ)
+
+"""BC parameters for R_μνR^μν"""
+bc_RicSq(α₂, Λ) = BuenoCanoParams(zero(Λ), zero(Λ), oftype(Λ, 2α₂), 2α₂*Λ)
+
+"""BC parameters for R³ (I₁)"""
+bc_R3(γ, Λ) = BuenoCanoParams(zero(Λ), 24γ*Λ, zero(Λ), 48γ*Λ^2)
+
+"""BC parameters for R·Ric² (I₂)"""
+bc_RRicSq(γ, Λ) = BuenoCanoParams(zero(Λ), 4γ*Λ, 2γ*Λ, 12γ*Λ^2)
+
+"""BC parameters for Ric³ (I₃)"""
+bc_Ric3(γ, Λ) = BuenoCanoParams(zero(Λ), zero(Λ), 6γ*Λ, 3γ*Λ^2)
+
+"""BC parameters for R·Riem² (I₄)"""
+bc_RRiem2(γ, Λ) = BuenoCanoParams(4γ*Λ, 8γ*Λ/3, zero(Λ), 8γ*Λ^2)
+
+"""BC parameters for Ric·Riem² (I₅)"""
+bc_RicRiem2(γ, Λ) = BuenoCanoParams(4γ*Λ/3, zero(Λ), 2γ*Λ/3, 2γ*Λ^2)
+
+"""BC parameters for Riem³ (I₆)"""
+bc_Riem3(γ, Λ) = BuenoCanoParams(2γ*Λ, zero(Λ), zero(Λ), 4γ*Λ^2/3)
+
+"""
+    dS_spectrum_6deriv(; κ, α₁=0, α₂=0, β₁=0, β₂=0,
+                        γ₁=0, γ₂=0, γ₃=0, γ₄=0, γ₅=0, γ₆=0, Λ)
+
+Compute the particle spectrum of general 6-derivative gravity on de Sitter.
+
+The action is:
+  S = ∫d⁴x√g [κR + α₁R² + α₂Ric² + β₁R□R + β₂Ric□Ric
+               + γ₁R³ + γ₂R·Ric² + γ₃Ric³ + γ₄R·Riem² + γ₅Ric·Riem² + γ₆Riem³]
+
+Returns a NamedTuple with:
+- `params`: total BuenoCanoParams
+- `κ_eff_inv`: inverse effective Newton constant (Eq. 17)
+- `m2_graviton`: massive spin-2 mass squared (Eq. 18), `Inf` if no massive mode
+- `m2_scalar`: spin-0 mass squared (Eq. 19), `Inf` if no scalar mode
+- `flat_f2`: flat-space spin-2 form factor coefficients `(c₁, c₂)` where f₂(z)=1+c₁z+c₂z²
+- `flat_f0`: flat-space spin-0 form factor coefficients `(c₁, c₂)` where f₀(z)=1+c₁z+c₂z²
+
+Note: β₁R□R and β₂Ric□Ric contribute to the flat form factors but not to the dS
+Bueno-Cano parameters (since □R̄ = 0 on MSS). Their dS effect enters through the
+replacement α → α − βm² in the mass formulas (implicit momentum dependence).
+
+Reference: Bueno & Cano (1607.06463) Eqs. (17)-(19);
+           Buoninfante et al. (2012.11829) Eq. (2.13).
+"""
+function dS_spectrum_6deriv(; κ, α₁=0, α₂=0, β₁=0, β₂=0,
+                              γ₁=0, γ₂=0, γ₃=0, γ₄=0, γ₅=0, γ₆=0, Λ)
+    # Total BC parameters (cubics contribute at O(Λ))
+    p = bc_EH(κ, Λ) + bc_R2(α₁, Λ) + bc_RicSq(α₂, Λ) +
+        bc_R3(γ₁, Λ) + bc_RRicSq(γ₂, Λ) + bc_Ric3(γ₃, Λ) +
+        bc_RRiem2(γ₄, Λ) + bc_RicRiem2(γ₅, Λ) + bc_Riem3(γ₆, Λ)
+
+    Λ_BC = Λ / 3
+
+    # Effective Newton constant (Eq. 17)
+    κ_eff = 4p.e - 8Λ_BC * p.a
+
+    # Massive spin-2 mass (Eq. 18)
+    denom_g = 2p.a + p.c
+    m2_g = abs(denom_g) > 1e-15 * abs(p.e) ?
+        (-p.e + 2Λ_BC * p.a) / denom_g : oftype(Λ, Inf)
+
+    # Spin-0 mass (Eq. 19)
+    denom_s = 2p.a + 4p.c + 12p.b
+    m2_s = abs(denom_s) > 1e-15 * abs(p.e) ?
+        (2p.e - 4Λ_BC * (p.a + 4p.b + p.c)) / denom_s : oftype(Λ, Inf)
+
+    # Flat-space form factors (Buoninfante Eq. 2.13)
+    flat_f2 = (-α₂/κ, -β₂/κ)
+    flat_f0 = ((6α₁ + 2α₂)/κ, (6β₁ + 2β₂)/κ)
+
+    (params = p, κ_eff_inv = κ_eff, m2_graviton = m2_g, m2_scalar = m2_s,
+     flat_f2 = flat_f2, flat_f0 = flat_f0)
+end

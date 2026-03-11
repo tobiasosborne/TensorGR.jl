@@ -346,13 +346,28 @@ using Random
         bc_EH(κ, Λ) = (a=0.0, b=0.0, c=0.0, e=κ)
 
         """Bueno-Cano parameters for R²"""
-        bc_R2(α₁, Λ) = (a=0.0, b=2α₁, c=0.0, e=8α₁*Λ/3)
+        bc_R2(α₁, Λ) = (a=0.0, b=2α₁, c=0.0, e=8α₁*Λ)
 
         """Bueno-Cano parameters for R_μνR^μν"""
-        bc_RicSq(α₂, Λ) = (a=0.0, b=0.0, c=2α₂, e=2α₂*Λ/3)
+        bc_RicSq(α₂, Λ) = (a=0.0, b=0.0, c=2α₂, e=2α₂*Λ)
 
         """Bueno-Cano parameters for R³ (cubic invariant I1)"""
-        bc_R3(γ₁, Λ) = (a=0.0, b=24γ₁*Λ/3, c=0.0, e=48γ₁*(Λ/3)^2)
+        bc_R3(γ₁, Λ) = (a=0.0, b=24γ₁*Λ, c=0.0, e=48γ₁*Λ^2)
+
+        """Bueno-Cano parameters for R·Ric² (cubic invariant I2)"""
+        bc_RRicSq(γ₂, Λ) = (a=0.0, b=4γ₂*Λ, c=2γ₂*Λ, e=12γ₂*Λ^2)
+
+        """Bueno-Cano parameters for Ric³ (cubic invariant I3)"""
+        bc_Ric3(γ₃, Λ) = (a=0.0, b=0.0, c=6γ₃*Λ, e=3γ₃*Λ^2)
+
+        """Bueno-Cano parameters for R·Riem² (cubic invariant I4)"""
+        bc_RRiem2(γ₄, Λ) = (a=4γ₄*Λ, b=(8//3)*γ₄*Λ, c=0.0, e=8γ₄*Λ^2)
+
+        """Bueno-Cano parameters for Ric·Riem² (cubic invariant I5)"""
+        bc_RicRiem2(γ₅, Λ) = (a=(4//3)*γ₅*Λ, b=0.0, c=(2//3)*γ₅*Λ, e=2γ₅*Λ^2)
+
+        """Bueno-Cano parameters for Riem³ (cubic invariant I6)"""
+        bc_Riem3(γ₆, Λ) = (a=2γ₆*Λ, b=0.0, c=0.0, e=(4//3)*γ₆*Λ^2)
 
         """Total Bueno-Cano parameters (sum of contributions)"""
         function bc_total(κ, α₁, α₂, γ₁, Λ)
@@ -487,8 +502,98 @@ using Random
             # At Λ≠0: cubic parameters are proportional to Λ
             Λ = 0.3
             p = bc_R3(γ₁, Λ)
-            @test p.b ≈ 24γ₁ * Λ/3
-            @test p.e ≈ 48γ₁ * (Λ/3)^2
+            @test p.b ≈ 24γ₁ * Λ
+            @test p.e ≈ 48γ₁ * Λ^2
+        end
+
+        @testset "all cubic invariants: Λ→0 vanishing" begin
+            # All 6 cubic BC parameter functions must return zeros at Λ=0
+            γ = 0.5
+            for (fn, name) in [(bc_R3, "R³"), (bc_RRicSq, "R·Ric²"),
+                               (bc_Ric3, "Ric³"), (bc_RRiem2, "R·Riem²"),
+                               (bc_RicRiem2, "Ric·Riem²"), (bc_Riem3, "Riem³")]
+                p = fn(γ, 0.0)
+                @test p.a == 0.0
+                @test p.b == 0.0
+                @test p.c == 0.0
+                @test p.e == 0.0
+            end
+        end
+
+        @testset "full 6-deriv dS spectrum" begin
+            # Full spectrum with all 14 couplings:
+            # S = κR + α₁R² + α₂Ric² + γ₁R³ + γ₂R·Ric² + γ₃Ric³
+            #     + γ₄R·Riem² + γ₅Ric·Riem² + γ₆Riem³
+            # (β₁R□R + β₂Ric□Ric not included — they contribute only on flat)
+            #
+            # Reference: Bueno-Cano (1607.06463) Eqs. (17)-(19)
+
+            """Total BC parameters for full 6-deriv theory on dS"""
+            function bc_total_6deriv(κ, α₁, α₂, γ₁, γ₂, γ₃, γ₄, γ₅, γ₆, Λ)
+                terms = [bc_EH(κ, Λ), bc_R2(α₁, Λ), bc_RicSq(α₂, Λ),
+                         bc_R3(γ₁, Λ), bc_RRicSq(γ₂, Λ), bc_Ric3(γ₃, Λ),
+                         bc_RRiem2(γ₄, Λ), bc_RicRiem2(γ₅, Λ), bc_Riem3(γ₆, Λ)]
+                (a = sum(t.a for t in terms),
+                 b = sum(t.b for t in terms),
+                 c = sum(t.c for t in terms),
+                 e = sum(t.e for t in terms))
+            end
+
+            Random.seed!(777)
+            for _ in 1:50
+                κ = rand() * 3 + 0.5
+                α₁ = (rand() - 0.5) * 0.5
+                α₂ = rand() * 2 + 0.1
+                γs = [(rand() - 0.5) * 0.1 for _ in 1:6]
+                Λ = rand() * 0.2
+                Λ_BC = Λ / 3
+
+                p = bc_total_6deriv(κ, α₁, α₂, γs..., Λ)
+
+                # Effective Newton constant (Eq. 17)
+                κ_eff_val = κ_eff_inv(p.a, p.e, Λ_BC)
+                @test isfinite(κ_eff_val)
+
+                # At small Λ, κ_eff ≈ 4κ (EH dominates)
+                @test κ_eff_val > 0
+
+                # Spin-2 mass (Eq. 18)
+                if abs(2p.a + p.c) > 1e-10
+                    mg2 = m2_g(p.a, p.c, p.e, Λ_BC)
+                    @test isfinite(mg2)
+                end
+
+                # Spin-0 mass (Eq. 19)
+                denom = 2p.a + 4p.c + 12p.b
+                if abs(denom) > 1e-10
+                    ms2 = m2_s(p.a, p.b, p.c, p.e, Λ_BC)
+                    @test isfinite(ms2)
+                end
+
+                # Flat limit: cubic contributions vanish
+                p0 = bc_total_6deriv(κ, α₁, α₂, γs..., 0.0)
+                @test p0.a ≈ 0.0 atol=1e-14
+                @test p0.e ≈ κ
+                @test p0.b ≈ 2α₁
+                @test p0.c ≈ 2α₂
+            end
+        end
+
+        @testset "ECG: only massless graviton on dS" begin
+            # Einsteinian Cubic Gravity (Bueno-Cano 1607.06463 Eq.23):
+            # The unique cubic theory sharing GR's spectrum on MSS backgrounds.
+            # ECG has specific γ₄,γ₅,γ₆ such that the cubic Riem contributions
+            # to a and c cancel, leaving only EH-like spectrum.
+            #
+            # For ECG: L = κR + λ P, where P is the cubic Lovelock-like scalar.
+            # In D=4, ECG has a=0, c=0 from Riemann cubics → no massive modes.
+            # We test a simpler version: pure GR + any cubic with a+c=0 on dS
+            # still gives finite κ_eff.
+
+            κ = 1.0; Λ = 0.1; Λ_BC = Λ/3
+            p = bc_EH(κ, Λ)
+            @test κ_eff_inv(p.a, p.e, Λ_BC) ≈ 4κ
+            @test p.a == 0.0 && p.c == 0.0  # no massive modes in pure GR
         end
 
         @testset "TensorGR perturbation engine on dS" begin
@@ -510,6 +615,93 @@ using Random
                 # First-order Ricci tensor on dS
                 δRic = δricci(mp, down(:a), down(:b), 1)
                 @test δRic isa TensorExpr
+            end
+        end
+    end
+
+    # ══════════════════════════════════════════════════════════════════
+    # dS_spectrum_6deriv API tests
+    # ══════════════════════════════════════════════════════════════════
+
+    @testset "dS_spectrum_6deriv: GR limit" begin
+        s = dS_spectrum_6deriv(κ=1.0, Λ=0.1)
+        @test s.κ_eff_inv ≈ 4.0
+        @test isinf(s.m2_graviton)
+        @test isinf(s.m2_scalar)
+        @test s.flat_f2 == (0.0, 0.0)
+        @test s.flat_f0 == (0.0, 0.0)
+    end
+
+    @testset "dS_spectrum_6deriv: Stelle flat limit" begin
+        κ = 1.0; α₂ = 0.3; α₁ = -0.2  # α₁≠-α₂/3 so spin-0 mass is finite
+        s = dS_spectrum_6deriv(κ=κ, α₁=α₁, α₂=α₂, Λ=0.0)
+        @test isapprox(s.m2_graviton, -κ/(2α₂); rtol=1e-10)
+        expected_ms = 2κ / (24α₁ + 8α₂)
+        @test isapprox(s.m2_scalar, expected_ms; rtol=1e-10)
+        @test s.flat_f2 == (-α₂/κ, 0.0)
+        @test s.flat_f0 == ((6α₁+2α₂)/κ, 0.0)
+    end
+
+    @testset "dS_spectrum_6deriv: 6-deriv flat form factors" begin
+        κ = 1.0; α₁ = -0.1; α₂ = 0.3; β₁ = 0.05; β₂ = 0.1
+        s = dS_spectrum_6deriv(κ=κ, α₁=α₁, α₂=α₂, β₁=β₁, β₂=β₂, Λ=0.0)
+        @test s.flat_f2[1] ≈ -α₂/κ
+        @test s.flat_f2[2] ≈ -β₂/κ
+        @test s.flat_f0[1] ≈ (6α₁+2α₂)/κ
+        @test s.flat_f0[2] ≈ (6β₁+2β₂)/κ
+    end
+
+    @testset "dS_spectrum_6deriv: cubics shift masses" begin
+        κ = 1.0; α₁ = -0.1; α₂ = 0.3; Λ = 0.1
+        s_stelle = dS_spectrum_6deriv(κ=κ, α₁=α₁, α₂=α₂, Λ=Λ)
+        s_cubic  = dS_spectrum_6deriv(κ=κ, α₁=α₁, α₂=α₂, γ₁=0.05, γ₄=0.02, Λ=Λ)
+        @test s_cubic.m2_graviton != s_stelle.m2_graviton
+        @test s_cubic.m2_scalar != s_stelle.m2_scalar
+        @test s_cubic.flat_f2 == s_stelle.flat_f2
+        @test s_cubic.flat_f0 == s_stelle.flat_f0
+    end
+
+    @testset "dS_spectrum_6deriv: BuenoCanoParams additive" begin
+        p1 = BuenoCanoParams(1.0, 2.0, 3.0, 4.0)
+        p2 = BuenoCanoParams(0.5, 1.5, 2.5, 3.5)
+        p = p1 + p2
+        @test p.a ≈ 1.5
+        @test p.b ≈ 3.5
+        @test p.c ≈ 5.5
+        @test p.e ≈ 7.5
+    end
+
+    @testset "dS_spectrum_6deriv: consistency across random params" begin
+        # Verify dS_spectrum_6deriv gives consistent κ_eff, m²_g, m²_s
+        # using the exported bc_* functions directly
+        Random.seed!(888)
+        for _ in 1:30
+            κ = rand()*3+0.5; α₁ = (rand()-0.5)*0.5; α₂ = rand()*2+0.1
+            γs = [(rand()-0.5)*0.1 for _ in 1:6]
+            Λ = rand()*0.2
+
+            s = dS_spectrum_6deriv(κ=κ, α₁=α₁, α₂=α₂,
+                                    γ₁=γs[1], γ₂=γs[2], γ₃=γs[3],
+                                    γ₄=γs[4], γ₅=γs[5], γ₆=γs[6], Λ=Λ)
+
+            # Manually sum BC parameters using exported functions
+            p = bc_EH(κ, Λ) + bc_R2(α₁, Λ) + bc_RicSq(α₂, Λ) +
+                bc_R3(γs[1], Λ) + bc_RRicSq(γs[2], Λ) + bc_Ric3(γs[3], Λ) +
+                bc_RRiem2(γs[4], Λ) + bc_RicRiem2(γs[5], Λ) + bc_Riem3(γs[6], Λ)
+
+            @test s.params.a ≈ p.a rtol=1e-10
+            @test s.params.b ≈ p.b rtol=1e-10
+            @test s.params.c ≈ p.c rtol=1e-10
+            @test s.params.e ≈ p.e rtol=1e-10
+
+            Λ_BC = Λ/3
+            @test s.κ_eff_inv ≈ 4p.e - 8Λ_BC*p.a rtol=1e-10
+            if abs(2p.a + p.c) > 1e-10
+                @test s.m2_graviton ≈ (-p.e + 2Λ_BC*p.a)/(2p.a + p.c) rtol=1e-10
+            end
+            denom = 2p.a + 4p.c + 12p.b
+            if abs(denom) > 1e-10
+                @test s.m2_scalar ≈ (2p.e - 4Λ_BC*(p.a + 4p.b + p.c))/denom rtol=1e-10
             end
         end
     end

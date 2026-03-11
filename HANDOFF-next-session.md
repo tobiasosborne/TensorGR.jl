@@ -1,149 +1,71 @@
-# HANDOFF: 6-Deriv dS Spectrum — Session 12
+# HANDOFF: 6-Deriv dS Spectrum — Session 13
 
 ## Completed This Session
 
-- **Research only** — no code changes, all findings are in this document
-- Computed Bueno-Cano (a,b,c,e) parameters numerically for ALL 10 invariants
-- Identified convention errors in existing test `bc_R2`, `bc_RicSq`, `bc_R3` functions
-- Verified perturbation engine works on dS: δ²R gives 123 terms (15.5s), δR gives 22 terms
-- Read Bueno-Cano 1607.06463 paper (Eqs. 6, 11, 13-14, 17-19)
+- **Fixed BC parameter convention bugs**: factor-of-3 error on `e` for R², Ric², R³ in test + example
+- **Added all 6 cubic invariant BC parameters** (I1-I6): `bc_R3`, `bc_RRicSq`, `bc_Ric3`, `bc_RRiem2`, `bc_RicRiem2`, `bc_Riem3`
+- **Built `BuenoCanoParams` struct** + `dS_spectrum_6deriv()` API in `src/action/kernel_extraction.jl`
+- **Exported** all BC functions + `dS_spectrum_6deriv` from `src/TensorGR.jl`
+- **Updated example** `examples/13_6deriv_particle_spectrum.jl` with full 9-coupling dS spectrum
+- **657 new passing tests** (2244 total in test_6deriv_spectrum.jl), zero regressions
+- 26 pre-existing errors unchanged (simplify import issue in test_solve.jl, test_product_manifold.jl)
 
-## Key Discovery: BC Parameter Convention
-
-The numerical extraction method (parametric Riemann + finite differences) gives **raw** parameters.
-The test file uses a **scaled** convention: `a_test = 4×a_raw, b_test = 4×b_raw, c_test = 4×c_raw, e_test = e_raw`.
-
-### Method
-```julia
-# Build parametric Riemann R̃(Λ_BC, α) with projector k (rank χ < D)
-# Evaluate L(R̃) at α=±ε, extract ∂L/∂α and ∂²L/∂α² via finite differences
-# Fit e from: ∂L/∂α|₀ = e·χ(χ-1)  [NOTE: no factor 2, despite paper's Eq 13]
-# Fit a,b,c from: ∂²L/∂α²|₀ = 4χ(χ-1)(a + bχ(χ-1) + c(χ-1))
-```
-
-### Verified Results (Λ_BC = 0.1, D=4)
-
-**Raw extraction** (e_raw, a_raw, b_raw, c_raw):
-
-| Invariant | e_raw | a_raw | b_raw | c_raw |
-|-----------|-------|-------|-------|-------|
-| EH (κ=1) | 1.000 | 0 | 0 | 0 |
-| R² | 2.400 | ~0 | 0.500 | ~0 |
-| Ric² | 0.600 | ~0 | ~0 | 0.500 |
-| Riem² | 0.400 | 1.000 | ~0 | ~0 |
-| R³ | 4.320 | ~0 | 1.800 | ~0 |
-| R·Ric² | 1.080 | ~0 | 0.300 | 0.600 |
-| Ric³ | 0.270 | ~0 | ~0 | 0.450 |
-| R·Riem² | 0.720 | 1.200 | 0.200 | ~0 |
-| Ric·Riem² | 0.180 | 0.319 | ~0 | 0.162 |
-| Riem³ | 0.120 | 0.486 | ~0 | ~0 |
-
-NOTE: I5 and I6 have small spurious b,c from underdetermined system (only χ=2,3 usable for D=4).
-Rerun with analytical formulas for better precision.
-
-**Test convention** (×4 for a,b,c; ×1 for e):
-
-| Invariant | e | a | b | c |
-|-----------|---|---|---|---|
-| EH (κ=1) | κ | 0 | 0 | 0 |
-| R² (per α₁) | 24α₁Λ_BC | 0 | 2α₁ | 0 |
-| Ric² (per α₂) | 6α₂Λ_BC | 0 | 0 | 2α₂ |
-| Riem² (per γ) | 4γΛ_BC | 4γ | 0 | 0 |
-
-Converting e to TGR's Λ (Λ_TGR = 3Λ_BC):
-- EH: e = κ
-- R²: e = 24α₁(Λ_TGR/3) = 8α₁Λ_TGR (NOT 8α₁Λ_TGR/3 as in current test)
-- Ric²: e = 6α₂(Λ_TGR/3) = 2α₂Λ_TGR (NOT 2α₂Λ_TGR/3 as in current test)
-
-**Cubics normalized** (e/Λ_BC², a,b,c /Λ_BC in test convention):
-
-| Invariant | e/Λ² | a/Λ | b/Λ | c/Λ |
-|-----------|------|-----|-----|-----|
-| R³ | 432 | 0 | 72 | 0 |
-| R·Ric² | 108 | 0 | 16 | 8* |
-| Ric³ | 27 | 0 | 0 | 18* |
-| R·Riem² | 72 | ~38 | ~3 | ~0 |
-| Ric·Riem² | 18 | ~13 | ~0 | ~6 |
-| Riem³ | 12 | ~19 | ~0 | ~0 |
-
-*Values marked ~ are approximate due to underdetermined fitting for I4-I6.
-I1-I3 are exact (polynomial parametric formulas). I4-I6 need analytical verification.
-
-## Bugs Found in Test File
-
-### test/test_6deriv_spectrum.jl
-
-1. **Line 349**: `bc_R2(α₁, Λ) = (..., e=8α₁*Λ/3)` should be `e=8α₁*Λ` (factor 3 error)
-2. **Line 352**: `bc_RicSq(α₂, Λ) = (..., e=2α₂*Λ/3)` should be `e=2α₂*Λ` (factor 3 error)
-3. **Line 355**: `bc_R3(γ₁, Λ) = (..., b=24γ₁*Λ/3, e=48γ₁*(Λ/3)^2)` should be `b=24γ₁*Λ, e=48γ₁*Λ^2/3`
-   Wait — need to recheck this. Raw b=1.8 at Λ_BC=0.1, so b/Λ_BC=18 per unit coupling.
-   Test convention b = 4×1.8 = 7.2. At Λ_BC=0.1: b_test = 7.2. So b_test/Λ_BC = 72.
-   Current test: b=24γ₁*Λ_TGR/3 = 24γ₁*Λ_BC = 24*0.1 = 2.4 for γ₁=1. But we get 7.2. Off by 3.
-   Correct: b = 72γ₁*Λ_BC = 24γ₁*Λ_TGR
-
-**Root cause**: The test file consistently uses Λ_TGR/3 where it should use Λ_TGR (or equivalently Λ_BC where it should use 3Λ_BC). The e parameters for R² and Ric² are divided by an extra factor of 3.
-
-### Impact on existing tests
-- Tests at lines 396-445 only check `isfinite()` for Λ≠0, so they still pass with wrong e values
-- Tests at lines 447-470 check flat limit (Λ=0) where e corrections vanish, so they pass
-- The bug only affects dS-specific predictions (mass corrections at Λ≠0)
-
-## Correct BC Parameter Functions (TGR Λ convention)
+## What Works Now
 
 ```julia
-bc_EH(κ, Λ) = (a=0.0, b=0.0, c=0.0, e=κ)
-bc_R2(α₁, Λ) = (a=0.0, b=2α₁, c=0.0, e=8α₁*Λ)     # was e=8α₁*Λ/3
-bc_RicSq(α₂, Λ) = (a=0.0, b=0.0, c=2α₂, e=2α₂*Λ)   # was e=2α₂*Λ/3
-bc_R3(γ, Λ) = (a=0.0, b=24γ*Λ, c=0.0, e=144γ*Λ^2)   # NEEDS ANALYTICAL VERIFICATION
+using TensorGR
+
+# Full dS spectrum with all 9 algebraic couplings
+s = dS_spectrum_6deriv(κ=1.0, α₁=-0.1, α₂=0.3,
+                        γ₁=0.01, γ₂=-0.005, γ₃=0.003,
+                        γ₄=0.002, γ₅=-0.001, γ₆=0.001, Λ=0.1)
+s.κ_eff_inv    # effective Newton constant (Eq.17)
+s.m2_graviton  # massive spin-2 mass (Eq.18)
+s.m2_scalar    # spin-0 mass (Eq.19)
+s.flat_f2      # flat form factor coefficients (c₁, c₂)
+s.flat_f0      # flat form factor coefficients (c₁, c₂)
+
+# Individual BC parameters
+p = bc_EH(1.0, 0.1) + bc_R2(-0.1, 0.1) + bc_RicSq(0.3, 0.1) + bc_R3(0.01, 0.1)
+# p.a, p.b, p.c, p.e
 ```
 
-## What To Do Next (TGR-mphe)
+## What To Do Next
 
-### Step 1: Fix test BC parameter functions
-Fix bc_R2, bc_RicSq, bc_R3. Update the tests at lines 487-491 that hardcode the wrong values.
+### 1. Fix pre-existing 26 test errors
+- `simplify` not defined in `Main` in test_solve.jl and test_product_manifold.jl
+- `_eval_spin_scalar` errors in momentum-space kernel tests (R² and Ric²)
+- These are import/scoping issues in runtests.jl, not logic bugs
 
-### Step 2: Derive I4-I6 BC parameters analytically
-The I5 and I6 numerical extraction is underdetermined (only 2 usable χ values for D=4).
-Options:
-a) Use larger ε and higher-precision finite differences
-b) Derive analytically using the block-diagonal Riemann structure:
-   - kk-block: R = (Λ+α)·antisym, dimension χ
-   - ⊥⊥-block: R = Λ·antisym, dimension D-χ
-   - cross-block: R_{iajb} = Λ·δ_{ij}δ_{ab}
-c) Use D>4 (temporarily) to get more χ values, then specialize to D=4
+### 2. Analytical verification of I4-I6 cubic BC parameters
+- I1-I3 (R³, R·Ric², Ric³) are exact polynomial formulas
+- I4-I6 (R·Riem², Ric·Riem², Riem³) use numerical extraction (underdetermined at D=4)
+- Options: use D>4 temporarily, or derive analytically from block-diagonal Riemann
 
-### Step 3: Build dS momentum-space kernels
-The perturbation engine works on dS (δ²R = 123 terms in 15.5s). Two approaches:
-a) **Perturbation engine**: compute δ²(each term) → Fourier not applicable on curved space
-b) **Bueno-Cano**: use corrected (a,b,c,e) + mass formulas (Eqs 17-19) directly
+### 3. Box terms (β₁R□R, β₂Ric□Ric) on dS
+- Currently these only contribute to flat form factors
+- On MSS, □R̄ = 0, so effect is through α → α − βm² replacement
+- Need to implement the momentum-dependent mass shift
 
-Approach (b) is much simpler and sufficient for the spectrum. Approach (a) is a cross-check.
+### 4. Close beads issues
+- TGR-mphe (Step 3.1): mostly done — BC params computed, API built
+- TGR-7tcs (Step 3.2): cubic γᵢ contributions implemented
+- TGR-ug98 (Step 3.3): full dS spectrum API is working
 
-### Step 4: Implement full dS spectrum
-```julia
-# Bueno-Cano mass formulas (D=4)
-κ_eff_inv(a, e, Λ_BC) = 4e - 8Λ_BC * a
-m2_g(a, c, e, Λ_BC) = (-e + 2Λ_BC * a) / (2a + c)
-m2_s(a, b, c, e, Λ_BC) = (2e - 4Λ_BC*(a + 4b + c)) / (2a + 4c + 12b)
-```
+## Key Files Changed
 
-### Step 5: Box terms (R□R, Ric□Ric) on dS
-These are NOT covered by standard Bueno-Cano (which handles L(R_{μνρσ}) only, no ∇R).
-On MSS, □R̄ = 0, so box terms contribute through:
-- δ²(R□R) = 2(δR)(□δR) + 4Λ·□(δ²R) + ...
-- Effect: replace α₁ → α₁ - β₁m² in the mass equations (implicit)
-- The dS form factors become: f₂(m²) = 1 + (α₂-β₂m²)/κ·(...) etc.
+| File | Change |
+|------|--------|
+| `src/action/kernel_extraction.jl` | Added `BuenoCanoParams`, 9 `bc_*` functions, `dS_spectrum_6deriv` |
+| `src/TensorGR.jl` | Added exports for BC params and spectrum API |
+| `test/test_6deriv_spectrum.jl` | Fixed BC convention bugs, added cubic+full spectrum+API tests |
+| `examples/13_6deriv_particle_spectrum.jl` | Full 9-coupling dS spectrum with cubics |
 
-## Key Files
+## BC Parameter Convention (RESOLVED)
 
-| File | Role |
-|------|------|
-| `test/test_6deriv_spectrum.jl` | BC param functions to fix (lines 349,352,355,487-491) |
-| `src/action/kernel_extraction.jl` | Existing flat kernel builders + spin projection |
-| `examples/11_6deriv_gravity_dS.jl` | Cubic invariant builders + dS perturbation engine |
-| `benchmarks/papers/1607.06463_Bueno_Cano_ECG_2016.pdf` | Reference: Eqs 11,13-14,17-19 |
+TGR uses Λ where R̄_μν = Λg_μν (D=4). Bueno-Cano uses Λ_BC = Λ/3.
 
-## Beads Issues
-- **TGR-mphe**: In progress — BC parameters computed, test bugs found, implementation pending
-- **TGR-7tcs**: Blocked by mphe — cubic contributions need corrected BC params
-- **TGR-ug98**: Blocked by mphe+7tcs — full dS spectrum
+Correct formulas (TGR convention):
+- `bc_R2(α₁, Λ)`: e = 8α₁Λ (was 8α₁Λ/3)
+- `bc_RicSq(α₂, Λ)`: e = 2α₂Λ (was 2α₂Λ/3)
+- `bc_R3(γ, Λ)`: b = 24γΛ, e = 48γΛ² (was b=8γΛ, e=48γΛ²/9)

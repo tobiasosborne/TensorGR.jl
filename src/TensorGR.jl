@@ -227,6 +227,9 @@ export sym_det, sym_inv, sym_eval
 export KineticKernel, extract_kernel, spin_project, contract_momenta
 export build_FP_momentum_kernel, build_R2_momentum_kernel, build_Ric2_momentum_kernel
 export _eval_spin_scalar
+export BuenoCanoParams, dS_spectrum_6deriv
+export bc_EH, bc_R2, bc_RicSq, bc_R3, bc_RRicSq, bc_Ric3
+export bc_RRiem2, bc_RicRiem2, bc_Riem3
 
 # Exports: CAS integration
 export simplify_scalar, simplify_quadratic_form
