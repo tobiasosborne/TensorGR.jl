@@ -42,7 +42,7 @@ const WEYL_EXPANSION_TERMS = 3
 const WEYL_DECOMPOSITION_TERMS = 3
 
 # ── Schwarzschild (arXiv:0903.1134) ──────────────────────────────────────────
-const SCHWARZ_D1RIC_SIMPLIFIED_TERMS = 18  # δ¹Ric on vacuum bg, simplified
+const SCHWARZ_D1RIC_SIMPLIFIED_TERMS = 26  # δ¹Ric on vacuum bg, simplified
 const SCHWARZ_D2RIC_RAW_TERMS = 8          # δ²Ric on vacuum bg, raw
 
 # ── Chern-Simons (arXiv:1012.3144) ──────────────────────────────────────────
@@ -52,13 +52,13 @@ const CS_ISAACSON_TERMS = 8       # ⟨δ²Ric⟩ bilinear in h
 
 # ── de Sitter (arXiv:1403.3335) ─────────────────────────────────────────────
 const DS_D1RIEM_RAW_TERMS = 6     # δ¹Riem on dS, raw
-const DS_D1RIEM_SIMPLIFIED_TERMS = 6   # δ¹Riem on dS, simplified (contract_curvature in pipeline)
+const DS_D1RIEM_SIMPLIFIED_TERMS = 26   # δ¹Riem on dS, simplified (contract_curvature in pipeline)
 
 # ── Galileon (arXiv:0901.1314) ──────────────────────────────────────────────
 const GALILEON_L2_FACTORS = 3     # g^{ab} ∂_a π ∂_b π
 const GALILEON_L4_TERMS = 2       # (□π)² - (∇∇π)²
 const GALILEON_L4_EOM_DERIV_ORDER = 4  # structural (before commutation)
-const GALILEON_L4_EOM_TERMS = 17  # VarD(L₄, π) simplified (improved collect_terms)
+const GALILEON_L4_EOM_TERMS = 15  # VarD(L₄, π) simplified (improved collect_terms)
 
 # ── PSALTer (arXiv:2406.09500) ──────────────────────────────────────────────
 const PSALTER_THETA_TERMS = 2     # θ_{μν} = η_{μν} - k_μ k_ν/k²
@@ -73,7 +73,7 @@ const XPAND_SPLIT_HAB_TERMS = 16          # split_all_spacetime(h_{ab}) terms
 const XPAND_SVT_SUBSTITUTED_TERMS = 16    # after apply_svt
 const XPAND_SECTOR_NAMES = Set([:scalar, :vector, :tensor])
 const XPAND_E2E_SECTOR_NAMES = Set([:pure_scalar, :scalar, :vector, :tensor])
-const XPAND_DRIC_SPLIT_TERMS = 320        # δ¹Ric split into 3+1
+const XPAND_DRIC_SPLIT_TERMS = 512        # δ¹Ric split into 3+1
 
 # ── EFTofPNG (arXiv:1705.06309) ─────────────────────────────────────────────
 const EFTPNG_DRICCI_TERMS = Dict(1 => 2, 2 => 4, 3 => 6)

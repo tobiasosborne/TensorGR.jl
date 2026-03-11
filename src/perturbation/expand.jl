@@ -45,7 +45,8 @@ end
 
 """Return δᵏΓ for k≥1, or the background Christoffel Γ₀ for k=0 on curved background."""
 function _get_christoffel_order(mp::MetricPerturbation,
-                                 a::TIndex, b::TIndex, c::TIndex, k::Int)
+                                 a::TIndex, b::TIndex, c::TIndex, k::Int;
+                                 _avoid::Set{Symbol}=Set{Symbol}())
     if k == 0
         if mp.curved && mp.background_christoffel !== nothing
             return Tensor(mp.background_christoffel, [a, b, c])
@@ -53,7 +54,7 @@ function _get_christoffel_order(mp::MetricPerturbation,
             return ZERO
         end
     end
-    δchristoffel(mp, a, b, c, k)
+    δchristoffel(mp, a, b, c, k; _avoid=_avoid)
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -74,17 +75,23 @@ At order n (partition-based recursion):
 
 Index `a` must be Up; `b` and `c` must be Down.
 """
-function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, order::Int)
+function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, order::Int;
+                      _avoid::Set{Symbol}=Set{Symbol}())
     @assert a.position == Up  "First index of Christoffel must be Up"
     @assert b.position == Down "Second index of Christoffel must be Down"
     @assert c.position == Down "Third index of Christoffel must be Down"
     order <= 0 && return ZERO
 
-    key = (:δchristoffel, a, b, c, order)
-    cached = _pert_memo_get(key)
-    cached !== nothing && return cached
+    # Only use memo cache when no avoid set (direct calls).
+    # When called from the chain with _avoid, internal dummies must respect
+    # the caller's index context to prevent name clashes.
+    if isempty(_avoid)
+        key = (:δchristoffel, a, b, c, order)
+        cached = _pert_memo_get(key)
+        cached !== nothing && return cached
+    end
 
-    used = _collect_used(a, b, c)
+    used = union(_collect_used(a, b, c), _avoid)
     terms = TensorExpr[]
 
     # With covariant_output, derivatives are ∇ (not ∂), and ∇g₀=0 by metric
@@ -105,7 +112,7 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
         push!(used, d)
 
         # δᵏ(g^{ad})
-        δk_ginv = δinverse_metric(mp, a, up(d), k)
+        δk_ginv = δinverse_metric(mp, a, up(d), k; _avoid=used)
         δk_ginv == ZERO && continue
 
         # δˡ(g_{cd}), δˡ(g_{bd}), δˡ(g_{bc})
@@ -142,7 +149,11 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
         push!(terms, term)
     end
 
-    _pert_memo_set!(key, tsum(terms))
+    result = tsum(terms)
+    if isempty(_avoid)
+        _pert_memo_set!(key, result)
+    end
+    result
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -164,7 +175,8 @@ At order n, expand using the Leibniz rule on partitions:
 Index `a` must be Up; `b`, `c`, `d` must be Down.
 """
 function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
-                   c::TIndex, d::TIndex, order::Int)
+                   c::TIndex, d::TIndex, order::Int;
+                   _avoid::Set{Symbol}=Set{Symbol}())
     @assert a.position == Up   "First Riemann index must be Up"
     @assert b.position == Down "Second Riemann index must be Down"
     @assert c.position == Down "Third Riemann index must be Down"
@@ -172,22 +184,27 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
     order <= 0 && return ZERO
 
     key = (:δriemann, a, b, c, d, order)
-    cached = _pert_memo_get(key)
-    cached !== nothing && return cached
+    if isempty(_avoid)
+        cached = _pert_memo_get(key)
+        cached !== nothing && return cached
+    end
 
-    used = _collect_used(a, b, c, d)
+    used = union(_collect_used(a, b, c, d), _avoid)
     terms = TensorExpr[]
 
     # --- Linear part: D_c δⁿΓ^a_{db} - D_d δⁿΓ^a_{cb} ---
     # D = ∇ when covariant_output, else ∂
     _rcovd = mp.covd_name !== nothing ? mp.covd_name : :partial
-    δnΓ_adb = δchristoffel(mp, a, d, b, order)
+    δnΓ_adb = δchristoffel(mp, a, d, b, order; _avoid=used)
     if δnΓ_adb != ZERO
+        # Track indices from sub-expression to avoid clashes in subsequent calls
+        for idx in indices(δnΓ_adb); push!(used, idx.name); end
         push!(terms, TDeriv(c, δnΓ_adb, _rcovd))
     end
 
-    δnΓ_acb = δchristoffel(mp, a, c, b, order)
+    δnΓ_acb = δchristoffel(mp, a, c, b, order; _avoid=used)
     if δnΓ_acb != ZERO
+        for idx in indices(δnΓ_acb); push!(used, idx.name); end
         push!(terms, -TDeriv(d, δnΓ_acb, _rcovd))
     end
 
@@ -205,8 +222,14 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
         push!(used, e)
 
         # δᵏΓ or Γ₀ when k=0 / l=0
-        δkΓ_ace = _get_christoffel_order(mp, a, c, down(e), k)
-        δlΓ_edb = _get_christoffel_order(mp, up(e), d, b, l)
+        δkΓ_ace = _get_christoffel_order(mp, a, c, down(e), k; _avoid=used)
+        if δkΓ_ace != ZERO
+            for idx in indices(δkΓ_ace); push!(used, idx.name); end
+        end
+        δlΓ_edb = _get_christoffel_order(mp, up(e), d, b, l; _avoid=used)
+        if δlΓ_edb != ZERO
+            for idx in indices(δlΓ_edb); push!(used, idx.name); end
+        end
         if δkΓ_ace != ZERO && δlΓ_edb != ZERO
             δlΓ_edb = ensure_no_dummy_clash(δkΓ_ace, δlΓ_edb)
             push!(terms, tproduct(1 // 1, TensorExpr[δkΓ_ace, δlΓ_edb]))
@@ -216,15 +239,25 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
         e2 = fresh_index(used)
         push!(used, e2)
 
-        δkΓ_ade = _get_christoffel_order(mp, a, d, down(e2), k)
-        δlΓ_ecb = _get_christoffel_order(mp, up(e2), c, b, l)
+        δkΓ_ade = _get_christoffel_order(mp, a, d, down(e2), k; _avoid=used)
+        if δkΓ_ade != ZERO
+            for idx in indices(δkΓ_ade); push!(used, idx.name); end
+        end
+        δlΓ_ecb = _get_christoffel_order(mp, up(e2), c, b, l; _avoid=used)
+        if δlΓ_ecb != ZERO
+            for idx in indices(δlΓ_ecb); push!(used, idx.name); end
+        end
         if δkΓ_ade != ZERO && δlΓ_ecb != ZERO
             δlΓ_ecb = ensure_no_dummy_clash(δkΓ_ade, δlΓ_ecb)
             push!(terms, tproduct(-1 // 1, TensorExpr[δkΓ_ade, δlΓ_ecb]))
         end
     end
 
-    _pert_memo_set!(key, tsum(terms))
+    result = tsum(terms)
+    if isempty(_avoid)
+        _pert_memo_set!(key, result)
+    end
+    result
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -242,19 +275,26 @@ The Ricci tensor is the trace of the Riemann tensor:
 So δⁿRic_{ab} = δⁿR^c_{acb}, with `c` a fresh dummy index.
 Both `a` and `b` must be Down.
 """
-function δricci(mp::MetricPerturbation, a::TIndex, b::TIndex, order::Int)
+function δricci(mp::MetricPerturbation, a::TIndex, b::TIndex, order::Int;
+                _avoid::Set{Symbol}=Set{Symbol}())
     @assert a.position == Down "First Ricci index must be Down"
     @assert b.position == Down "Second Ricci index must be Down"
     order <= 0 && return ZERO
 
-    key = (:δricci, a, b, order)
-    cached = _pert_memo_get(key)
-    cached !== nothing && return cached
+    if isempty(_avoid)
+        key = (:δricci, a, b, order)
+        cached = _pert_memo_get(key)
+        cached !== nothing && return cached
+    end
 
-    used = _collect_used(a, b)
+    used = union(_collect_used(a, b), _avoid)
     c = fresh_index(used)
 
-    _pert_memo_set!(key, δriemann(mp, up(c), a, down(c), b, order))
+    result = δriemann(mp, up(c), a, down(c), b, order; _avoid=used)
+    if isempty(_avoid)
+        _pert_memo_set!(key, result)
+    end
+    result
 end
 
 # ────────────────────────────────────────────────────────────────────
@@ -290,20 +330,28 @@ function δricci_scalar(mp::MetricPerturbation, order::Int)
         push!(used, b)
 
         # δᵏ(g^{ab})
-        δk_ginv = δinverse_metric(mp, up(a), up(b), k)
+        δk_ginv = δinverse_metric(mp, up(a), up(b), k; _avoid=used)
+        if δk_ginv != ZERO
+            for idx in indices(δk_ginv); push!(used, idx.name); end
+        end
         δk_ginv == ZERO && continue
 
         # δˡ(Ric_{ab})
+        # Pass `used` as _avoid so that δricci (and its callees δriemann,
+        # δchristoffel) avoid generating internal dummy names that collide
+        # with the trace indices a, b or any other indices already in use.
         if l == 0
             # Background Ricci tensor
             δl_ric = Tensor(:Ric, [down(a), down(b)])
         else
-            δl_ric = δricci(mp, down(a), down(b), l)
+            δl_ric = δricci(mp, down(a), down(b), l; _avoid=used)
         end
         δl_ric == ZERO && continue
 
         # Ensure no dummy clashes
         δl_ric = ensure_no_dummy_clash(δk_ginv, δl_ric)
+        # Track all indices from this term for subsequent partitions
+        for idx in indices(δl_ric); push!(used, idx.name); end
         push!(terms, tproduct(1 // 1, TensorExpr[δk_ginv, δl_ric]))
     end
 

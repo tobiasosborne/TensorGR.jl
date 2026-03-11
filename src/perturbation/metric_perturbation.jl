@@ -209,19 +209,22 @@ Compute the perturbation of the inverse metric at a given order.
 At order 1: δ(g^{ab}) = -g^{ac} g^{bd} h_{cd}
 At order n: uses the partition-based recursion.
 """
-function δinverse_metric(mp::MetricPerturbation, idx_a::TIndex, idx_b::TIndex, order::Int)
+function δinverse_metric(mp::MetricPerturbation, idx_a::TIndex, idx_b::TIndex, order::Int;
+                         _avoid::Set{Symbol}=Set{Symbol}())
     order == 0 && return Tensor(mp.metric, [idx_a, idx_b])
     order < 0 && return ZERO
 
     key = (:δinverse_metric, idx_a, idx_b, order)
-    memo = get(task_local_storage(), :_pert_memo, nothing)
-    if memo !== nothing
-        cached = get(memo, key, nothing)
-        cached !== nothing && return cached
+    if isempty(_avoid)
+        memo = get(task_local_storage(), :_pert_memo, nothing)
+        if memo !== nothing
+            cached = get(memo, key, nothing)
+            cached !== nothing && return cached
+        end
     end
 
     if order == 1
-        used = Set{Symbol}([idx_a.name, idx_b.name])
+        used = union(Set{Symbol}([idx_a.name, idx_b.name]), _avoid)
         c = fresh_index(used)
         push!(used, c)
         d = fresh_index(used)
@@ -231,20 +234,23 @@ function δinverse_metric(mp::MetricPerturbation, idx_a::TIndex, idx_b::TIndex, 
             Tensor(mp.metric, [idx_b, up(d)]),
             Tensor(mp.perturbation, [down(c), down(d)])
         ])
-        memo !== nothing && (memo[key] = result)
+        if isempty(_avoid)
+            memo = get(task_local_storage(), :_pert_memo, nothing)
+            memo !== nothing && (memo[key] = result)
+        end
         return result
     end
 
     # Higher orders: δⁿ(g^{ab}) = -Σ_{k=1}^{n-1} δᵏ(g^{ac}) g^{bd} δⁿ⁻ᵏ(g_{cd})
     # This is the standard recursion from matrix perturbation theory
-    used = Set{Symbol}([idx_a.name, idx_b.name])
+    used = union(Set{Symbol}([idx_a.name, idx_b.name]), _avoid)
     terms = TensorExpr[]
     for k in 1:order-1
         c = fresh_index(used)
         push!(used, c)
         d = fresh_index(used)
         push!(used, d)
-        δk_inv = δinverse_metric(mp, idx_a, up(c), k)
+        δk_inv = δinverse_metric(mp, idx_a, up(c), k; _avoid=used)
         δnk_g = order - k == 1 ? Tensor(mp.perturbation, [down(c), down(d)]) : ZERO
         if δnk_g != ZERO
             term = tproduct(-1 // 1, TensorExpr[
@@ -256,6 +262,9 @@ function δinverse_metric(mp::MetricPerturbation, idx_a::TIndex, idx_b::TIndex, 
         end
     end
     result = tsum(terms)
-    memo !== nothing && (memo[key] = result)
+    if isempty(_avoid)
+        memo = get(task_local_storage(), :_pert_memo, nothing)
+        memo !== nothing && (memo[key] = result)
+    end
     result
 end
