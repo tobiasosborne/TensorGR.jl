@@ -24,7 +24,7 @@ end
 
 const tier1 = ["bench_01_xpert.jl", "bench_02_xtras.jl", "bench_03_xpand.jl", "bench_04_conformal.jl"]
 const tier2 = ["bench_05_schwarzschild2.jl", "bench_06_gw_stress.jl", "bench_07_riemann_corr.jl", "bench_08_galileon.jl"]
-const tier3 = ["bench_09_psalter.jl", "bench_10_eftpng.jl", "bench_11_superfield.jl", "bench_12_6deriv_dS.jl"]
+const tier3 = ["bench_09_psalter.jl", "bench_10_eftpng.jl", "bench_11_superfield.jl", "bench_12_6deriv_dS.jl", "bench_13_spectrum.jl"]
 
 all_benches = String[]
 tier_max >= 1 && append!(all_benches, tier1)
