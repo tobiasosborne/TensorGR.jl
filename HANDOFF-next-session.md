@@ -1,78 +1,138 @@
-# HANDOFF: 6-Deriv dS Spectrum — Session 16
+# HANDOFF: Perturbation Engine ↔ FP Cross-Check — Session 17
 
-## Status: ALL GREEN (tests unchanged)
+## Status: ALL GREEN (tests unchanged, diagnostic-only session)
 
 - **5851 tests pass**, 0 errors, 0 broken, 0 failed
-- **13 benchmarks pass** (271 benchmark tests)
-- All code pushed to remote (after this commit)
+- No src/ changes this session — only diagnostic example scripts (16-22)
+- All prior code pushed to remote
 
-## Completed This Session (16)
+## What Was Done This Session
 
-- **Rewrote `examples/15_perturbation_spectrum_crosscheck.jl`** to attempt full BC parameter cross-check via perturbation engine:
-  - Added `sqrt_g_correction()` helper for metric determinant expansion
-  - Included cosmological constant `-2Λ` for on-shell gauge invariance
-  - Full pipeline: `expand_perturbation → commute_covds → to_fourier → extract_kernel → spin_project`
-  - Pipeline runs end-to-end without errors (16 bilinear kernel terms for EH)
+### Confirmed: `spin_project` swap symmetry is CORRECT
+- Individual bilinear terms produce identical spin projections regardless of which h is "left" vs "right"
+- Tested via: (a) swapping h factors in original expression before `extract_kernel`, (b) manually constructing `KineticKernel` with swapped left/right
+- The Barnes-Rivers projectors P^J are correctly symmetric: P^J_{μν,ρσ} = P^J_{ρσ,μν}
+- **Previous session's "swap bug" was a test construction error** — example 21's "swapped" expression was mathematically different, not just reordered
 
-- **Identified normalization mismatch**: The perturbation engine path produces spin projections that don't match the direct FP momentum kernel builder:
-  - spin-2: factor of **-0.5** relative to `build_FP_momentum_kernel`
-  - spin-0s: factor of **2.5** relative to FP
-  - spin-1: **non-zero** (should be 0 for gauge-invariant EH action)
-  - spin-0w: 0 ✓
+### Confirmed: Pipeline works end-to-end for known-correct inputs
+- Position-space FP Lagrangian → `to_fourier` → `extract_kernel` → `spin_project` gives exact match with `build_FP_momentum_kernel`
+- spin-2=4.25, spin-1=0, spin-0s=-1.7, spin-0w=0 (at k²=1.7) — all correct
 
-## Root Cause Analysis (for next session)
+### Identified: `expand_derivatives` corrupts δR
+- Engine δR (after `expand_derivatives` + Fourier) = **(3/2)×** the correct analytic result
+- Analytic: δR = k^a k^b h_{ab} - k² h
+- Engine with expand_derivatives: (3/2)(k^a k^b h_{ab} - k²h)
+- **Root cause**: `expand_derivatives` applies Leibniz rule to g·∂h, producing spurious ∂g terms. On flat background ∂g=0, but expand_derivatives treats g as a variable
+- **DO NOT use `expand_derivatives` on perturbation engine output** — it introduces wrong terms
 
-The mismatch between the perturbation engine's `δ²R` path and the direct FP kernel builder has NOT been resolved. Likely causes, in order of probability:
+### Identified: L₂ = δ²R + ½h·δR does NOT match FP
+- L₂ - FP = 28 position-space terms = 13 Fourier kernel terms
+- These 13 terms have **nonzero** spin projections: spin-2=-6.375, spin-1=-3.825, spin-0s=-2.55
+- This means L₂ - FP is NOT purely total derivatives — there's a genuine content mismatch
 
-### 1. Missing `½h·δR` normalization (MOST LIKELY)
-The FP Lagrangian is `L_FP = δ²(√g·R)/√g₀ = δ²R + ½h·δR + (⅛h² − ¼hh)·(R₀−2Λ)`. At Λ→0, `L_FP = δ²R + ½h·δR`. The `½h·δR` term mixes trace and TT sectors. If the perturbation engine's δ²R already includes some of these cross-terms (from the Cauchy product), they may be double-counted.
+### Key numerical results (at k²=1.7)
 
-**Diagnosis**: Compute `δ²R` alone (without √g correction), Fourier transform, spin project. Compare spin-2 against FP. If spin-2 is ½ of FP, then the `½h·δR` term accounts for the other half. If spin-2 is -½ of FP (as observed), there's a sign issue.
+| Quantity | spin-2 | spin-1 | spin-0s | spin-0w |
+|----------|--------|--------|---------|---------|
+| FP (reference) | 4.25 | 0.0 | -1.7 | 0.0 |
+| δ²R (engine) | -2.125 | -3.825 | -1.7 | 0.0 |
+| ½h·δR | 0.0 | 0.0 | -2.55 | 0.0 |
+| L₂ = δ²R + ½h·δR | -2.125 | -3.825 | -4.25 | 0.0 |
+| X = -h^{ab}δRic_{ab} (analytic) | 4.25 | 0.0 | 0.85 | 0.0 |
+| Y = δ²R - X (engine residual) | -6.375 | -3.825 | -2.55 | 0.0 |
 
-### 2. Fourier convention sign issue
-`to_fourier` replaces `∇_a → k_a` (no imaginary unit, no sign). The FP builder uses the same convention. BUT: the covariant derivative `∇g` on MSS includes Christoffel terms. When `commute_covds` sorts derivatives, the commutator `[∇_a, ∇_b]h = Riem·h` produces extra terms. These extra terms may have wrong signs relative to the ∂→k convention.
+### Decomposition insight
+δ²R = X + Y where:
+- X = -h^{ab}δRic_{ab} = known-correct analytic expression (3 terms in Fourier)
+- Y = η^{ab}δ²Ric_{ab} = Christoffel-squared contributions from the perturbation engine
 
-**Diagnosis**: Try the non-covariant perturbation mode (remove `covariant_output=true`) and use partial derivatives. The `to_fourier` default handles `∂ → k` cleanly.
+**X matches FP for spin-2** (4.25 = 4.25). The problem is entirely in Y.
 
-### 3. The `δ²R` definition vs Taylor convention
-The memory says "`δricci_scalar(mp, n)` returns the ε^n COEFFICIENT". This means `R(ε) = R₀ + ε·δR + ε²·δ²R + ...`. The second variation of the action is `ε²·∫√g₀·Q` where `Q = δ²R + ½h·δR + ...`. If instead `δ²R` = `R''(0)` (without the 1/2! factor), then `Q = ½·δ²R + ½h·δR + ...`.
+## ROOT CAUSE (narrowed down)
 
-**Diagnosis**: Check a simple case: for g = η + εh with h = const·η (pure trace), compute δ²R analytically and compare with `expand_perturbation(R, mp, 2)`.
+The bug is in the **perturbation engine's computation of δ²R**, specifically the Y = η^{ab}δ²Ric_{ab} piece (Christoffel-squared terms). The Y piece should project to:
+- spin-2: 0 (it doesn't contribute to spin-2 in the analytic result)
+- spin-1: 0 (gauge invariance)
 
-### 4. Integration by parts (IBP) needed
-The quadratic Lagrangian may contain total derivatives (terms like ∂_μ(h·∂_νh)). These contribute to the bilinear kernel but integrate to zero. Before spin projection, IBP should be applied to put everything in standard form (all derivatives acting symmetrically on the two h's). Without IBP, the kernel has extra terms that pollute the spin projections.
+But the engine Y gives spin-2 = -6.375, spin-1 = -3.825.
 
-**Diagnosis**: Check if the kernel has terms with all momenta on one side (asymmetric). The FP builder has balanced momentum structure by construction.
+### Most likely sub-causes (investigate in order)
+
+1. **`to_fourier` mishandles nested TDeriv(∂, TSum(...))**
+   - δ²R has 4 terms (of 22) with nested structure: `h × ∂(g·∂h + g·∂h - g·∂h)` and `g × ∂(g·g·h·∂h + ...)`
+   - `to_fourier` processes TDeriv by: (a) recursively transform inner, (b) multiply by k
+   - On flat background this SHOULD be correct (∂g=0 so ∂ passes through g)
+   - But need to verify the recursive transform handles TDeriv(TSum) correctly
+   - **Test**: expand_derivatives on δ²R BEFORE Fourier, compare. If different, to_fourier is losing information from nested TDeriv
+   - **CAUTION**: expand_derivatives introduces spurious ∂g terms. Need to add a `set_constant!(reg, :g)` or manually filter ∂g=0 after expanding
+
+2. **Perturbation engine δ²Ric has wrong Christoffel-squared terms**
+   - The Cauchy product in `δricci_scalar` computes: [g^{ab}·Ric_{ab}]₂ = η^{ab}[Ric]₂ + [g^{-1}]₁·[Ric]₁
+   - [Ric]₂ involves δΓ·δΓ (Palatini identity at second order)
+   - These δΓ·δΓ terms have complex index structure and might have coefficient errors
+   - **Test**: Build analytic Y = η^{ab}(δΓ^c_{ad}δΓ^d_{bc} - δΓ^c_{ab}δΓ^d_{cd}) in Fourier space and compare with engine Y
+
+3. **Convention mismatch in `δricci_scalar`**
+   - The MEMORY says δricci_scalar returns ε^n COEFFICIENT
+   - But verify: is [R]₂ = ½R''(0) or R''(0)?
+   - If it's R''(0) (without 1/2!), then the formula should be L₂ = ½δ²R + ½hδR, not δ²R + ½hδR
+   - **Test**: pure-trace perturbation h=λη: R(η+ελη) = R(η(1+ελ)) = (1+ελ)^{-2}×0 = 0 on flat. So this test is trivial on flat. Try on a curved background instead.
 
 ## Recommended Next Session Strategy
 
-1. **Quick diagnostic** (~5 min): Compute δ²R on flat (no MSS), add `set_vanishing!` for Ric and RicScalar, then Fourier + spin project. This avoids MSS complications and tests the core pipeline.
+### Priority 1: Verify to_fourier on nested TDeriv (~10 min)
+```julia
+# Take a single nested-TDeriv term from δ²R
+term = δ2R.terms[1]  # -h × ∂(g·∂h + g·∂h - g·∂h)
+# Fourier transform with and without manually expanding ∂ through the sum
+result_nested = to_fourier(term)
+# Manually: expand outer ∂ by Leibniz, drop ∂g terms, THEN Fourier
+term_expanded = expand_derivatives(term)  # gives ∂g terms
+# Filter: remove any factor containing ∂g (since ∂g=0 on flat)
+# Then Fourier and compare
+```
 
-2. **Non-covariant path** (~5 min): Try `define_metric_perturbation!(reg, :g, :h; curved=true)` (no `covariant_output=true`), use `to_fourier` with default convention. The non-covariant expressions have partial derivatives only.
+### Priority 2: Build analytic Y and compare (~15 min)
+Build Y = η^{ab}δ²Ric_{ab} analytically in Fourier space using:
+```
+δΓ^c_{ab} = ½η^{cd}(k_a h_{bd} + k_b h_{ad} - k_d h_{ab})
+δ²Ric_{ab} = δΓ^c_{ad}δΓ^d_{bc} - δΓ^c_{ab}δΓ^d_{cd}
+Y = η^{ab}δ²Ric_{ab}
+```
+This is messy (4×4 = 16 cross-terms from the two δΓ products, minus another 16, contracted with η^{ab}) but mechanical. Compare spin projections of analytic Y with engine Y.
 
-3. **IBP experiment** (~10 min): Before `extract_kernel`, apply `ibp_product` to symmetrize derivatives. Compare spin projections before/after.
+### Priority 3: If to_fourier is the culprit, fix it (~20 min)
+If nested TDeriv handling is wrong, fix `_fourier_transform(::TDeriv)` to expand ∂(TSum) = Σ∂(term) before multiplying by k. Or add a pre-processing step that flattens nested TDeriv before Fourier.
 
-4. **Normalization test** (~5 min): Check if `expand_perturbation(R, mp, 2)` returns the Taylor coefficient or the second derivative. Use a pure-trace perturbation h = λ·g where δ²R is analytically known.
+### Priority 4: If perturbation engine is the culprit, fix δ²Ric (~30 min)
+If the analytic Y differs from the engine Y, the bug is in `expand.jl`'s computation of second-order Ricci. Check the Cauchy product structure and δΓ·δΓ assembly.
 
 ## Key Files
 
 | File | Role |
 |------|------|
-| `examples/15_perturbation_spectrum_crosscheck.jl` | Cross-check script (UPDATED this session) |
-| `src/action/kernel_extraction.jl` | KineticKernel, spin_project, BC params |
-| `src/svt/fourier.jl` | `to_fourier`: replaces ∂/∇ → k (no sign, no i) |
-| `src/perturbation/expand.jl` | `expand_perturbation` (Cauchy product engine) |
-| `src/algebra/ibp.jl` | `ibp_product` (integration by parts) |
-| `benchmarks/bench_13_spectrum.jl` | Existing spin projection tests (FP, R², Ric²) |
+| `src/perturbation/expand.jl` | `δricci_scalar`, `δricci`, `δchristoffel` — likely bug location |
+| `src/svt/fourier.jl` | `to_fourier`, `_fourier_transform` — nested TDeriv handling |
+| `src/action/kernel_extraction.jl` | KineticKernel, spin_project (CONFIRMED CORRECT) |
+| `src/action/spin_projectors.jl` | Barnes-Rivers projectors (CONFIRMED CORRECT) |
+| `src/algebra/derivatives.jl` | `expand_derivatives` — DO NOT USE on pert engine output |
+| `examples/16_diagnostic_flat_pipeline.jl` | Diagnostic: derivative distribution check |
+| `examples/17_pipeline_isolation_test.jl` | Diagnostic: FP position-space through pipeline (PASSES) |
+| `examples/18_expand_derivs_fix.jl` | Diagnostic: expand_derivatives makes things worse |
+| `examples/19_kernel_debug.jl` | Diagnostic: all Fourier terms are bilinear |
+| `examples/20_kernel_comparison.jl` | Diagnostic: pert engine vs analytic X decomposition |
+| `examples/21_total_deriv_test.jl` | Diagnostic: swap test (FLAWED test construction) |
+| `examples/22_swap_symmetry_test.jl` | Diagnostic: proper swap test (PASSES) |
 
 ## Critical Gotchas (accumulated)
 
+- `spin_project` swap symmetry is FINE — individual terms project identically under left↔right swap
+- `expand_derivatives` on pert engine output produces spurious ∂g terms (3/2× factor on δR) — DO NOT USE
+- `to_fourier` nested TDeriv: `∂(TSum)` → `k × fourier(TSum)` — correct in principle but needs verification
 - `spin_project` returns **Tr(K·P^J)**, NOT f_J. Divide by {5,3,1,1}
-- On flat without MSS rules, spin projection leaves uncontracted `Ric` tensors → use MSS or `set_vanishing!`
-- `to_fourier` uses ∂→k (no -i, no sign) — same convention as `build_FP_momentum_kernel`
-- The cosmological constant -2Λ is needed in L₀ for gauge invariance (spin-1=0) on MSS
 - `δricci_scalar(mp, n)` returns ε^n COEFFICIENT (Cauchy product)
-- √g expansion: Q = δ²L + ½h·δL + (⅛h² − ¼hh)·L₀ (see derivation in script header)
+- The analytic X = -h^{ab}δRic_{ab} correctly gives spin-2=4.25 matching FP — the problem is ONLY in Y = δΓ·δΓ terms
+- L₂ - FP has 13 Fourier kernel terms with nonzero spin content — NOT total derivatives
 
 ## Open Beads Issues (6-deriv related)
 
@@ -83,3 +143,7 @@ The quadratic Lagrangian may contain total derivatives (terms like ∂_μ(h·∂
 | TGR-tztc | OPEN P2 | Step 2.3: Cross-check Path A vs Path B |
 | TGR-j6r9 | OPEN P2 | Step 5: Tests + benchmark (blocked by tztc) |
 | TGR-af4a | OPEN P2 | Step 6: Example script + module integration |
+
+## Diagnostic Example Files to Clean Up
+
+Examples 16-22 are all diagnostic scripts from sessions 16-17. They can be deleted once the cross-check is resolved. None are referenced by tests or benchmarks.
