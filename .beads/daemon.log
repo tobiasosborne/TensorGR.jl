@@ -2946,3 +2946,112 @@ time=2026-03-09T21:39:42.240Z level=INFO msg="   Consider running 'bd sync' to c
 time=2026-03-09T21:39:42.761Z level=INFO msg="Pulled from remote"
 time=2026-03-09T21:39:42.839Z level=INFO msg="Imported from JSONL"
 time=2026-03-09T21:39:42.844Z level=INFO msg="Auto-import complete"
+time=2026-03-11T11:59:28.850Z level=INFO msg="Daemon started (interval: %v, auto-commit: %v, auto-push: %v)" !BADKEY=5s !BADKEY=false !BADKEY=false
+time=2026-03-11T11:59:28.851Z level=INFO msg="using database" path=/home/tobias/Projects/TensorGR.jl/.beads/beads.db
+time=2026-03-11T11:59:28.873Z level=INFO msg="database opened" path=/home/tobias/Projects/TensorGR.jl/.beads/beads.db freshness_checking=true
+time=2026-03-11T11:59:28.874Z level=INFO msg="upgrading .beads/.gitignore"
+time=2026-03-11T11:59:28.874Z level=WARN msg="failed to upgrade .gitignore" error="open .beads/.gitignore: no such file or directory"
+time=2026-03-11T11:59:28.877Z level=INFO msg="Repository fingerprint validated: %s" !BADKEY=4695ce9b
+time=2026-03-11T11:59:28.877Z level=INFO msg="starting RPC server" socket=/home/tobias/Projects/TensorGR.jl/.beads/bd.sock
+time=2026-03-11T11:59:28.877Z level=INFO msg="RPC server ready (socket listening)"
+time=2026-03-11T11:59:28.879Z level=INFO msg="registered in global registry"
+time=2026-03-11T11:59:28.879Z level=INFO msg="Starting %s..." !BADKEY="sync cycle"
+time=2026-03-11T11:59:28.880Z level=INFO msg="Pre-export validation failed: %v" !BADKEY="refusing to export: JSONL content has changed since last import (import first to avoid data loss)"
+time=2026-03-11T11:59:28.880Z level=INFO msg="monitoring parent process" pid=0
+time=2026-03-11T11:59:28.880Z level=INFO msg="using event-driven mode"
+time=2026-03-11T11:59:28.881Z level=INFO msg="Auto-pull disabled: use 'git pull' manually to sync remote changes"
+time=2026-03-11T17:54:21.252Z level=INFO msg="Daemon started (interval: %v, auto-commit: %v, auto-push: %v)" !BADKEY=5s !BADKEY=false !BADKEY=false
+time=2026-03-11T17:54:21.253Z level=INFO msg="using database" path=/home/tobias/Projects/TensorGR.jl/.beads/beads.db
+time=2026-03-11T17:54:21.316Z level=INFO msg="database opened" path=/home/tobias/Projects/TensorGR.jl/.beads/beads.db freshness_checking=true
+time=2026-03-11T17:54:21.316Z level=INFO msg="upgrading .beads/.gitignore"
+time=2026-03-11T17:54:21.316Z level=WARN msg="failed to upgrade .gitignore" error="open .beads/.gitignore: no such file or directory"
+time=2026-03-11T17:54:21.321Z level=INFO msg="Repository fingerprint validated: %s" !BADKEY=4695ce9b
+time=2026-03-11T17:54:21.321Z level=INFO msg="starting RPC server" socket=/home/tobias/Projects/TensorGR.jl/.beads/bd.sock
+time=2026-03-11T17:54:21.322Z level=INFO msg="RPC server ready (socket listening)"
+time=2026-03-11T17:54:21.325Z level=INFO msg="registered in global registry"
+time=2026-03-11T17:54:21.325Z level=INFO msg="Starting %s..." !BADKEY="sync cycle"
+time=2026-03-11T17:54:21.327Z level=INFO msg="Pre-export validation failed: %v" !BADKEY="refusing to export: JSONL content has changed since last import (import first to avoid data loss)"
+time=2026-03-11T17:54:21.327Z level=INFO msg="monitoring parent process" pid=0
+time=2026-03-11T17:54:21.327Z level=INFO msg="using event-driven mode"
+time=2026-03-11T17:54:21.327Z level=INFO msg="Auto-pull disabled: use 'git pull' manually to sync remote changes"
+time=2026-03-11T17:54:23.892Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T17:54:23.892Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T17:54:24.446Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T17:54:24.446Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T17:54:24.892Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T17:54:24.893Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T17:54:24.894Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-11T17:54:25.448Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T17:54:25.448Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T17:54:25.450Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-11T17:54:29.503Z level=INFO msg="Pulled from remote"
+time=2026-03-11T17:54:29.666Z level=INFO msg="Imported from JSONL"
+time=2026-03-11T17:54:29.674Z level=INFO msg="Auto-import complete"
+time=2026-03-11T17:54:31.729Z level=INFO msg="Pulled from remote"
+time=2026-03-11T17:54:31.921Z level=INFO msg="Imported from JSONL"
+time=2026-03-11T17:54:31.931Z level=INFO msg="Auto-import complete"
+time=2026-03-11T20:11:49.818Z level=INFO msg="Git ref change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.git/refs/heads/master.lock
+time=2026-03-11T20:11:50.967Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T20:11:51.688Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T20:11:56.025Z level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-03-11T20:12:03.221Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T20:12:03.221Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T20:12:03.582Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T20:12:04.592Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T20:12:04.592Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T20:12:04.602Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-11T20:12:06.026Z level=INFO msg="Pulled from remote"
+time=2026-03-11T20:12:06.197Z level=INFO msg="Imported from JSONL"
+time=2026-03-11T20:12:06.204Z level=INFO msg="Auto-import complete"
+time=2026-03-11T21:00:41.903Z level=INFO msg="Daemon started (interval: %v, auto-commit: %v, auto-push: %v)" !BADKEY=5s !BADKEY=false !BADKEY=false
+time=2026-03-11T21:00:41.904Z level=INFO msg="using database" path=/home/tobias/Projects/TensorGR.jl/.beads/beads.db
+time=2026-03-11T21:00:41.938Z level=INFO msg="database opened" path=/home/tobias/Projects/TensorGR.jl/.beads/beads.db freshness_checking=true
+time=2026-03-11T21:00:41.939Z level=INFO msg="upgrading .beads/.gitignore"
+time=2026-03-11T21:00:41.939Z level=WARN msg="failed to upgrade .gitignore" error="open .beads/.gitignore: no such file or directory"
+time=2026-03-11T21:00:41.943Z level=INFO msg="Repository fingerprint validated: %s" !BADKEY=4695ce9b
+time=2026-03-11T21:00:41.943Z level=INFO msg="starting RPC server" socket=/home/tobias/Projects/TensorGR.jl/.beads/bd.sock
+time=2026-03-11T21:00:41.944Z level=INFO msg="RPC server ready (socket listening)"
+time=2026-03-11T21:00:41.946Z level=INFO msg="registered in global registry"
+time=2026-03-11T21:00:41.946Z level=INFO msg="Starting %s..." !BADKEY="sync cycle"
+time=2026-03-11T21:00:41.947Z level=INFO msg="Pre-export validation failed: %v" !BADKEY="refusing to export: JSONL content has changed since last import (import first to avoid data loss)"
+time=2026-03-11T21:00:41.947Z level=INFO msg="monitoring parent process" pid=0
+time=2026-03-11T21:00:41.947Z level=INFO msg="using event-driven mode"
+time=2026-03-11T21:00:41.948Z level=INFO msg="Auto-pull disabled: use 'git pull' manually to sync remote changes"
+time=2026-03-11T21:55:55.683Z level=INFO msg="Git ref change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.git/refs/heads/master.lock
+time=2026-03-11T21:55:56.684Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T21:55:56.685Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T21:55:56.686Z level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-03-11T21:55:59.953Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T21:56:00.372Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T21:56:00.372Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T21:56:01.373Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T21:56:01.374Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T21:56:01.375Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-11T21:56:02.150Z level=INFO msg="Pulled from remote"
+time=2026-03-11T21:56:02.283Z level=INFO msg="Imported from JSONL"
+time=2026-03-11T21:56:02.292Z level=INFO msg="Auto-import complete"
+time=2026-03-11T21:56:10.365Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T21:56:10.365Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T21:56:10.824Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T21:56:11.826Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T21:56:11.827Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T21:56:11.828Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-11T21:56:12.558Z level=INFO msg="Pulled from remote"
+time=2026-03-11T21:56:12.688Z level=INFO msg="Imported from JSONL"
+time=2026-03-11T21:56:12.697Z level=INFO msg="Auto-import complete"
+time=2026-03-11T22:04:08.347Z level=INFO msg="Mutation detected: %s %s" status=TGR-c6su
+time=2026-03-11T22:04:08.847Z level=INFO msg="Export triggered by mutation events"
+time=2026-03-11T22:04:08.847Z level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-03-11T22:04:08.905Z level=INFO msg="JSONL file created: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T22:04:08.905Z level=INFO msg="Exported to JSONL"
+time=2026-03-11T22:04:08.905Z level=INFO msg="Export complete"
+time=2026-03-11T22:04:08.905Z level=INFO msg="File change detected: %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T22:04:09.906Z level=INFO msg="Import triggered by file change"
+time=2026-03-11T22:04:09.907Z level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-03-11T22:04:09.908Z level=INFO msg="JSONL content changed, proceeding with %s..." !BADKEY=auto-import
+time=2026-03-11T22:04:09.915Z level=INFO msg="⚠️  WARNING: Uncommitted local changes detected in %s" !BADKEY=/home/tobias/Projects/TensorGR.jl/.beads/issues.jsonl
+time=2026-03-11T22:04:09.915Z level=INFO msg="   Pulling from remote may overwrite local unpushed changes."
+time=2026-03-11T22:04:09.915Z level=INFO msg="   Consider running 'bd sync' to commit and push your changes first."
+time=2026-03-11T22:04:10.508Z level=INFO msg="Pulled from remote"
+time=2026-03-11T22:04:10.611Z level=INFO msg="Imported from JSONL"
+time=2026-03-11T22:04:10.622Z level=INFO msg="Auto-import complete"
