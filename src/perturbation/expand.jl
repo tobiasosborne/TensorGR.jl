@@ -87,11 +87,15 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
     used = _collect_used(a, b, c)
     terms = TensorExpr[]
 
+    # With covariant_output, derivatives are ∇ (not ∂), and ∇g₀=0 by metric
+    # compatibility. So l=0 vanishes just like on flat background.
+    skip_l0 = !mp.curved || mp.covd_name !== nothing
+
     for k in 0:order
         l = order - k
-        # On flat background, skip l=0 (∂g₀=0 so the term vanishes).
-        # On curved background, l=0 contributes via ∂g₀ ≠ 0.
-        if l < 1 && !mp.curved
+        # On flat background or covariant output, skip l=0 (∂g₀=0 / ∇g₀=0).
+        # On curved background (non-covariant), l=0 contributes via ∂g₀ ≠ 0.
+        if l < 1 && skip_l0
             continue
         end
         l < 0 && continue
@@ -114,16 +118,18 @@ function δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, 
         all_zero = (δl_gcd == ZERO && δl_gbd == ZERO && δl_gbc == ZERO)
         all_zero && continue
 
-        # Build the three derivative terms: ∂_b δˡg_{cd} + ∂_c δˡg_{bd} - ∂_d δˡg_{bc}
+        # Build the three derivative terms: D_b δˡg_{cd} + D_c δˡg_{bd} - D_d δˡg_{bc}
+        # where D = ∇ (covariant) when mp.covd_name is set, else ∂ (partial).
+        _dcovd = mp.covd_name !== nothing ? mp.covd_name : :partial
         deriv_terms = TensorExpr[]
         if δl_gcd != ZERO
-            push!(deriv_terms, TDeriv(b, δl_gcd))
+            push!(deriv_terms, TDeriv(b, δl_gcd, _dcovd))
         end
         if δl_gbd != ZERO
-            push!(deriv_terms, TDeriv(c, δl_gbd))
+            push!(deriv_terms, TDeriv(c, δl_gbd, _dcovd))
         end
         if δl_gbc != ZERO
-            push!(deriv_terms, -TDeriv(down(d), δl_gbc))
+            push!(deriv_terms, -TDeriv(down(d), δl_gbc, _dcovd))
         end
 
         isempty(deriv_terms) && continue
@@ -172,21 +178,24 @@ function δriemann(mp::MetricPerturbation, a::TIndex, b::TIndex,
     used = _collect_used(a, b, c, d)
     terms = TensorExpr[]
 
-    # --- Linear part: ∂_c δⁿΓ^a_{db} - ∂_d δⁿΓ^a_{cb} ---
+    # --- Linear part: D_c δⁿΓ^a_{db} - D_d δⁿΓ^a_{cb} ---
+    # D = ∇ when covariant_output, else ∂
+    _rcovd = mp.covd_name !== nothing ? mp.covd_name : :partial
     δnΓ_adb = δchristoffel(mp, a, d, b, order)
     if δnΓ_adb != ZERO
-        push!(terms, TDeriv(c, δnΓ_adb))
+        push!(terms, TDeriv(c, δnΓ_adb, _rcovd))
     end
 
     δnΓ_acb = δchristoffel(mp, a, c, b, order)
     if δnΓ_acb != ZERO
-        push!(terms, -TDeriv(d, δnΓ_acb))
+        push!(terms, -TDeriv(d, δnΓ_acb, _rcovd))
     end
 
     # --- Quadratic part: Σ_{k+l=n} δᵏΓ^a_{ce} δˡΓ^e_{db} - δᵏΓ^a_{de} δˡΓ^e_{cb} ---
     # On flat background: k≥1, l≥1 (Γ₀=0 so k=0 and l=0 vanish).
-    # On curved background: k≥0, l≥0 but skip (k=0,l=0) which is the background R₀.
-    k_start = mp.curved ? 0 : 1
+    # On curved background (non-covariant): k≥0, l≥0 but skip (k=0,l=0) = background R₀.
+    # With covariant_output: k≥1, l≥1 — the Γ₀ cross-terms are absorbed into ∇.
+    k_start = (mp.curved && mp.covd_name === nothing) ? 0 : 1
     for k in k_start:order-k_start
         l = order - k
         (k == 0 && l == 0) && continue  # background Riemann, not a perturbation

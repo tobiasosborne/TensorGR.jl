@@ -172,5 +172,21 @@ const _NAMES_6D = ["R^3", "R*Ric^2", "Ric^3", "R*Riem^2", "Ric*Riem^2", "Riem^3"
             R_bg = simplify(R; registry=reg)
             @test R_bg isa TProduct  # 4*Λ
         end
+
+        # ── 12.7: Covariant output path (∇h, no Γ₀g) ────────────────
+        @testset "Covariant output: R³ raw terms" begin
+            # Setup covariant perturbation (separate mp to avoid conflict)
+            mp_cov = define_metric_perturbation!(reg, :g, :h;
+                curved=true, covariant_output=true)
+
+            # R³ raw terms should match non-covariant (same partition count)
+            expr = _build_I1(reg)
+            raw = expand_perturbation(expr, mp_cov, 2)
+            @test count_terms(raw) == 6
+
+            # Verify no background Christoffel in output (covariant path)
+            @test mp_cov.background_christoffel === nothing
+            @test mp_cov.covd_name === :∇g
+        end
     end
 end

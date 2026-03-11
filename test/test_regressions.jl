@@ -12,7 +12,7 @@ using TensorGR: to_expr, from_expr, is_well_formed, _normalize_dummies,
     define_metric!(reg, :g; manifold=:M)
 
     with_registry(reg) do
-        mp = MetricPerturbation(:g, :h, :M, :ε, false, nothing)
+        mp = MetricPerturbation(:g, :h, :M, :ε, false, nothing, nothing)
         g_ab = Tensor(:g, [down(:a), down(:b)])
         result = expand_perturbation(g_ab, mp, 0)
         # Order 0 must return the tensor itself (background), NOT zero

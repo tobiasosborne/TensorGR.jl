@@ -22,6 +22,7 @@ struct MetricPerturbation
     order_param::Symbol
     curved::Bool
     background_christoffel::Union{Symbol, Nothing}
+    covd_name::Union{Symbol, Nothing}  # e.g. :∇g when covariant_output=true
 end
 
 """
@@ -34,7 +35,8 @@ function define_metric_perturbation!(reg::TensorRegistry, metric::Symbol,
                                      perturbation::Symbol;
                                      background::Symbol=Symbol(metric, :_bg),
                                      order_param::Symbol=:ε,
-                                     curved::Bool=false)
+                                     curved::Bool=false,
+                                     covariant_output::Bool=false)
     mp = get_manifold(reg, get_tensor(reg, metric).manifold)
 
     # Register perturbation tensor h_{ab} with same symmetries as metric
@@ -45,7 +47,18 @@ function define_metric_perturbation!(reg::TensorRegistry, metric::Symbol,
     end
 
     bg_christoffel = nothing
-    if curved
+    covd = nothing
+
+    if covariant_output
+        # Covariant output requires curved background
+        curved || error("covariant_output=true requires curved=true")
+        # Look up or auto-register the Levi-Civita CovD for this metric
+        covd = Symbol(:∇, metric)
+        if !has_tensor(reg, covd)
+            define_covd!(reg, covd; manifold=mp.name, metric=metric)
+        end
+        # No background Christoffel needed — Palatini identity absorbs Γ₀ into ∇
+    elseif curved
         # Register background Christoffel Γ₀^a_{bc} (symmetric in lower pair)
         bg_christoffel = Symbol(:Γ₀, metric)
         if !has_tensor(reg, bg_christoffel)
@@ -59,7 +72,7 @@ function define_metric_perturbation!(reg::TensorRegistry, metric::Symbol,
     end
 
     MetricPerturbation(metric, perturbation, background, order_param,
-                       curved, bg_christoffel)
+                       curved, bg_christoffel, covd)
 end
 
 """
