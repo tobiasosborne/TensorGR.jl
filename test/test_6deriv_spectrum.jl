@@ -352,22 +352,22 @@ using Random
         bc_RicSq(α₂, Λ) = (a=0.0, b=0.0, c=2α₂, e=2α₂*Λ)
 
         """Bueno-Cano parameters for R³ (cubic invariant I1)"""
-        bc_R3(γ₁, Λ) = (a=0.0, b=24γ₁*Λ, c=0.0, e=48γ₁*Λ^2)
+        bc_R3(γ₁, Λ) = (a=0.0, b=6γ₁*Λ, c=0.0, e=24γ₁*Λ^2)
 
         """Bueno-Cano parameters for R·Ric² (cubic invariant I2)"""
-        bc_RRicSq(γ₂, Λ) = (a=0.0, b=4γ₂*Λ, c=2γ₂*Λ, e=12γ₂*Λ^2)
+        bc_RRicSq(γ₂, Λ) = (a=0.0, b=γ₂*Λ, c=2γ₂*Λ, e=6γ₂*Λ^2)
 
         """Bueno-Cano parameters for Ric³ (cubic invariant I3)"""
-        bc_Ric3(γ₃, Λ) = (a=0.0, b=0.0, c=6γ₃*Λ, e=3γ₃*Λ^2)
+        bc_Ric3(γ₃, Λ) = (a=0.0, b=0.0, c=(3//2)*γ₃*Λ, e=(3//2)*γ₃*Λ^2)
 
         """Bueno-Cano parameters for R·Riem² (cubic invariant I4)"""
-        bc_RRiem2(γ₄, Λ) = (a=4γ₄*Λ, b=(8//3)*γ₄*Λ, c=0.0, e=8γ₄*Λ^2)
+        bc_RRiem2(γ₄, Λ) = (a=4γ₄*Λ, b=(2//3)*γ₄*Λ, c=0.0, e=4γ₄*Λ^2)
 
         """Bueno-Cano parameters for Ric·Riem² (cubic invariant I5)"""
-        bc_RicRiem2(γ₅, Λ) = (a=(4//3)*γ₅*Λ, b=0.0, c=(2//3)*γ₅*Λ, e=2γ₅*Λ^2)
+        bc_RicRiem2(γ₅, Λ) = (a=γ₅*Λ, b=0.0, c=(2//3)*γ₅*Λ, e=γ₅*Λ^2)
 
         """Bueno-Cano parameters for Riem³ (cubic invariant I6)"""
-        bc_Riem3(γ₆, Λ) = (a=2γ₆*Λ, b=0.0, c=0.0, e=(4//3)*γ₆*Λ^2)
+        bc_Riem3(γ₆, Λ) = (a=2γ₆*Λ, b=0.0, c=0.0, e=(2//3)*γ₆*Λ^2)
 
         """Total Bueno-Cano parameters (sum of contributions)"""
         function bc_total(κ, α₁, α₂, γ₁, Λ)
@@ -502,8 +502,8 @@ using Random
             # At Λ≠0: cubic parameters are proportional to Λ
             Λ = 0.3
             p = bc_R3(γ₁, Λ)
-            @test p.b ≈ 24γ₁ * Λ
-            @test p.e ≈ 48γ₁ * Λ^2
+            @test p.b ≈ 6γ₁ * Λ
+            @test p.e ≈ 24γ₁ * Λ^2
         end
 
         @testset "all cubic invariants: Λ→0 vanishing" begin

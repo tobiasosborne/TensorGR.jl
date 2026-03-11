@@ -247,13 +247,41 @@ p3 = bc_results[3]
 println("\nI₃ = Ric³:")
 println("  Analytical: a=0, b=0, c=3Λ/2=$(3Λ_TGR/2), e=3Λ²/2=$(3Λ_TGR^2/2)")
 println("  Numerical:  a=$(round(p3.a; sigdigits=6)), b=$(round(p3.b; sigdigits=6)), c=$(round(p3.c; sigdigits=6)), e=$(round(p3.e; sigdigits=6))")
-println("  ✓ Verified numerically")
+@assert abs(p3.a) < 1e-4 "I₃: a should be 0, got $(p3.a)"
+@assert abs(p3.b) < 1e-4 "I₃: b should be 0, got $(p3.b)"
+@assert abs(p3.c - 3Λ_TGR/2) / (3Λ_TGR/2) < 1e-3 "I₃: c should be 3Λ/2"
+@assert abs(p3.e - 3Λ_TGR^2/2) / (3Λ_TGR^2/2) < 1e-3 "I₃: e should be 3Λ²/2"
+println("  ✓ All match within tolerance")
 
 p4 = bc_results[4]
 println("\nI₄ = R·Riem²:")
 println("  Analytical: a=4Λ=$(4Λ_TGR), b=2Λ/3=$(2Λ_TGR/3), c=0, e=4Λ²=$(4Λ_TGR^2)")
 println("  Numerical:  a=$(round(p4.a; sigdigits=6)), b=$(round(p4.b; sigdigits=6)), c=$(round(p4.c; sigdigits=6)), e=$(round(p4.e; sigdigits=6))")
-println("  ✓ Verified numerically")
+@assert abs(p4.a - 4Λ_TGR) / (4Λ_TGR) < 1e-3 "I₄: a should be 4Λ"
+@assert abs(p4.b - 2Λ_TGR/3) / (2Λ_TGR/3) < 1e-3 "I₄: b should be 2Λ/3"
+@assert abs(p4.c) < 1e-4 "I₄: c should be 0, got $(p4.c)"
+@assert abs(p4.e - 4Λ_TGR^2) / (4Λ_TGR^2) < 1e-3 "I₄: e should be 4Λ²"
+println("  ✓ All match within tolerance")
+
+p5 = bc_results[5]
+println("\nI₅ = Ric·Riem²:")
+println("  Analytical: a=Λ=$(Λ_TGR), b=0, c=2Λ/3=$(2Λ_TGR/3), e=Λ²=$(Λ_TGR^2)")
+println("  Numerical:  a=$(round(p5.a; sigdigits=6)), b=$(round(p5.b; sigdigits=6)), c=$(round(p5.c; sigdigits=6)), e=$(round(p5.e; sigdigits=6))")
+@assert abs(p5.a - Λ_TGR) / Λ_TGR < 1e-3 "I₅: a should be Λ"
+@assert abs(p5.b) < 1e-4 "I₅: b should be 0, got $(p5.b)"
+@assert abs(p5.c - 2Λ_TGR/3) / (2Λ_TGR/3) < 1e-3 "I₅: c should be 2Λ/3"
+@assert abs(p5.e - Λ_TGR^2) / Λ_TGR^2 < 1e-3 "I₅: e should be Λ²"
+println("  ✓ All match within tolerance")
+
+p6 = bc_results[6]
+println("\nI₆ = Riem³:")
+println("  Analytical: a=2Λ=$(2Λ_TGR), b=0, c=0, e=2Λ²/3=$(2Λ_TGR^2/3)")
+println("  Numerical:  a=$(round(p6.a; sigdigits=6)), b=$(round(p6.b; sigdigits=6)), c=$(round(p6.c; sigdigits=6)), e=$(round(p6.e; sigdigits=6))")
+@assert abs(p6.a - 2Λ_TGR) / (2Λ_TGR) < 1e-3 "I₆: a should be 2Λ"
+@assert abs(p6.b) < 1e-4 "I₆: b should be 0, got $(p6.b)"
+@assert abs(p6.c) < 1e-4 "I₆: c should be 0, got $(p6.c)"
+@assert abs(p6.e - 2Λ_TGR^2/3) / (2Λ_TGR^2/3) < 1e-3 "I₆: e should be 2Λ²/3"
+println("  ✓ All match within tolerance")
 
 # ═══════════════════════════════════════════════════════════════════════
 # Full dS spectrum with all parameters
