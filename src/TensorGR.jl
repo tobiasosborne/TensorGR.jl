@@ -78,6 +78,7 @@ include("action/quadratic_action.jl")
 include("action/extract_quadratic.jl")
 include("action/spin_projectors.jl")
 include("action/kernel_extraction.jl")
+include("action/svt_quadratic.jl")
 
 # Layer 4: CAS integration hooks (after QuadraticForm is defined)
 include("scalar/simplify_cas.jl")
@@ -231,6 +232,7 @@ export _eval_spin_scalar
 export BuenoCanoParams, dS_spectrum_6deriv
 export bc_EH, bc_R2, bc_RicSq, bc_R3, bc_RRicSq, bc_Ric3
 export bc_RRiem2, bc_RicRiem2, bc_Riem3
+export svt_quadratic_forms_6deriv
 
 # Exports: CAS integration
 export simplify_scalar, simplify_quadratic_form

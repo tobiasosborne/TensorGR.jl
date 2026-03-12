@@ -1443,4 +1443,170 @@ using Random
         end
     end
 
+    # ══════════════════════════════════════════════════════════════════
+    # Path B: SVT quadratic forms (TGR-pr04)
+    # ══════════════════════════════════════════════════════════════════
+
+    @testset "SVT Path B: GR scalar matrix" begin
+        # Pure GR: M_ΦΦ=0, M_Φψ=-2κk², M_ψψ=κ(2k²-6ω²), det=-4κ²k⁴
+        Random.seed!(1234)
+        for _ in 1:50
+            κ = rand() * 3 + 0.5
+            ω2 = rand() * 5 + 0.1
+            k2 = rand() * 5 + 0.1
+
+            r = svt_quadratic_forms_6deriv(κ=κ, ω²=ω2, k²=k2)
+            M = r.scalar.matrix
+
+            @test isapprox(M[1,1], 0.0; atol=1e-12)
+            @test isapprox(M[1,2], -2κ*k2; rtol=1e-12)
+            @test isapprox(M[2,2], κ*(2k2 - 6ω2); rtol=1e-12)
+
+            det_val = M[1,1]*M[2,2] - M[1,2]*M[2,1]
+            @test isapprox(det_val, -4κ^2*k2^2; rtol=1e-10)
+        end
+    end
+
+    @testset "SVT Path B: tensor sector = κp²f₂(p²)" begin
+        Random.seed!(2345)
+        for _ in 1:50
+            κ = rand() * 3 + 0.5
+            α₂ = rand() * 2 - 1.0
+            β₂ = rand() * 0.5
+            ω2 = rand() * 5 + 0.1
+            k2 = rand() * 5 + 0.1
+            p2 = ω2 - k2
+
+            r = svt_quadratic_forms_6deriv(κ=κ, α₂=α₂, β₂=β₂, ω²=ω2, k²=k2)
+            M_TT = r.tensor.matrix[1,1]
+            expected = κ*p2 - α₂*p2^2 - β₂*p2^3
+            @test isapprox(M_TT, expected; rtol=1e-10)
+        end
+    end
+
+    @testset "SVT Path B: vector sector vanishes" begin
+        r = svt_quadratic_forms_6deriv(κ=1.0, α₁=-0.1, α₂=0.3, β₁=0.05, β₂=0.1,
+                                        ω²=2.0, k²=1.5)
+        @test r.vector_vanishes === true
+    end
+
+    @testset "SVT Path B: Stelle scalar matrix (β=0)" begin
+        # For Stelle gravity, verify specific scalar matrix entries
+        # Coefficient is −(α+βp²), not −2(α+βp²) — see svt_quadratic.jl
+        Random.seed!(3456)
+        for _ in 1:50
+            κ = rand() * 3 + 0.5
+            α₁ = rand() * 2 - 1.0
+            α₂ = rand() * 2 - 1.0
+            ω2 = rand() * 5 + 0.1
+            k2 = rand() * 5 + 0.1
+
+            r = svt_quadratic_forms_6deriv(κ=κ, α₁=α₁, α₂=α₂, ω²=ω2, k²=k2)
+            M = r.scalar.matrix
+
+            # M_ΦΦ = -(4α₁+2α₂)k⁴
+            @test isapprox(M[1,1], -(4α₁+2α₂)*k2^2; rtol=1e-10)
+
+            # M_Φψ = -2κk² + 2α₁k²(4k²-6ω²) - α₂(4ω²k²-2k⁴)
+            exp_Φψ = -2κ*k2 + 2α₁*k2*(4k2-6ω2) - α₂*(4ω2*k2-2k2^2)
+            @test isapprox(M[1,2], exp_Φψ; rtol=1e-10)
+
+            # M_ψψ = κ(2k²-6ω²) - α₁(4k²-6ω²)² - α₂(12ω⁴-16ω²k²+6k⁴)
+            exp_ψψ = κ*(2k2-6ω2) - α₁*(4k2-6ω2)^2 - α₂*(12ω2^2-16ω2*k2+6k2^2)
+            @test isapprox(M[2,2], exp_ψψ; rtol=1e-10)
+        end
+    end
+
+    # ══════════════════════════════════════════════════════════════════
+    # Cross-check Path A vs Path B (TGR-tztc)
+    #
+    # Path A: spin-projection form factors f₂(p²), f₀(p²)
+    # Path B: SVT quadratic forms M_TT(ω²,k²), det(M_scalar)(ω²,k²)
+    #
+    # Agreement: at a root p²=m² of f_s, the corresponding Path B
+    # quantity must vanish when ω² = k² + m² (on mass shell).
+    # ══════════════════════════════════════════════════════════════════
+
+    @testset "Cross-check: tensor poles match f₂ zeros" begin
+        # At zeros of f₂(p²), M_TT must vanish (and vice versa)
+        Random.seed!(4567)
+        for _ in 1:100
+            κ = rand() * 3 + 0.5
+            α₂ = rand() * 2 + 0.1
+            β₂ = rand() * 0.5 + 0.01
+
+            # Find zeros of f₂(z) = 1 − (α₂/κ)z − (β₂/κ)z²
+            a_coeff = -β₂/κ
+            b_coeff = -α₂/κ
+            c_coeff = 1.0
+            disc = b_coeff^2 - 4a_coeff*c_coeff
+            disc < 0 && continue  # skip complex roots
+
+            z₁ = (-b_coeff + sqrt(disc)) / (2a_coeff)
+            z₂ = (-b_coeff - sqrt(disc)) / (2a_coeff)
+
+            for m² in (z₁, z₂)
+                # On mass shell: p² = m², pick arbitrary k²
+                k2 = rand() * 5 + 0.5
+                ω2 = k2 + m²
+
+                r = svt_quadratic_forms_6deriv(κ=κ, α₂=α₂, β₂=β₂, ω²=ω2, k²=k2)
+                M_TT = r.tensor.matrix[1,1]
+                @test isapprox(M_TT, 0.0; atol=1e-8 * max(1.0, abs(κ*m²)))
+            end
+        end
+    end
+
+    @testset "Cross-check: scalar det zeros match f₀ zeros" begin
+        # At zeros of f₀(p²), det(M_scalar) must vanish
+        Random.seed!(5678)
+        for _ in 1:100
+            κ = rand() * 3 + 0.5
+            α₁ = rand() * 2 - 1.0
+            α₂ = rand() * 2 - 1.0
+            β₁ = rand() * 0.5
+            β₂ = rand() * 0.5
+
+            # Zeros of f₀(z) = 1 + (6α₁+2α₂)z/κ + (6β₁+2β₂)z²/κ
+            c1 = (6α₁ + 2α₂) / κ
+            c2 = (6β₁ + 2β₂) / κ
+            abs(c2) < 1e-12 && continue  # skip degenerate
+
+            disc = c1^2 - 4c2
+            disc < 0 && continue  # skip complex roots
+
+            z₁ = (-c1 + sqrt(disc)) / (2c2)
+            z₂ = (-c1 - sqrt(disc)) / (2c2)
+
+            for m² in (z₁, z₂)
+                abs(m²) < 1e-6 && continue  # skip near-zero masses
+                k2 = rand() * 5 + 0.5
+                ω2 = k2 + m²
+
+                r = svt_quadratic_forms_6deriv(κ=κ, α₁=α₁, α₂=α₂, β₁=β₁, β₂=β₂,
+                                                ω²=ω2, k²=k2)
+                M = r.scalar.matrix
+                det_val = M[1,1]*M[2,2] - M[1,2]*M[2,1]
+                scale = max(1.0, abs(κ^2 * k2^2))
+                @test isapprox(det_val, 0.0; atol=1e-6 * scale)
+            end
+        end
+    end
+
+    @testset "Cross-check: GR scalar det = -4κ²k⁴ (no scalar pole)" begin
+        # In GR, f₀=1 everywhere, so det(M_scalar) should never vanish
+        # except at k²=0. Verify det = -4κ²k⁴.
+        Random.seed!(6789)
+        for _ in 1:50
+            κ = rand() * 3 + 0.5
+            ω2 = rand() * 5 + 0.1
+            k2 = rand() * 5 + 0.1
+
+            r = svt_quadratic_forms_6deriv(κ=κ, ω²=ω2, k²=k2)
+            M = r.scalar.matrix
+            det_val = M[1,1]*M[2,2] - M[1,2]*M[2,1]
+            @test isapprox(det_val, -4κ^2*k2^2; rtol=1e-10)
+        end
+    end
+
 end
