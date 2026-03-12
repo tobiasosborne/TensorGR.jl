@@ -48,6 +48,7 @@ include("gr/box.jl")
 include("gr/lie.jl")
 include("gr/killing.jl")
 include("gr/symmetry_ansatz.jl")
+include("gr/metric_ansatz_gen.jl")
 include("gr/matter.jl")
 include("gr/hypersurface.jl")
 include("gr/mapping.jl")
@@ -192,6 +193,7 @@ export product_einstein_equations
 
 # Exports: Symmetry ansatz
 export SymmetryAnsatz, SphericalSymmetry, AxialSymmetry, StaticSymmetry, HomogeneousIsotropy
+export metric_ansatz
 
 # Exports: Matter
 export PerfectFluidProperties, define_perfect_fluid!, perfect_fluid_expr, get_perfect_fluid

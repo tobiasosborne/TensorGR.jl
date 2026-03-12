@@ -341,4 +341,83 @@ function TensorGR.symbolic_curvature_from_metric(sm::SymbolicMetric)
     (; Gamma=Gamma, Riem=Riem, Ric=Ric, R=R, G=G, K=K)
 end
 
+# ─── Metric ansatz generators ────────────────────────────────────
+
+"""
+    metric_ansatz(reg, manifold, ::HomogeneousIsotropy; coords, k) -> NamedTuple
+
+Generate the FLRW metric:
+  ds^2 = -dtau^2 + a(tau)^2 [dchi^2/(1-k*chi^2) + chi^2 dOmega^2]
+
+Returns `(metric, free_functions, time_coord)`.
+"""
+function TensorGR.metric_ansatz(reg::TensorGR.TensorRegistry, manifold::Symbol,
+                                 ans::TensorGR.HomogeneousIsotropy;
+                                 coords::Vector{Symbol}=[:tau, :chi, :theta, :phi],
+                                 k::Int=0)
+    length(coords) == 4 || error("FLRW ansatz requires exactly 4 coordinates")
+    k in (-1, 0, 1) || error("Spatial curvature k must be -1, 0, or +1, got $k")
+
+    # Create symbolic coordinate variables
+    _c1 = coords[1]; _c2 = coords[2]; _c3 = coords[3]; _c4 = coords[4]
+    tau_sym = first(Symbolics.@variables $_c1)
+    chi_sym = first(Symbolics.@variables $_c2)
+    theta_sym = first(Symbolics.@variables $_c3)
+    phi_sym = first(Symbolics.@variables $_c4)
+
+    # Scale factor a(tau) as a function of the time coordinate
+    a_func = first(Symbolics.@variables a($(tau_sym)))
+
+    # Build diagonal metric entries
+    g_tt = Symbolics.Num(-1)
+    g_chichi = a_func^2 / (1 - k * chi_sym^2)
+    g_thth = a_func^2 * chi_sym^2
+    g_phiphi = a_func^2 * chi_sym^2 * sin(theta_sym)^2
+
+    sm = TensorGR.symbolic_diagonal_metric(
+        [tau_sym, chi_sym, theta_sym, phi_sym],
+        [g_tt, g_chichi, g_thth, g_phiphi]
+    )
+
+    return (metric=sm, free_functions=[a_func], time_coord=tau_sym)
+end
+
+"""
+    metric_ansatz(reg, manifold, ::SphericalSymmetry; coords) -> NamedTuple
+
+Generate a static spherically symmetric metric:
+  ds^2 = -A(r) dt^2 + B(r) dr^2 + r^2 dOmega^2
+
+Returns `(metric, free_functions, radial_coord)`.
+"""
+function TensorGR.metric_ansatz(reg::TensorGR.TensorRegistry, manifold::Symbol,
+                                 ans::TensorGR.SphericalSymmetry;
+                                 coords::Vector{Symbol}=[:t, :r, :theta, :phi])
+    length(coords) == 4 || error("Spherical ansatz requires exactly 4 coordinates")
+
+    # Create symbolic coordinate variables
+    _c1 = coords[1]; _c2 = coords[2]; _c3 = coords[3]; _c4 = coords[4]
+    t_sym = first(Symbolics.@variables $_c1)
+    r_sym = first(Symbolics.@variables $_c2)
+    theta_sym = first(Symbolics.@variables $_c3)
+    phi_sym = first(Symbolics.@variables $_c4)
+
+    # Free functions A(r) and B(r)
+    A_func = first(Symbolics.@variables A($(r_sym)))
+    B_func = first(Symbolics.@variables B($(r_sym)))
+
+    # Build diagonal metric entries
+    g_tt = -A_func
+    g_rr = B_func
+    g_thth = r_sym^2
+    g_phiphi = r_sym^2 * sin(theta_sym)^2
+
+    sm = TensorGR.symbolic_diagonal_metric(
+        [t_sym, r_sym, theta_sym, phi_sym],
+        [g_tt, g_rr, g_thth, g_phiphi]
+    )
+
+    return (metric=sm, free_functions=[A_func, B_func], radial_coord=r_sym)
+end
+
 end # module
