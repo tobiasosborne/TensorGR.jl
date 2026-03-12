@@ -104,6 +104,9 @@ include("components/symbolic_metric.jl")
 # Layer 5.5: Worldline / PN
 include("worldline/worldline.jl")
 
+# Layer 5.5: Geodesics
+include("geodesics/geodesic.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -289,6 +292,9 @@ export @manifold, @define_tensor, @covd
 
 # Exports: Worldline / PN
 export Worldline, define_worldline!, pn_order, truncate_pn
+
+# Exports: Geodesics
+export GeodesicEquation, setup_geodesic, geodesic_rhs!
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
