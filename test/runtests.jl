@@ -72,4 +72,6 @@ using TensorGR
     include("test_6deriv_spectrum.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
+    # Geodesic equation
+    include("test_geodesics.jl")
 end
