@@ -242,7 +242,7 @@ export KineticKernel, extract_kernel, spin_project, contract_momenta
 export build_FP_momentum_kernel, build_R2_momentum_kernel, build_Ric2_momentum_kernel
 export scale_kernel, combine_kernels, build_6deriv_flat_kernel, flat_6deriv_spin_projections
 export _eval_spin_scalar
-export BuenoCanoParams, dS_spectrum_6deriv
+export BuenoCanoParams, dS_spectrum_6deriv, bc_to_form_factors
 export bc_EH, bc_R2, bc_RicSq, bc_R3, bc_RRicSq, bc_Ric3
 export bc_RRiem2, bc_RicRiem2, bc_Riem3
 export svt_quadratic_forms_6deriv

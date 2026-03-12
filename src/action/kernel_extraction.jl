@@ -655,6 +655,43 @@ function build_6deriv_flat_kernel(reg; κ=1//1, α₁=0//1, α₂=0//1, β₁=0/
     combine_kernels(kernels)
 end
 
+# ─── Analytic form factor prediction from Bueno-Cano parameters ──────
+
+"""
+    bc_to_form_factors(bc::BuenoCanoParams, k2, Λ) -> (f_spin2=..., f_spin0s=...)
+
+Predict spin-projected form factors Tr(K·P^J) from Bueno-Cano parameters.
+
+This is an independent algebraic cross-check that does NOT use the perturbation
+engine. The prediction uses known flat-space kernel traces scaled by the
+effective couplings encoded in the BC parameters.
+
+The flat-space kernel traces (verified by Barnes-Rivers spin projection) are:
+- K_FP:  Tr(K_FP · P²) = (5/2)k²,  Tr(K_FP · P⁰ˢ) = -k²
+- K_R²:  Tr(K_R² · P²) = 0,         Tr(K_R² · P⁰ˢ) = 3k⁴
+- K_Ric²: Tr(K_Ric² · P²) = (5/4)k⁴, Tr(K_Ric² · P⁰ˢ) = k⁴
+
+The combined kernel K = κ·K_FP − 2α₁·K_R² − 2α₂·K_Ric² gives:
+  f₂(k²) = (5/2)[κ_eff · k² − (c/2) · k⁴]
+  f₀(k²) = −κ_eff · k² − (3b + c) · k⁴
+
+where κ_eff = e − (2Λ/3)·a, and a, b, c, e are the BC parameters.
+
+Returns a NamedTuple with `f_spin2` and `f_spin0s` values at the given k² and Λ.
+"""
+function bc_to_form_factors(bc::BuenoCanoParams, k2, Λ)
+    Λ_BC = Λ / 3
+    κ_eff = bc.e - 2Λ_BC * bc.a
+
+    # Spin-2: f₂ = (5/2)[κ_eff·k² − (c/2)·k⁴]
+    f2 = (5 // 2) * (κ_eff * k2 - (bc.c / 2) * k2^2)
+
+    # Spin-0s: f₀ = −κ_eff·k² − (3b + c)·k⁴
+    f0 = -κ_eff * k2 - (3 * bc.b + bc.c) * k2^2
+
+    (f_spin2 = f2, f_spin0s = f0)
+end
+
 """
     flat_6deriv_spin_projections(reg; κ=1, α₁=0, α₂=0, β₁=0, β₂=0)
 
