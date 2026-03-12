@@ -1,30 +1,44 @@
-#= Hypersurface geometry.
+#= Submanifold / hypersurface geometry.
 
-Given an embedding of a codimension-1 hypersurface in an ambient manifold,
-compute the induced metric, unit normal, extrinsic curvature, etc.
+Given an embedding of a codimension-k submanifold in an ambient manifold,
+compute the induced metric, unit normals, extrinsic curvatures, etc.
 
-Port of diffgeo.m's `hypersurface` functionality.
+Codimension-1 (hypersurface) is the most common case and retains its
+convenience API for backward compatibility.
 =#
 
 """
-    HypersurfaceProperties
+    SubmanifoldProperties
 
-Stores the geometric data of a hypersurface embedding.
+Stores the geometric data of a submanifold embedding with arbitrary codimension.
 
 Fields:
 - `ambient`: name of the ambient manifold
 - `metric`: ambient metric name
-- `normal_coord`: the coordinate normal to the hypersurface (or nothing for parametric)
-- `signature`: +1 (spacelike normal) or -1 (timelike normal)
+- `codimension`: codimension of the embedding (1 for hypersurface)
+- `normal_coord`: first normal coordinate (or nothing for parametric), backward compat
+- `signature`: signature of first normal (+1 spacelike, -1 timelike), backward compat
+- `dim_ambient`: dimension of ambient manifold
+- `dim_surface`: dimension of submanifold
+- `normal_names`: vector of normal vector names (length = codimension)
+- `extrinsic_names`: vector of extrinsic curvature names (length = codimension)
+- `signatures`: vector of normal signatures (length = codimension)
 """
-struct HypersurfaceProperties
+struct SubmanifoldProperties
     ambient::Symbol
     metric::Symbol
+    codimension::Int
     normal_coord::Union{Symbol, Nothing}
     signature::Int
     dim_ambient::Int
     dim_surface::Int
+    normal_names::Vector{Symbol}
+    extrinsic_names::Vector{Symbol}
+    signatures::Vector{Int}
 end
+
+# Backward compatibility alias
+const HypersurfaceProperties = SubmanifoldProperties
 
 """
     extrinsic_curvature_expr(a, b, normal, metric; registry=current_registry()) -> TensorExpr
@@ -48,61 +62,15 @@ function extrinsic_curvature_expr(a::TIndex, b::TIndex,
     end
 end
 
-"""
-    define_hypersurface!(reg, name; ambient, metric, normal_name=:n,
-                          extrinsic_name=:K, induced_name=:γ, signature=-1)
+# ── Internal: register normal + normalization rule ──
 
-Define a hypersurface embedding and register associated tensors:
-- Unit normal `n_a`
-- Induced metric `γ_{ab} = g_{ab} + σ n_a n_b` (where σ = -signature)
-- Extrinsic curvature `K_{ab}`
-- Projector `P^a_b = δ^a_b + σ n^a n_b` (projects onto the hypersurface)
-
-`signature` is the norm of the unit normal: +1 for spacelike, -1 for timelike.
-"""
-function define_hypersurface!(reg::TensorRegistry, name::Symbol;
-                               ambient::Symbol,
-                               metric::Symbol=:g,
-                               normal_name::Symbol=:n,
-                               extrinsic_name::Symbol=:K,
-                               induced_name::Symbol=:γ,
-                               projector_name::Symbol=:P_hs,
-                               signature::Int=-1)
-    @assert signature in (-1, 1) "signature must be +1 or -1"
-    mp = get_manifold(reg, ambient)
-    d = mp.dim
-    σ = -signature  # sign factor for induced metric
-
-    # Register unit normal n_a (rank-1)
+function _register_normal!(reg::TensorRegistry, normal_name::Symbol,
+                           ambient::Symbol, sig::Int)
     if !has_tensor(reg, normal_name)
         register_tensor!(reg, TensorProperties(
             name=normal_name, manifold=ambient, rank=(0, 1),
             symmetries=SymmetrySpec[],
-            options=Dict{Symbol,Any}(:is_normal => true, :signature => signature)))
-    end
-
-    # Register induced metric γ_{ab} = g_{ab} + σ n_a n_b  (symmetric)
-    if !has_tensor(reg, induced_name)
-        register_tensor!(reg, TensorProperties(
-            name=induced_name, manifold=ambient, rank=(0, 2),
-            symmetries=SymmetrySpec[Symmetric(1, 2)],
-            options=Dict{Symbol,Any}(:is_induced_metric => true)))
-    end
-
-    # Register extrinsic curvature K_{ab} (symmetric)
-    if !has_tensor(reg, extrinsic_name)
-        register_tensor!(reg, TensorProperties(
-            name=extrinsic_name, manifold=ambient, rank=(0, 2),
-            symmetries=SymmetrySpec[Symmetric(1, 2)],
-            options=Dict{Symbol,Any}(:is_extrinsic => true)))
-    end
-
-    # Register projector P^a_b
-    if !has_tensor(reg, projector_name)
-        register_tensor!(reg, TensorProperties(
-            name=projector_name, manifold=ambient, rank=(1, 1),
-            symmetries=SymmetrySpec[],
-            options=Dict{Symbol,Any}(:is_projector => true)))
+            options=Dict{Symbol,Any}(:is_normal => true, :signature => sig)))
     end
 
     # Rule: n_a n^a = signature
@@ -111,9 +79,6 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
             if !(expr isa TProduct)
                 return false
             end
-            n_count = count(f -> f isa Tensor && f.name == normal_name, expr.factors)
-            n_count >= 2 || return false
-            # Check for contraction: n_a n^a
             n_factors = [f for f in expr.factors if f isa Tensor && f.name == normal_name]
             length(n_factors) >= 2 || return false
             for i in 1:length(n_factors), j in i+1:length(n_factors)
@@ -128,7 +93,6 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
             false
         end,
         function(expr)
-            # Replace n_a n^a with signature
             factors = copy(expr.factors)
             n_indices = Int[]
             for (i, f) in enumerate(factors)
@@ -136,7 +100,6 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
                     push!(n_indices, i)
                 end
             end
-            # Find first contracting pair and remove
             for i in 1:length(n_indices), j in i+1:length(n_indices)
                 fi = factors[n_indices[i]]
                 fj = factors[n_indices[j]]
@@ -145,25 +108,137 @@ function define_hypersurface!(reg::TensorRegistry, name::Symbol;
                    fi.indices[1].position != fj.indices[1].position
                     remaining = [factors[k] for k in eachindex(factors)
                                  if k != n_indices[i] && k != n_indices[j]]
-                    return tproduct(expr.scalar * signature, isempty(remaining) ?
+                    return tproduct(expr.scalar * sig, isempty(remaining) ?
                                     TensorExpr[TScalar(1 // 1)] : remaining)
                 end
             end
             expr
         end
     ))
+end
 
-    # Store properties (use foliations dict as general storage)
-    hs = HypersurfaceProperties(ambient, metric, nothing, signature, d, d - 1)
-    reg.foliations[Symbol(:hypersurface_, name)] = hs
+"""
+    define_submanifold!(reg, name; ambient, metric, codimension=1,
+                         normal_names=nothing, extrinsic_names=nothing,
+                         induced_name=:γ, projector_name=:P_hs,
+                         signatures=nothing)
 
-    hs
+Define a submanifold embedding of arbitrary codimension and register
+associated tensors. For each normal direction i:
+- Unit normal `nᵢ_a`
+- Extrinsic curvature `Kᵢ_{ab}`
+
+Also registers the induced metric and projector.
+
+`signatures` is a vector of normal norms: +1 (spacelike) or -1 (timelike).
+"""
+function define_submanifold!(reg::TensorRegistry, name::Symbol;
+                              ambient::Symbol,
+                              metric::Symbol=:g,
+                              codimension::Int=1,
+                              normal_names::Union{Vector{Symbol}, Nothing}=nothing,
+                              extrinsic_names::Union{Vector{Symbol}, Nothing}=nothing,
+                              induced_name::Symbol=:γ,
+                              projector_name::Symbol=:P_hs,
+                              signatures::Union{Vector{Int}, Nothing}=nothing)
+    @assert codimension >= 1 "codimension must be >= 1"
+    mp = get_manifold(reg, ambient)
+    d = mp.dim
+    @assert codimension < d "codimension must be < ambient dimension"
+
+    # Default names
+    if normal_names === nothing
+        normal_names = codimension == 1 ? [:n] :
+            [Symbol(:n, i) for i in 1:codimension]
+    end
+    if extrinsic_names === nothing
+        extrinsic_names = codimension == 1 ? [:K] :
+            [Symbol(:K, i) for i in 1:codimension]
+    end
+    if signatures === nothing
+        signatures = fill(-1, codimension)
+    end
+
+    @assert length(normal_names) == codimension
+    @assert length(extrinsic_names) == codimension
+    @assert length(signatures) == codimension
+    @assert all(s -> s in (-1, 1), signatures)
+
+    # Register normals with normalization rules
+    for (nn, sig) in zip(normal_names, signatures)
+        _register_normal!(reg, nn, ambient, sig)
+    end
+
+    # Register extrinsic curvatures K_i_{ab} (symmetric)
+    for kn in extrinsic_names
+        if !has_tensor(reg, kn)
+            register_tensor!(reg, TensorProperties(
+                name=kn, manifold=ambient, rank=(0, 2),
+                symmetries=SymmetrySpec[Symmetric(1, 2)],
+                options=Dict{Symbol,Any}(:is_extrinsic => true)))
+        end
+    end
+
+    # Register induced metric (symmetric)
+    if !has_tensor(reg, induced_name)
+        register_tensor!(reg, TensorProperties(
+            name=induced_name, manifold=ambient, rank=(0, 2),
+            symmetries=SymmetrySpec[Symmetric(1, 2)],
+            options=Dict{Symbol,Any}(:is_induced_metric => true)))
+    end
+
+    # Register projector P^a_b
+    if !has_tensor(reg, projector_name)
+        register_tensor!(reg, TensorProperties(
+            name=projector_name, manifold=ambient, rank=(1, 1),
+            symmetries=SymmetrySpec[],
+            options=Dict{Symbol,Any}(:is_projector => true)))
+    end
+
+    # Store properties
+    sp = SubmanifoldProperties(
+        ambient, metric, codimension,
+        nothing, signatures[1], d, d - codimension,
+        collect(normal_names), collect(extrinsic_names), collect(signatures))
+    reg.foliations[Symbol(:hypersurface_, name)] = sp
+
+    sp
+end
+
+"""
+    define_hypersurface!(reg, name; ambient, metric, normal_name=:n,
+                          extrinsic_name=:K, induced_name=:γ, signature=-1)
+
+Define a codimension-1 hypersurface embedding. Convenience wrapper around
+`define_submanifold!`.
+
+Registers:
+- Unit normal `n_a`
+- Induced metric `γ_{ab} = g_{ab} + σ n_a n_b` (where σ = -signature)
+- Extrinsic curvature `K_{ab}`
+- Projector `P^a_b = δ^a_b + σ n^a n_b`
+
+`signature` is the norm of the unit normal: +1 for spacelike, -1 for timelike.
+"""
+function define_hypersurface!(reg::TensorRegistry, name::Symbol;
+                               ambient::Symbol,
+                               metric::Symbol=:g,
+                               normal_name::Symbol=:n,
+                               extrinsic_name::Symbol=:K,
+                               induced_name::Symbol=:γ,
+                               projector_name::Symbol=:P_hs,
+                               signature::Int=-1)
+    define_submanifold!(reg, name;
+        ambient=ambient, metric=metric, codimension=1,
+        normal_names=[normal_name], extrinsic_names=[extrinsic_name],
+        induced_name=induced_name, projector_name=projector_name,
+        signatures=[signature])
 end
 
 """
     induced_metric_expr(a, b, metric, normal; signature=-1) -> TensorExpr
 
-The induced metric on the hypersurface:
+The induced metric on a codimension-1 hypersurface:
 `γ_{ab} = g_{ab} - σ n_a n_b`
 
 where σ = signature of the normal (n·n = σ).
@@ -171,6 +246,24 @@ where σ = signature of the normal (n·n = σ).
 function induced_metric_expr(a::TIndex, b::TIndex, metric::Symbol, normal::Symbol;
                               signature::Int=-1)
     Tensor(metric, [a, b]) - (signature // 1) * Tensor(normal, [a]) * Tensor(normal, [b])
+end
+
+"""
+    induced_metric_expr(a, b, metric, normals, signatures) -> TensorExpr
+
+The induced metric on a codimension-k submanifold:
+`γ_{ab} = g_{ab} - Σᵢ σᵢ nᵢ_a nᵢ_b`
+
+where σᵢ = signature of normal i (nᵢ·nᵢ = σᵢ).
+"""
+function induced_metric_expr(a::TIndex, b::TIndex, metric::Symbol,
+                              normals::Vector{Symbol}, signatures::Vector{Int})
+    @assert length(normals) == length(signatures)
+    result = Tensor(metric, [a, b])
+    for (nn, sig) in zip(normals, signatures)
+        result = result - (sig // 1) * Tensor(nn, [a]) * Tensor(nn, [b])
+    end
+    result
 end
 
 """
@@ -183,4 +276,21 @@ function projector_expr(a::TIndex, b::TIndex, normal::Symbol;
                          signature::Int=-1)
     @assert a.position == Up && b.position == Down
     Tensor(:δ, [a, b]) - (signature // 1) * Tensor(normal, [a]) * Tensor(normal, [b])
+end
+
+"""
+    projector_expr(a, b, normals, signatures) -> TensorExpr
+
+The projection tensor onto a codimension-k submanifold:
+`P^a_b = δ^a_b - Σᵢ σᵢ nᵢ^a nᵢ_b`
+"""
+function projector_expr(a::TIndex, b::TIndex,
+                         normals::Vector{Symbol}, signatures::Vector{Int})
+    @assert a.position == Up && b.position == Down
+    @assert length(normals) == length(signatures)
+    result = Tensor(:δ, [a, b])
+    for (nn, sig) in zip(normals, signatures)
+        result = result - (sig // 1) * Tensor(nn, [a]) * Tensor(nn, [b])
+    end
+    result
 end

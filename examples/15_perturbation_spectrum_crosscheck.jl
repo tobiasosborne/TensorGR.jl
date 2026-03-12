@@ -38,7 +38,7 @@ function _subst_lambda(d::TDeriv, Λ_val)
     TDeriv(d.index, _subst_lambda(d.arg, Λ_val), d.covd)
 end
 
-"""Build √g correction: ½h·δL + (⅛h² - ¼h_{ab}h^{ab})·L₀.
+"""Build √g correction: ½h·δL + (¼h² - ¼h_{ab}h^{ab})·L₀.
 Uses indices :z1-:z8 to avoid clashes."""
 function sqrt_g_correction(L0::TensorExpr, δL::TensorExpr, metric::Symbol)
     h_A = Tensor(metric, [up(:z1), up(:z2)]) * Tensor(:h, [down(:z1), down(:z2)])
@@ -46,7 +46,7 @@ function sqrt_g_correction(L0::TensorExpr, δL::TensorExpr, metric::Symbol)
     hh  = Tensor(:h, [down(:z5), down(:z6)]) * Tensor(:h, [up(:z5), up(:z6)])
     h_C = Tensor(metric, [up(:z7), up(:z8)]) * Tensor(:h, [down(:z7), down(:z8)])
 
-    tproduct(1 // 8, TensorExpr[h_A * h_B]) * L0 +
+    tproduct(1 // 4, TensorExpr[h_A * h_B]) * L0 +
     tproduct(-1 // 4, TensorExpr[hh]) * L0 +
     tproduct(1 // 2, TensorExpr[h_C]) * δL
 end

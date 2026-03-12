@@ -173,7 +173,8 @@ export commute_covds
 export sort_covds_to_box, sort_covds_to_div, symmetrize_covds
 export box, grad_squared, covd_chain, covd_product
 export lie_derivative, lie_bracket, lie_to_covd
-export HypersurfaceProperties, define_hypersurface!
+export SubmanifoldProperties, HypersurfaceProperties
+export define_submanifold!, define_hypersurface!
 export extrinsic_curvature_expr, induced_metric_expr, projector_expr
 export MappingProperties, define_mapping!, get_mapping, has_mapping
 export pullback, pushforward, pullback_metric
