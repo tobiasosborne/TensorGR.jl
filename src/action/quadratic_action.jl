@@ -58,7 +58,8 @@ end
 """
     sym_det(M::Matrix) -> Any
 
-Symbolic determinant for small matrices (up to 3×3).
+Symbolic determinant via cofactor expansion along the first row.
+Optimized fast paths for 1×1 through 3×3; general recursion for larger.
 """
 function sym_det(M::Matrix)
     n = size(M, 1)
@@ -79,14 +80,30 @@ function sym_det(M::Matrix)
                      _sym_mul(b, _sym_sub(_sym_mul(d,k), _sym_mul(f,g)))),
             _sym_mul(c, _sym_sub(_sym_mul(d,h), _sym_mul(e,g))))
     else
-        error("sym_det not implemented for $(n)×$(n) matrices")
+        # Cofactor expansion along first row
+        result = 0
+        for j in 1:n
+            minor = _sym_minor(M, 1, j)
+            cofactor = iseven(j + 1) ? minor : _sym_neg(minor)
+            result = _sym_add(result, _sym_mul(M[1, j], cofactor))
+        end
+        return result
     end
+end
+
+"""Return determinant of the (n-1)×(n-1) submatrix with row i and column j removed."""
+function _sym_minor(M::Matrix, i::Int, j::Int)
+    n = size(M, 1)
+    rows = [r for r in 1:n if r != i]
+    cols = [c for c in 1:n if c != j]
+    sym_det(M[rows, cols])
 end
 
 """
     sym_inv(M::Matrix) -> Matrix
 
-Symbolic inverse via adjugate/determinant for small matrices.
+Symbolic inverse via adjugate/determinant. Optimized for 1×1 and 2×2;
+general cofactor method for larger matrices.
 """
 function sym_inv(M::Matrix)
     n = size(M, 1)
@@ -98,18 +115,14 @@ function sym_inv(M::Matrix)
         inv_det = _sym_div(1, det)
         return [_sym_mul(M[2,2], inv_det)   _sym_mul(_sym_neg(M[1,2]), inv_det);
                 _sym_mul(_sym_neg(M[2,1]), inv_det)  _sym_mul(M[1,1], inv_det)]
-    elseif n == 3
-        adj = Matrix{Any}(undef, 3, 3)
-        for i in 1:3, j in 1:3
-            rows = [r for r in 1:3 if r != j]
-            cols = [c for c in 1:3 if c != i]
-            minor = _sym_sub(_sym_mul(M[rows[1],cols[1]], M[rows[2],cols[2]]),
-                             _sym_mul(M[rows[1],cols[2]], M[rows[2],cols[1]]))
+    else
+        # General adjugate: adj[i,j] = (-1)^(i+j) * minor(j,i)  (note transpose)
+        adj = Matrix{Any}(undef, n, n)
+        for i in 1:n, j in 1:n
+            minor = _sym_minor(M, j, i)
             adj[i, j] = iseven(i + j) ? minor : _sym_neg(minor)
         end
-        return [_sym_div(adj[i,j], det) for i in 1:3, j in 1:3]
-    else
-        error("sym_inv not implemented for $(n)×$(n)")
+        return [_sym_div(adj[i,j], det) for i in 1:n, j in 1:n]
     end
 end
 

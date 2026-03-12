@@ -38,6 +38,22 @@ end
     @test sym_det(M) == 22
 end
 
+@testset "Symbolic determinant 4×4" begin
+    M = [2 1 0 0; 1 3 1 0; 0 1 4 1; 0 0 1 5]
+    @test sym_det(M) == 85
+end
+
+@testset "Symbolic inverse 4×4" begin
+    M = [2 1 0 0; 1 3 1 0; 0 1 4 1; 0 0 1 5]
+    inv_M = sym_inv(M)
+    # Verify M * M^{-1} = I
+    for i in 1:4, j in 1:4
+        val = sum(M[i,k] * inv_M[k,j] for k in 1:4)
+        expected = i == j ? 1 : 0
+        @test val ≈ expected atol=1e-12
+    end
+end
+
 @testset "QuadraticForm construction" begin
     entries = Dict(
         (:ϕ, :ϕ) => :(k^4),
