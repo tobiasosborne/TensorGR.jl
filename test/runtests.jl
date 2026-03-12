@@ -59,6 +59,8 @@ using TensorGR
         import TensorGR: simplify
         # Symbolic components (Symbolics.jl)
         include("test_symbolic_components.jl")
+        # Metric ansatz generators (Symbolics.jl)
+        include("test_metric_ansatz.jl")
     else
         @info "Skipping CAS/symbolic component tests: Symbolics.jl not available"
     end
