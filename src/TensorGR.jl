@@ -52,6 +52,7 @@ include("gr/matter.jl")
 include("gr/hypersurface.jl")
 include("gr/mapping.jl")
 include("gr/product_manifold.jl")
+include("gr/invariants.jl")
 
 # Layer 4: Perturbation theory
 include("perturbation/partitions.jl")
@@ -191,6 +192,9 @@ export SymmetryAnsatz, SphericalSymmetry, AxialSymmetry, StaticSymmetry, Homogen
 
 # Exports: Matter
 export PerfectFluidProperties, define_perfect_fluid!, perfect_fluid_expr, get_perfect_fluid
+
+# Exports: Curvature invariants
+export InvariantEntry, INVARIANT_CATALOG, curvature_invariant, list_invariants
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det
