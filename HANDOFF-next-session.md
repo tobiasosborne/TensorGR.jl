@@ -1,114 +1,127 @@
-# HANDOFF: Session 24 — TGR-af4a Complete, Full Backlog Created
+# HANDOFF: Session 25 — 6 Issues Closed, 12 Ready
 
-## Status: TGR-af4a DONE, 28 issues in beads
+## Status: 6 closed this session, 28 total issues, 12 ready
 
 - **All tests pass**: 6788 (Pkg.test)
-- **Beads DB**: Reinitialized (was broken), 28 issues created with dependency chains
-- **Committed**: examples/26 showcase + results/6deriv_spectrum_results.jl
+- **Beads DB**: 6 closed, 22 open (12 ready, 10 blocked)
 
 ## What Was Done This Session
 
-### TGR-af4a: Example Script + Results + Module Integration (CLOSED)
+### TGR-l8h [P1 bug] — Fix √g coefficient in perturbation crosscheck (CLOSED)
+- Fixed `1//8` → `1//4` for (tr h)² coefficient in `sqrt_g_correction()` at `examples/15_perturbation_spectrum_crosscheck.jl:49`
+- Updated docstring to match
 
-1. Created `examples/26_6deriv_spectrum_showcase.jl` (~200 lines):
-   - Path A: Barnes-Rivers spin projection with individual kernel traces
-   - Path B: SVT quadratic forms with tensor/scalar sector verification
-   - Path C: Bueno-Cano dS spectrum with BC parameter table
-   - Cross-check: Path A ≡ Path B at 4 momentum values
-   - All paths verified, example runs end-to-end
+### TGR-889 [P3 feature] — Generalize HypersurfaceProperties to SubmanifoldProperties (CLOSED)
+- Refactored `src/gr/hypersurface.jl`: `SubmanifoldProperties` struct with `codimension`, `normal_names`, `extrinsic_names`, `signatures` vectors
+- `const HypersurfaceProperties = SubmanifoldProperties` for backward compat
+- Added `define_submanifold!` for arbitrary codimension, `define_hypersurface!` is now a wrapper
+- Extended `induced_metric_expr` and `projector_expr` with codim-k overloads (multiple normals/signatures)
+- Extracted `_register_normal!` helper (shared by both APIs)
+- All existing tests pass unchanged
 
-2. Created `results/6deriv_spectrum_results.jl` (~130 lines):
-   - `SixDerivSpectrumResults` module with form factors, pole finders, Stelle limits
-   - BC coefficient tables, dS physical spectrum calculator
-   - SVT structure documentation, spin projection traces
+### TGR-4yo [P2 feature] — SymmetryAnsatz types (CLOSED, via worktree agent)
+- Created `src/gr/symmetry_ansatz.jl` (128 lines): abstract `SymmetryAnsatz` + 4 concrete types
+  - `SphericalSymmetry`, `AxialSymmetry`, `StaticSymmetry`, `HomogeneousIsotropy`
+- Exported from TensorGR.jl
 
-3. Module integration was already done in prior sessions (confirmed).
+### TGR-61p [P2 task] — DifferentialEquations.jl weak dependency (CLOSED, via worktree agent)
+- Added to `[weakdeps]`, `[extensions]`, `[compat]` in Project.toml
+- Created `ext/TensorGRDiffEqExt.jl` stub module
+- Added to test/Project.toml
+- **Note**: Agent used wrong UUID (`caa7`), fixed to correct `fbaa` post-merge
 
-### Full Backlog Assessment + Issue Creation
+### TGR-dhp [P3 feature] — Perfect fluid stress-energy tensor (CLOSED, via worktree agent)
+- Created `src/gr/matter.jl` (222 lines)
+- `PerfectFluidProperties` struct, `define_perfect_fluid!`, `perfect_fluid_expr`, `get_perfect_fluid`
+- Registers T^{ab} (symmetric), ρ (scalar), p (scalar), u^a (vector) + normalization rule u_a u^a = -1
 
-Spawned 6 parallel agents to assess all backlog items. Created 28 granular beads issues across 6 workstreams with chained dependencies.
+### TGR-m3r [P3 feature] — Curvature invariant catalog (CLOSED, via worktree agent)
+- Created `src/gr/invariants.jl` (193 lines)
+- `InvariantEntry` struct, `INVARIANT_CATALOG` with 5 entries: R, R², Ric², Kretschmann, Weyl²
+- `curvature_invariant(name)`, `list_invariants(; order)` API
 
-## Ready Issues (no blockers)
+## Ready Issues (no blockers) — Recommended Priority
 
 ```
 bd ready
 ```
 
-| ID | P | Type | Title |
-|----|---|------|-------|
-| TGR-l8h | P1 | bug | Fix √g coefficient bug in perturbation crosscheck |
-| TGR-61p | P2 | task | Add DifferentialEquations.jl as weak dependency |
-| TGR-4yo | P2 | feature | Define SymmetryAnsatz types for metric reduction |
-| TGR-jpo | P2 | task | Analytic FP cross-check from BC params (Approach 3) |
-| TGR-m3r | P3 | feature | Order 1-2 curvature invariant catalog |
-| TGR-889 | P3 | feature | Generalize HypersurfaceProperties to SubmanifoldProperties |
-| TGR-dhp | P3 | feature | Perfect fluid stress-energy tensor |
+| ID | P | Type | Title | Unblocks |
+|----|---|------|-------|----------|
+| TGR-76k | P1 | task | Validate dS crosscheck via √g perturbation (Approach 1) | — |
+| TGR-egq | P2 | feature | GeodesicEquation type and setup function | TGR-nzk |
+| TGR-aqj | P2 | feature | FLRW metric ansatz generator | TGR-soo |
+| TGR-xqh | P2 | feature | Spherical symmetry metric ansatz generator | TGR-soo |
+| TGR-jpo | P2 | task | Analytic FP cross-check from BC params (Approach 3) | — |
+| TGR-3gx | P3 | feature | Order-2 curvature syzygies as rewrite rules | TGR-dcw |
+| TGR-0mg | P3 | feature | Gauss-Codazzi relations as rewrite rules | TGR-ugs |
+| TGR-760 | P3 | feature | GHY boundary term extraction | TGR-ugs |
+| TGR-vhp | P3 | feature | Equation of state types for matter | TGR-r4i |
+| TGR-zkw | P3 | feature | Auto-register Killing equation as rewrite rules | — |
+| TGR-f0c | P3 | feature | Axial symmetry metric ansatz generator | TGR-soo |
+| TGR-141 | P4 | feature | Order-3 cubic curvature invariants to catalog | TGR-dcw |
 
 ## Recommended Next Session Priority
 
-1. **TGR-l8h** (30 min) — Fix `1//8` → `1//4` in examples/15 line 49, validate dS crosscheck
-2. **TGR-4yo** (1-2 hrs) — SymmetryAnsatz types, then TGR-xqh spherical generator
-3. **TGR-61p** (30 min) — DiffEq weak dep setup (unblocks geodesic + TOV chains)
+1. **TGR-76k** (P1) — Run the fixed dS crosscheck (examples/15) end-to-end, validate FP kernel
+2. **TGR-xqh + TGR-aqj** (P2) — Spherical + FLRW ansatz generators (unblock TGR-soo tests)
+3. **TGR-egq** (P2) — GeodesicEquation type (unblocks geodesic chain)
+4. **TGR-jpo** (P2) — Analytic FP cross-check from BC params
 
 ## Workstream Dependency Graph
 
-### dS Crosscheck (3 issues)
+### dS Crosscheck (2 remaining)
 ```
-TGR-l8h [P1] Fix √g coefficient
-  └→ TGR-76k [P1] Validate full dS pipeline
-TGR-jpo [P2] Analytic FP cross-check (independent)
-```
-
-### Symmetry Ansatz (6 issues)
-```
-TGR-4yo [P2] Types
-  ├→ TGR-xqh [P2] Spherical ──┐
-  ├→ TGR-aqj [P2] FLRW ───────┼→ TGR-soo [P2] Tests
-  ├→ TGR-f0c [P3] Axial ──────┘
-  └→ TGR-zkw [P3] Killing rules
+✓ TGR-l8h Fix √g coefficient
+  └→ TGR-76k [P1] Validate full dS pipeline (READY)
+TGR-jpo [P2] Analytic FP cross-check (READY, independent)
 ```
 
-### Geodesic Integration (5 issues)
+### Symmetry Ansatz (4 remaining)
 ```
-TGR-61p [P2] DiffEq weak dep
-  └→ TGR-egq → TGR-nzk → TGR-ak3 → TGR-adq
-```
-
-### TOV Solver (5 issues)
-```
-TGR-dhp [P3] Matter tensor
-  └→ TGR-vhp → TGR-r4i → TGR-3q9 (also needs TGR-61p) → TGR-8ea
+✓ TGR-4yo Types
+  ├→ TGR-xqh [P2] Spherical (READY) ──┐
+  ├→ TGR-aqj [P2] FLRW (READY) ───────┼→ TGR-soo [P2] Tests
+  ├→ TGR-f0c [P3] Axial (READY) ──────┘
+  └→ TGR-zkw [P3] Killing rules (READY)
 ```
 
-### Submanifolds (5 issues)
+### Geodesic Integration (4 remaining)
 ```
-TGR-889 [P3] SubmanifoldProperties
-  ├→ TGR-760 GHY ───────┐
-  ├→ TGR-0mg Gauss-Codazzi ┼→ TGR-ugs Tests
-  └→ TGR-prb Israel junction
+✓ TGR-61p DiffEq weak dep
+  └→ TGR-egq [P2] (READY) → TGR-nzk → TGR-ak3 → TGR-adq
 ```
 
-### Invar Database (4 issues)
+### TOV Solver (4 remaining)
 ```
-TGR-m3r [P3] Order 1-2 catalog
-  ├→ TGR-3gx Syzygies ──┐
-  └→ TGR-141 Cubics ─────┼→ TGR-dcw Tests
+✓ TGR-dhp Matter tensor
+  └→ TGR-vhp [P3] (READY) → TGR-r4i → TGR-3q9 (needs TGR-61p ✓) → TGR-8ea
 ```
 
-## Key Files
+### Submanifolds (4 remaining)
+```
+✓ TGR-889 SubmanifoldProperties
+  ├→ TGR-760 [P3] GHY (READY) ────────┐
+  ├→ TGR-0mg [P3] Gauss-Codazzi (READY) ┼→ TGR-ugs Tests
+  └→ TGR-prb [P4] Israel junction
+```
 
-| File | Purpose |
-|------|---------|
-| `examples/26_6deriv_spectrum_showcase.jl` | **NEW**: Full 3-path showcase |
-| `results/6deriv_spectrum_results.jl` | **NEW**: Machine-readable results module |
-| `examples/15_perturbation_spectrum_crosscheck.jl` | Has √g bug at line 49 |
-| `src/gr/hypersurface.jl` | Starting point for submanifold generalization |
-| `src/gr/killing.jl` | Starting point for Killing equation enforcement |
-| `src/algebra/ansatz.jl` | Ansatz framework (used by symmetry ansatz) |
-| `src/components/symbolic_metric.jl` | Symbolic metric pipeline |
+### Invar Database (3 remaining)
+```
+✓ TGR-m3r Order 1-2 catalog
+  ├→ TGR-3gx [P3] Syzygies (READY) ──┐
+  └→ TGR-141 [P4] Cubics (READY) ─────┼→ TGR-dcw Tests
+```
 
-## Infrastructure Notes
+## Key Files Changed This Session
 
-- Beads DB was reinitialized (`bd init --force --prefix TGR`). Old issue IDs (TGR-af4a etc.) are gone from the DB but referenced in git history.
-- Infrastructure issues (BinaryBuilder TGR-byb, Pkg registration TGR-erv) deprioritized per user request.
-- 3 `@test_skip` benchmarks remain (spherical harmonics, bitensors) — stretch goals.
+| File | Change |
+|------|--------|
+| `examples/15_perturbation_spectrum_crosscheck.jl` | Fixed √g coefficient 1//8 → 1//4 |
+| `src/gr/hypersurface.jl` | Refactored to SubmanifoldProperties (codim-k) |
+| `src/gr/symmetry_ansatz.jl` | **NEW**: SymmetryAnsatz type hierarchy |
+| `src/gr/matter.jl` | **NEW**: Perfect fluid stress-energy |
+| `src/gr/invariants.jl` | **NEW**: Curvature invariant catalog |
+| `ext/TensorGRDiffEqExt.jl` | **NEW**: DiffEq extension stub |
+| `Project.toml` | Added DifferentialEquations weakdep |
+| `src/TensorGR.jl` | Added includes + exports for all new modules |
