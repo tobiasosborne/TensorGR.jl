@@ -19,3 +19,7 @@ reports/*.synctex.gz
 reports/*.fls
 reports/*.fdb_latexmk
 reports/*.toc
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

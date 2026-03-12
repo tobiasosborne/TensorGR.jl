@@ -1,44 +1,44 @@
-# HANDOFF: Session 25 — 6 Issues Closed, 12 Ready
+# HANDOFF: Session 26 — 4 Issues Closed (recovery), 9 Ready
 
-## Status: 6 closed this session, 28 total issues, 12 ready
+## Status: 10 closed total, 28 total issues, 9 ready
 
-- **All tests pass**: 6788 (Pkg.test)
-- **Beads DB**: 6 closed, 22 open (12 ready, 10 blocked)
+- **All tests pass**: 7267 (Pkg.test)
+- **Beads DB**: 10 closed, 18 open (9 ready, 9 blocked)
 
 ## What Was Done This Session
 
-### TGR-l8h [P1 bug] — Fix √g coefficient in perturbation crosscheck (CLOSED)
-- Fixed `1//8` → `1//4` for (tr h)² coefficient in `sqrt_g_correction()` at `examples/15_perturbation_spectrum_crosscheck.jl:49`
-- Updated docstring to match
+Session 25 terminated prematurely after spawning 4 parallel worktree agents. Three completed but none were merged. This session recovered by:
 
-### TGR-889 [P3 feature] — Generalize HypersurfaceProperties to SubmanifoldProperties (CLOSED)
-- Refactored `src/gr/hypersurface.jl`: `SubmanifoldProperties` struct with `codimension`, `normal_names`, `extrinsic_names`, `signatures` vectors
-- `const HypersurfaceProperties = SubmanifoldProperties` for backward compat
-- Added `define_submanifold!` for arbitrary codimension, `define_hypersurface!` is now a wrapper
-- Extended `induced_metric_expr` and `projector_expr` with codim-k overloads (multiple normals/signatures)
-- Extracted `_register_normal!` helper (shared by both APIs)
-- All existing tests pass unchanged
+1. Deep-parsed session transcripts to identify 4 worktree agents and their status
+2. Merged 3 completed worktree branches (all clean, no conflicts)
+3. Cleaned up all 4 worktrees + branches
+4. Ran full test suite (7267 pass)
+5. Closed 4 issues
 
-### TGR-4yo [P2 feature] — SymmetryAnsatz types (CLOSED, via worktree agent)
-- Created `src/gr/symmetry_ansatz.jl` (128 lines): abstract `SymmetryAnsatz` + 4 concrete types
-  - `SphericalSymmetry`, `AxialSymmetry`, `StaticSymmetry`, `HomogeneousIsotropy`
-- Exported from TensorGR.jl
+### TGR-jpo [P2 task] — Analytic FP cross-check from BC params (CLOSED)
+- Added `bc_to_form_factors(bc::BuenoCanoParams, k2, Λ)` to `src/action/kernel_extraction.jl` (37 lines)
+- Computes `f_spin2 = (5/2)[κ_eff * k² - (c/2) * k⁴]`, `f_spin0s = -κ_eff * k² - (3b + c) * k⁴`
+- Verified against existing flat-space kernel traces (K_FP, K_R², K_Ric²)
+- Tests in `test/test_6deriv_spectrum.jl` (146 new lines)
 
-### TGR-61p [P2 task] — DifferentialEquations.jl weak dependency (CLOSED, via worktree agent)
-- Added to `[weakdeps]`, `[extensions]`, `[compat]` in Project.toml
-- Created `ext/TensorGRDiffEqExt.jl` stub module
-- Added to test/Project.toml
-- **Note**: Agent used wrong UUID (`caa7`), fixed to correct `fbaa` post-merge
+### TGR-egq [P2 feature] — GeodesicEquation type and setup function (CLOSED)
+- Created `src/geodesics/geodesic.jl` (148 lines): `GeodesicEquation` struct, `setup_geodesic`, `geodesic_rhs!`, `_numerical_christoffel`
+- Tests in `test/test_geodesics.jl` (198 lines, 8 test sets)
+- Unblocked TGR-nzk (integrate_geodesic)
 
-### TGR-dhp [P3 feature] — Perfect fluid stress-energy tensor (CLOSED, via worktree agent)
-- Created `src/gr/matter.jl` (222 lines)
-- `PerfectFluidProperties` struct, `define_perfect_fluid!`, `perfect_fluid_expr`, `get_perfect_fluid`
-- Registers T^{ab} (symmetric), ρ (scalar), p (scalar), u^a (vector) + normalization rule u_a u^a = -1
+### TGR-aqj [P2 feature] — FLRW metric ansatz generator (CLOSED)
+- Stub `metric_ansatz` in `src/gr/metric_ansatz_gen.jl` (base, no Symbolics dep)
+- Full implementation via `HomogeneousIsotropy` dispatch in `ext/TensorGRSymbolicsExt.jl`
+- Supports k=0,±1 (flat/closed/open)
 
-### TGR-m3r [P3 feature] — Curvature invariant catalog (CLOSED, via worktree agent)
-- Created `src/gr/invariants.jl` (193 lines)
-- `InvariantEntry` struct, `INVARIANT_CATALOG` with 5 entries: R, R², Ric², Kretschmann, Weyl²
-- `curvature_invariant(name)`, `list_invariants(; order)` API
+### TGR-xqh [P2 feature] — Spherical symmetry metric ansatz generator (CLOSED)
+- `SphericalSymmetry` dispatch in `ext/TensorGRSymbolicsExt.jl`
+- Returns ds²=-A(r)dt²+B(r)dr²+r²dΩ² with free functions A(r), B(r)
+- Tests in `test/test_metric_ansatz.jl` (282 lines, 7 test sets)
+
+### TGR-76k [P1 task] — NOT completed
+- The 4th worktree agent (dS crosscheck validation) never ran — empty branch
+- Still the highest-priority ready issue
 
 ## Ready Issues (no blockers) — Recommended Priority
 
@@ -49,10 +49,7 @@ bd ready
 | ID | P | Type | Title | Unblocks |
 |----|---|------|-------|----------|
 | TGR-76k | P1 | task | Validate dS crosscheck via √g perturbation (Approach 1) | — |
-| TGR-egq | P2 | feature | GeodesicEquation type and setup function | TGR-nzk |
-| TGR-aqj | P2 | feature | FLRW metric ansatz generator | TGR-soo |
-| TGR-xqh | P2 | feature | Spherical symmetry metric ansatz generator | TGR-soo |
-| TGR-jpo | P2 | task | Analytic FP cross-check from BC params (Approach 3) | — |
+| TGR-nzk | P2 | feature | Implement integrate_geodesic() in DiffEq extension | TGR-ak3 |
 | TGR-3gx | P3 | feature | Order-2 curvature syzygies as rewrite rules | TGR-dcw |
 | TGR-0mg | P3 | feature | Gauss-Codazzi relations as rewrite rules | TGR-ugs |
 | TGR-760 | P3 | feature | GHY boundary term extraction | TGR-ugs |
@@ -64,38 +61,39 @@ bd ready
 ## Recommended Next Session Priority
 
 1. **TGR-76k** (P1) — Run the fixed dS crosscheck (examples/15) end-to-end, validate FP kernel
-2. **TGR-xqh + TGR-aqj** (P2) — Spherical + FLRW ansatz generators (unblock TGR-soo tests)
-3. **TGR-egq** (P2) — GeodesicEquation type (unblocks geodesic chain)
-4. **TGR-jpo** (P2) — Analytic FP cross-check from BC params
+2. **TGR-nzk** (P2) — Implement integrate_geodesic() in DiffEq extension (newly unblocked)
+3. **TGR-f0c** (P3) — Axial symmetry ansatz (unblocks TGR-soo tests)
+4. **TGR-3gx + TGR-141** (P3/P4) — Syzygies + cubic invariants (unblock TGR-dcw tests)
 
 ## Workstream Dependency Graph
 
-### dS Crosscheck (2 remaining)
+### dS Crosscheck (1 remaining)
 ```
 ✓ TGR-l8h Fix √g coefficient
   └→ TGR-76k [P1] Validate full dS pipeline (READY)
-TGR-jpo [P2] Analytic FP cross-check (READY, independent)
+✓ TGR-jpo Analytic FP cross-check
 ```
 
-### Symmetry Ansatz (4 remaining)
+### Symmetry Ansatz (2 remaining)
 ```
 ✓ TGR-4yo Types
-  ├→ TGR-xqh [P2] Spherical (READY) ──┐
-  ├→ TGR-aqj [P2] FLRW (READY) ───────┼→ TGR-soo [P2] Tests
-  ├→ TGR-f0c [P3] Axial (READY) ──────┘
+  ├→ ✓ TGR-xqh Spherical ──────────┐
+  ├→ ✓ TGR-aqj FLRW ──────────────┤
+  ├→ TGR-f0c [P3] Axial (READY) ──┼→ TGR-soo [P2] Tests
   └→ TGR-zkw [P3] Killing rules (READY)
 ```
 
-### Geodesic Integration (4 remaining)
+### Geodesic Integration (3 remaining)
 ```
 ✓ TGR-61p DiffEq weak dep
-  └→ TGR-egq [P2] (READY) → TGR-nzk → TGR-ak3 → TGR-adq
+  └→ ✓ TGR-egq GeodesicEquation
+       └→ TGR-nzk [P2] (READY) → TGR-ak3 → TGR-adq
 ```
 
 ### TOV Solver (4 remaining)
 ```
 ✓ TGR-dhp Matter tensor
-  └→ TGR-vhp [P3] (READY) → TGR-r4i → TGR-3q9 (needs TGR-61p ✓) → TGR-8ea
+  └→ TGR-vhp [P3] (READY) → TGR-r4i → TGR-3q9 → TGR-8ea
 ```
 
 ### Submanifolds (4 remaining)
@@ -117,11 +115,12 @@ TGR-jpo [P2] Analytic FP cross-check (READY, independent)
 
 | File | Change |
 |------|--------|
-| `examples/15_perturbation_spectrum_crosscheck.jl` | Fixed √g coefficient 1//8 → 1//4 |
-| `src/gr/hypersurface.jl` | Refactored to SubmanifoldProperties (codim-k) |
-| `src/gr/symmetry_ansatz.jl` | **NEW**: SymmetryAnsatz type hierarchy |
-| `src/gr/matter.jl` | **NEW**: Perfect fluid stress-energy |
-| `src/gr/invariants.jl` | **NEW**: Curvature invariant catalog |
-| `ext/TensorGRDiffEqExt.jl` | **NEW**: DiffEq extension stub |
-| `Project.toml` | Added DifferentialEquations weakdep |
-| `src/TensorGR.jl` | Added includes + exports for all new modules |
+| `src/action/kernel_extraction.jl` | Added `bc_to_form_factors` (37 lines) |
+| `src/geodesics/geodesic.jl` | **NEW**: GeodesicEquation type + setup (148 lines) |
+| `src/gr/metric_ansatz_gen.jl` | **NEW**: Stub `metric_ansatz` dispatch (25 lines) |
+| `ext/TensorGRSymbolicsExt.jl` | Added FLRW + spherical ansatz implementations (79 lines) |
+| `test/test_6deriv_spectrum.jl` | Added bc_to_form_factors tests (146 lines) |
+| `test/test_geodesics.jl` | **NEW**: Geodesic tests (198 lines) |
+| `test/test_metric_ansatz.jl` | **NEW**: Metric ansatz tests (282 lines) |
+| `src/TensorGR.jl` | Added includes + exports for geodesics + metric_ansatz |
+| `test/runtests.jl` | Added geodesics + metric_ansatz test includes |
