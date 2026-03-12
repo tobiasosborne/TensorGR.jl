@@ -47,6 +47,7 @@ include("gr/sort_covds.jl")
 include("gr/box.jl")
 include("gr/lie.jl")
 include("gr/killing.jl")
+include("gr/symmetry_ansatz.jl")
 include("gr/hypersurface.jl")
 include("gr/mapping.jl")
 include("gr/product_manifold.jl")
@@ -183,6 +184,9 @@ export has_product_manifold, get_product_manifold
 export product_metric, product_scalar_curvature
 export product_ricci, product_riemann, product_einstein
 export product_einstein_equations
+
+# Exports: Symmetry ansatz
+export SymmetryAnsatz, SphericalSymmetry, AxialSymmetry, StaticSymmetry, HomogeneousIsotropy
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det
