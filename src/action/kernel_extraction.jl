@@ -446,32 +446,72 @@ function Base.show(io::IO, p::BuenoCanoParams)
 end
 
 # ── BC parameters for each Lagrangian term ──
+# Each bc_* function returns BuenoCanoParams(a, b, c, e) for the given
+# Lagrangian term on a maximally symmetric background with Ric = Λ g.
+# Convention: Λ_BC = Λ/3 (Bueno-Cano's Λ vs TGR's Λ).
+# Reference: Bueno & Cano (1607.06463), Table 1 and Eqs. (6), (13)-(14).
 
-"""BC parameters for Einstein-Hilbert: κR"""
+"""
+    bc_EH(κ, Λ) -> BuenoCanoParams
+
+BC parameters for Einstein-Hilbert term `κR`. Only `e = κ`; all others zero.
+"""
 bc_EH(κ, Λ) = BuenoCanoParams(zero(Λ), zero(Λ), zero(Λ), oftype(Λ, κ))
 
-"""BC parameters for R²"""
+"""
+    bc_R2(α₁, Λ) -> BuenoCanoParams
+
+BC parameters for `α₁ R²`. Gives `b = 2α₁`, `e = 8α₁Λ`.
+"""
 bc_R2(α₁, Λ) = BuenoCanoParams(zero(Λ), oftype(Λ, 2α₁), zero(Λ), 8α₁*Λ)
 
-"""BC parameters for R_μνR^μν"""
+"""
+    bc_RicSq(α₂, Λ) -> BuenoCanoParams
+
+BC parameters for `α₂ R_{μν}R^{μν}`. Gives `c = 2α₂`, `e = 2α₂Λ`.
+"""
 bc_RicSq(α₂, Λ) = BuenoCanoParams(zero(Λ), zero(Λ), oftype(Λ, 2α₂), 2α₂*Λ)
 
-"""BC parameters for R³ (I₁)"""
+"""
+    bc_R3(γ, Λ) -> BuenoCanoParams
+
+BC parameters for cubic invariant I₁ = `γ R³`. Gives `b = 6γΛ`, `e = 24γΛ²`.
+"""
 bc_R3(γ, Λ) = BuenoCanoParams(zero(Λ), 6γ*Λ, zero(Λ), 24γ*Λ^2)
 
-"""BC parameters for R·Ric² (I₂)"""
+"""
+    bc_RRicSq(γ, Λ) -> BuenoCanoParams
+
+BC parameters for I₂ = `γ R·R_{μν}R^{μν}`. Gives `b = γΛ`, `c = 2γΛ`, `e = 6γΛ²`.
+"""
 bc_RRicSq(γ, Λ) = BuenoCanoParams(zero(Λ), γ*Λ, 2γ*Λ, 6γ*Λ^2)
 
-"""BC parameters for Ric³ (I₃)"""
+"""
+    bc_Ric3(γ, Λ) -> BuenoCanoParams
+
+BC parameters for I₃ = `γ R_{μν}R^{νρ}R_{ρ}^{μ}`. Gives `c = 3γΛ/2`, `e = 3γΛ²/2`.
+"""
 bc_Ric3(γ, Λ) = BuenoCanoParams(zero(Λ), zero(Λ), 3γ*Λ/2, 3γ*Λ^2/2)
 
-"""BC parameters for R·Riem² (I₄)"""
+"""
+    bc_RRiem2(γ, Λ) -> BuenoCanoParams
+
+BC parameters for I₄ = `γ R·R_{μνρσ}R^{μνρσ}`. Gives `a = 4γΛ`, `b = 2γΛ/3`, `e = 4γΛ²`.
+"""
 bc_RRiem2(γ, Λ) = BuenoCanoParams(4γ*Λ, 2γ*Λ/3, zero(Λ), 4γ*Λ^2)
 
-"""BC parameters for Ric·Riem² (I₅)"""
+"""
+    bc_RicRiem2(γ, Λ) -> BuenoCanoParams
+
+BC parameters for I₅ = `γ R_{μν}R^{μρσδ}R^{ν}_{ρσδ}`. Gives `a = γΛ`, `c = 2γΛ/3`, `e = γΛ²`.
+"""
 bc_RicRiem2(γ, Λ) = BuenoCanoParams(γ*Λ, zero(Λ), 2γ*Λ/3, γ*Λ^2)
 
-"""BC parameters for Riem³ (I₆)"""
+"""
+    bc_Riem3(γ, Λ) -> BuenoCanoParams
+
+BC parameters for I₆ = `γ R_{μν}^{ρσ}R_{ρσ}^{δε}R_{δε}^{μν}`. Gives `a = 2γΛ`, `e = 2γΛ²/3`.
+"""
 bc_Riem3(γ, Λ) = BuenoCanoParams(2γ*Λ, zero(Λ), zero(Λ), 2γ*Λ^2/3)
 
 """
