@@ -5,12 +5,13 @@
 #   Tier 1: dS spectrum API (BuenoCanoParams, dS_spectrum_6deriv)
 #   Tier 2: Barnes-Rivers spin projection on flat background
 #   Tier 3: Perturbation engine δ²S → Fourier → kernel → spin projection
+#   Tier 3: SVT quadratic forms (Path B) + Path A vs B cross-check
 #
 # Ground truth: Buoninfante et al. 2012.11829 Eq. (2.13) (flat)
 #               Bueno & Cano 1607.06463 Eqs. (17)-(19) (dS)
 # ============================================================================
 
-using TensorGR, Test
+using TensorGR, Test, Random
 include(joinpath(@__DIR__, "common.jl"))
 
 # ── Tier 1: dS spectrum API ────────────────────────────────────────────────
@@ -139,4 +140,136 @@ end
         @test length(tc.result.terms) > 0
         println("  δ²R → kernel: $(length(tc.result.terms)) terms, $(round(tc.time; digits=1))s")
     end
+end
+
+# ── Tier 3: SVT quadratic forms (Path B) ─────────────────────────────────
+
+@testset "bench_13: SVT quadratic forms" begin
+    # GR limit: M_TT = κp², det(M_scalar) = -4κ²k⁴
+    tc_gr = timed_compute() do
+        r = svt_quadratic_forms_6deriv(κ=1.0, ω²=2.0, k²=1.5)
+        p2 = 2.0 - 1.5
+        @test isapprox(r.tensor.matrix[1,1], p2; rtol=1e-12)
+        M = r.scalar.matrix
+        det_val = M[1,1]*M[2,2] - M[1,2]*M[2,1]
+        @test isapprox(det_val, -4*1.5^2; rtol=1e-10)
+        @test r.vector_vanishes === true
+        r
+    end
+    println("  SVT GR limit: $(round(tc_gr.time*1e6; digits=0))μs")
+
+    # Tensor sector = κp²f₂(p²) at random params
+    Random.seed!(1301)
+    tc_tensor = timed_compute() do
+        for _ in 1:50
+            κ = rand()*3+0.5; α₂ = rand()*2-1.0; β₂ = rand()*0.5
+            ω2 = rand()*5+0.1; k2 = rand()*5+0.1
+            p2 = ω2 - k2
+            r = svt_quadratic_forms_6deriv(κ=κ, α₂=α₂, β₂=β₂, ω²=ω2, k²=k2)
+            expected = κ*p2 - α₂*p2^2 - β₂*p2^3
+            @test isapprox(r.tensor.matrix[1,1], expected; rtol=1e-10)
+        end
+    end
+    println("  SVT tensor sector (50 pts): $(round(tc_tensor.time*1e3; digits=1))ms")
+
+    # Scalar det vanishes at f₀ roots (on mass shell)
+    Random.seed!(1302)
+    n_tested = 0
+    tc_scalar = timed_compute() do
+        for _ in 1:100
+            κ = rand()*3+0.5; α₁ = rand()*2-1.0; α₂ = rand()*2-1.0
+            β₁ = rand()*0.5; β₂ = rand()*0.5
+            c1 = (6α₁ + 2α₂) / κ; c2 = (6β₁ + 2β₂) / κ
+            abs(c2) < 1e-12 && continue
+            disc = c1^2 - 4c2
+            disc < 0 && continue
+            z₁ = (-c1 + sqrt(disc)) / (2c2)
+            abs(z₁) < 1e-6 && continue
+            k2 = rand()*5 + 0.5; ω2 = k2 + z₁
+            r = svt_quadratic_forms_6deriv(κ=κ, α₁=α₁, α₂=α₂, β₁=β₁, β₂=β₂,
+                                            ω²=ω2, k²=k2)
+            M = r.scalar.matrix
+            det_val = M[1,1]*M[2,2] - M[1,2]*M[2,1]
+            scale = max(1.0, abs(κ^2 * k2^2))
+            @test isapprox(det_val, 0.0; atol=1e-6 * scale)
+            n_tested += 1
+        end
+    end
+    println("  SVT scalar det at f₀ roots ($n_tested pts): $(round(tc_scalar.time*1e3; digits=1))ms")
+end
+
+# ── Tier 3: Cross-check Path A vs Path B ─────────────────────────────────
+
+@testset "bench_13: Path A vs B cross-check" begin
+    # Path A: spin projection form factors f₂(p²), f₀(p²)
+    # Path B: SVT M_TT = κp²f₂(p²), det(M_scalar) vanishes at f₀ roots
+    # Agreement: tensor poles match f₂ zeros, scalar det zeros match f₀ zeros
+
+    tc = timed_compute() do
+        Random.seed!(1303)
+        n_tensor = 0
+        n_scalar = 0
+        for _ in 1:50
+            κ = rand()*3+0.5; α₁ = rand()*2-1.0; α₂ = rand()*2+0.1
+            β₁ = rand()*0.5; β₂ = rand()*0.5+0.01
+
+            # Form factors
+            f₂(z) = 1 - (α₂/κ)*z - (β₂/κ)*z^2
+            f₀(z) = 1 + (6α₁+2α₂)*z/κ + (6β₁+2β₂)*z^2/κ
+
+            # Tensor: find f₂ roots, check M_TT vanishes
+            a_c = -β₂/κ; b_c = -α₂/κ
+            disc2 = b_c^2 - 4a_c
+            if disc2 >= 0
+                z₁ = (-b_c + sqrt(disc2)) / (2a_c)
+                k2 = rand()*5+0.5; ω2 = k2 + z₁
+                r = svt_quadratic_forms_6deriv(κ=κ, α₂=α₂, β₂=β₂, ω²=ω2, k²=k2)
+                @test isapprox(r.tensor.matrix[1,1], 0.0; atol=1e-8*max(1.0, abs(κ*z₁)))
+                n_tensor += 1
+            end
+
+            # Scalar: find f₀ roots, check det vanishes
+            c1 = (6α₁+2α₂)/κ; c2 = (6β₁+2β₂)/κ
+            abs(c2) < 1e-12 && continue
+            disc0 = c1^2 - 4c2
+            disc0 < 0 && continue
+            z₁ = (-c1 + sqrt(disc0)) / (2c2)
+            abs(z₁) < 1e-6 && continue
+            k2 = rand()*5+0.5; ω2 = k2 + z₁
+            r = svt_quadratic_forms_6deriv(κ=κ, α₁=α₁, α₂=α₂, β₁=β₁, β₂=β₂,
+                                            ω²=ω2, k²=k2)
+            M = r.scalar.matrix
+            det_val = M[1,1]*M[2,2] - M[1,2]*M[2,1]
+            @test isapprox(det_val, 0.0; atol=1e-6*max(1.0, abs(κ^2*k2^2)))
+            n_scalar += 1
+        end
+        (n_tensor, n_scalar)
+    end
+    nt, ns = tc.result
+    println("  Cross-check tensor=$nt scalar=$ns: $(round(tc.time*1e3; digits=1))ms")
+
+    # Buoninfante form factors via Path A match SVT tensor sector (Path B)
+    tc2 = timed_compute() do
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+
+            sp = flat_6deriv_spin_projections(reg; κ=1//1, α₂=3//10, β₂=1//10)
+            K_GR = build_FP_momentum_kernel(reg)
+            gr2 = spin_project(K_GR, :spin2; registry=reg)
+
+            for k2 in [1.0, 2.0, 3.0, 5.0]
+                # Path A: spin projection gives Tr(K·P²) = (5/2)k²·f₂(k²)
+                v_A = _eval_spin_scalar(sp.spin2, k2)
+                # Path B: M_TT = κp²f₂(p²), with p²=k² (on-shell ω²=2k²)
+                r = svt_quadratic_forms_6deriv(κ=1.0, α₂=0.3, β₂=0.1, ω²=2*k2, k²=k2)
+                # Normalize both to f₂: Path A via GR, Path B via κp²
+                f2_A = v_A / _eval_spin_scalar(gr2, k2)
+                f2_B = r.tensor.matrix[1,1] / k2
+                @test isapprox(f2_A, f2_B; atol=1e-12)
+            end
+        end
+    end
+    println("  Form factor Path A≡B: $(round(tc2.time; digits=1))s")
 end

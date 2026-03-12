@@ -1,39 +1,34 @@
-# HANDOFF: Session 22 — SVT Path B Implementation Complete
+# HANDOFF: Session 23 — TGR-j6r9 SVT Benchmark Tests Complete
 
-## Status: TGR-pr04 and TGR-tztc DONE
+## Status: TGR-j6r9 DONE
 
 - **All tests pass**: 6788 (Pkg.test)
-- **New file**: `src/action/svt_quadratic.jl` (~90 lines)
-- **New tests**: ~150 lines added to `test/test_6deriv_spectrum.jl`
-- **Beads DB broken**: Dolt migration issue, use `.beads/issues.jsonl` for issue tracking
+- **bench_13 pass**: 284 tests across 5 testsets (dS API, spin projection, perturbation pipeline, SVT quadratic forms, Path A vs B cross-check)
+- **Beads DB broken**: Dolt migration issue
 
 ## What Was Done This Session
 
-### TGR-pr04: SVT QuadraticForms (CLOSED)
+### TGR-j6r9: SVT Benchmark Tests (CLOSED)
 
-Implemented `svt_quadratic_forms_6deriv(; κ, α₁, α₂, β₁, β₂, ω², k²)`:
-- Tensor sector: `M_TT = κp²f₂(p²)` — 1×1 QuadraticForm
-- Scalar sector: 2×2 QuadraticForm for Bardeen variables (Φ, ψ)
-- Vector sector: vanishes identically
+Added 2 new benchmark testsets to `benchmarks/bench_13_spectrum.jl` (~135 lines):
 
-**Critical finding**: The curvature coefficient is `−(α+βp²)`, NOT `−2(α+βp²)` as the handoff derivation suggested. The factor-of-2 from `δ²(αR²) = 2α(δR)²` is absorbed by the Bardeen gauge normalization (`h₀₀ = 2Φ`, `h_{ij} = 2ψδ_{ij}`).
+1. **SVT quadratic forms** (90 tests):
+   - GR limit: M_TT = κp², det(M_scalar) = -4κ²k⁴, vector vanishes
+   - Tensor sector = κp²f₂(p²) verified at 50 random parameter points
+   - Scalar det vanishes at f₀ roots on mass shell (~37 random points)
 
-### TGR-tztc: Cross-check Path A vs Path B (CLOSED)
-
-Verified at 100+ random parameter points:
-- Tensor poles: `M_TT = 0` ↔ `f₂(p²) = 0` (exact match)
-- Scalar poles: `det(M_scalar) = 0` at `f₀(p²) = 0` roots (and also at `f₂` roots)
-- GR limit: `det = −4κ²k⁴` (no scalar mode)
-
-**Interesting physics**: The SVT scalar sector det has zeros at BOTH f₀ AND f₂ mass roots. This is because the Bardeen variables (Φ, ψ) couple to the full gravitational dynamics including trace operations that mix spin-0 and spin-2 sectors.
+2. **Path A vs B cross-check** (75 tests):
+   - Tensor poles match f₂ zeros (50 random points)
+   - Scalar det zeros match f₀ zeros (21 random points)
+   - Form factor equivalence: `flat_6deriv_spin_projections` (Path A) matches `svt_quadratic_forms_6deriv` (Path B) at 4 momentum values
 
 ## Critical Path (Updated)
 
 ```
-TGR-pr04 (DONE) → TGR-tztc (DONE) → TGR-j6r9 (Tests) → TGR-af4a (Example)
+TGR-pr04 (DONE) → TGR-tztc (DONE) → TGR-j6r9 (DONE) → TGR-af4a (Example)
 ```
 
-**TGR-j6r9 is the next task.** Add benchmark-level tests for the SVT spectrum.
+**TGR-af4a is the next task.** Example script + results + module integration.
 
 ## Open Issues
 
@@ -42,8 +37,8 @@ TGR-pr04 (DONE) → TGR-tztc (DONE) → TGR-j6r9 (Tests) → TGR-af4a (Example)
 |----|-------|--------|------------|
 | TGR-pr04 | Step 2.2: SVT QuadraticForms + propagators (flat) | **DONE** | — |
 | TGR-tztc | Step 2.3: Cross-check Path A vs Path B (flat) | **DONE** | — |
-| TGR-j6r9 | Step 5: Tests + benchmark for symbolic spectrum | open | — (READY) |
-| TGR-af4a | Step 6: Example script + results + module integration | open | TGR-j6r9 |
+| TGR-j6r9 | Step 5: Tests + benchmark for symbolic spectrum | **DONE** | — |
+| TGR-af4a | Step 6: Example script + results + module integration | open | — (READY) |
 
 ### P2 — Infrastructure
 | ID | Title | Status |
