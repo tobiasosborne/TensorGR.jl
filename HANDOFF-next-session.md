@@ -1,101 +1,252 @@
-# HANDOFF: Session 20 — Codebase Audit, Test Robustness, sym_det Generalization
+# HANDOFF: Session 21 — SVT Path B Analysis (TGR-pr04)
 
-## Status: CLEAN — All tests pass, 3 commits on master
+## Status: ANALYSIS COMPLETE, IMPLEMENTATION NOT STARTED
 
-- **5640 tests pass** via `include` path (no Symbolics), 0 errors
-- **6042 tests pass** via `Pkg.test()` (with Symbolics), 0 errors
-- Commits: `fbd55ad`, `086374f`, `c066fbc` (not yet pushed — remote needs auth)
+- **All tests still pass**: 5640 (include path) / 6042 (Pkg.test)
+- **No code changes this session** — pure research/analysis
+- **Beads DB broken**: Dolt migration issue, use `.beads/issues.jsonl` for issue tracking
+
+## Critical Path
+
+```
+TGR-pr04 (SVT QuadraticForms) → TGR-tztc (Cross-check A vs B) → TGR-j6r9 (Tests) → TGR-af4a (Example)
+```
+
+**TGR-pr04 is the critical unblock.** All dependencies are closed.
 
 ## What Was Done This Session
 
-### 1. Codebase Audit (6 parallel research agents)
+Comprehensive derivation of the SVT scalar sector quadratic form entries for 6-derivative gravity on flat background. Key results below.
 
-Comprehensive audit of the entire project, findings below.
+## Derivation Results (Ready to Implement)
 
-**Test gaps**: NONE. All 72 source files have corresponding test coverage. Zero @test_broken, zero TODO/FIXME in src/. 3 @test_skip in benchmarks (stretch goals: spherical harmonics, bitensors).
+### Fourier Conventions (matching TensorGR code)
 
-**Stubs status** (CLAUDE.md was outdated):
-- `sort_covds_to_box` — FULLY IMPLEMENTED (detects ∂_a(∂^a(T)) → g^{ab}∂_a∂_b T)
-- `lorentzian_contract` — FULLY IMPLEMENTED (applies metric sign flips in foliation)
-- `sort_covds_to_div` — intentional no-op (divergence patterns already canonical in AST)
-- `sym_det`/`sym_inv` — was limited to 3×3, now generalized (see below)
-- `linearize` — order 1 only (higher orders throw error)
-- `gauge_transformation` — orders 1-2 only (higher orders throw error)
+The code's `to_fourier` replaces `∂_μ → k_μ` (formal substitution). The `build_*_momentum_kernel` functions use:
+- `□ → k²` where `k² = k^μk_μ` (Lorentzian invariant, can be ±)
+- `δRic_{μν} = (1/2)(k^ρk_μ h_{νρ} + k^ρk_ν h_{μρ} - k²h_{μν} - k_μk_ν h)`
+- FP kernel: `L_FP = (1/2)k² h_{ab}h^{ab} - k_bk_c h^{ab}h^c_a + k_ak_b h^{ab}h - (1/2)k²h²`
 
-**Documentation coverage**: 80.2% of 343 exports documented. 68 gaps:
-- 9 `bc_*` functions had no docstrings → FIXED this session
-- Product manifold API (17 functions) — no dedicated doc page
-- Symbolic components API (11 functions) — no dedicated doc page
-- Kernel extraction API (10 functions) — only partially in action.md
-- Scalar algebra (5 functions) — no doc coverage
-- See full report in agent output for priority-ordered list
+### CRITICAL SIGN CONVENTION
 
-**P2 pipeline status** (6-deriv gravity):
-- Path A (covariant spin projection): COMPLETE, verified against Buoninfante
-- Path B (SVT 3+1 foliation): NOT STARTED — this is the critical unblock
-- Cross-check (Path A vs Path B): BLOCKED on Path B
-- Handoff doc: `HANDOFF-6deriv-crosscheck.md` has 3 approaches for √g correction
+The code's `build_6deriv_flat_kernel` combines kernels as:
+```
+K_total = κ·K_FP − 2(α₁+β₁k²)·K_R² − 2(α₂+β₂k²)·K_Ric²
+```
 
-### 2. Fix: Test Robustness (commit fbd55ad)
+The **MINUS** signs mean `δ²S = κ·L_FP − 2α₁(δR)² − 2α₂(δRic)²`, NOT plus. This is because the second variation of the EH action `δ²(κR)` already contains the full Fierz-Pauli structure, and the R²/Ric² terms enter with opposite sign in the linearized equations. The SVT matrix entries must use the SAME sign convention.
 
-`test_cas_integration.jl` and `test_symbolic_components.jl` used `using Symbolics` unconditionally, causing an error when tests were run via `include("test/runtests.jl")` instead of `Pkg.test()`.
+### Linearized Curvature in SVT (Bardeen Gauge, Flat Background)
 
-**Fix**: Guard the Symbolics-dependent includes in `runtests.jl` with:
+Bardeen gauge: `h_{00} = 2Φ`, `h_{0i} = S_i` (transverse), `h_{ij} = 2ψδ_{ij} + hTT_{ij}`.
+
+**Linearized Ricci scalar** (scalar sector only, verified by trace check):
+```
+δR = -2k²Φ + (4k²-6ω²)ψ
+```
+where `ω² = k₀²` (temporal), `k² = |k_spatial|²`, `p² = ω²-k²` (Lorentz invariant).
+
+**Linearized Ricci tensor components** (scalar sector):
+```
+δRic_{00} = k²Φ + 3ω²ψ
+δRic_{0i} = -2ωk_iψ
+δRic_{ij} = -p²ψδ_{ij} + k_ik_j(ψ-Φ)
+```
+
+**Verification**: `η^{μν}δRic_{μν} = -δRic_{00} + δRic_{ii} = δR` ✓
+
+### Bilinear Forms (Scalar Sector)
+
+All expressed as `S = X^T M X` where `X = (Φ, ψ)^T`, so `S = M_{ΦΦ}Φ² + 2M_{Φψ}Φψ + M_{ψψ}ψ²`.
+
+#### From EH (κR) — via linearized Einstein tensor
+
+```
+h^{μν}G^(1)_{μν} = 8k²Φψ + (12ω²-4k²)ψ²
+δ²S_EH[scalar] = -(κ/2) × above
+```
+
+```
+M_ΦΦ = 0
+M_Φψ = -2κk²
+M_ψψ = κ(2k² - 6ω²)
+```
+
+Check: `det(M_EH) = -4κ²k⁴` → zeros only at `k=0` (no scalar mode in GR) ✓
+
+#### From (δR)² — R² and R□R contributions
+
+```
+(δR)² = 4k⁴Φ² - 4k²(4k²-6ω²)Φψ + (4k²-6ω²)²ψ²
+```
+
+Matrix entries (per unit of (δR)²):
+```
+M_ΦΦ = 4k⁴
+M_Φψ = -2k²(4k²-6ω²)     [half the cross-term coefficient]
+M_ψψ = (4k²-6ω²)²
+```
+
+#### From (δRic)² — Ric² and Ric□Ric contributions
+
+Full contraction `δRic_{μν}δRic^{μν}` for scalar sector:
+```
+(δRic)² = 2k⁴Φ² + (8ω²k²-4k⁴)Φψ + (12ω⁴-16ω²k²+6k⁴)ψ²
+```
+
+Matrix entries (per unit of (δRic)²):
+```
+M_ΦΦ = 2k⁴
+M_Φψ = (4ω²k²-2k⁴)       [half the cross-term coefficient]
+M_ψψ = 12ω⁴-16ω²k²+6k⁴
+```
+
+Verified at ω=0: `(δRic)² = 2k⁴Φ² - 4k⁴Φψ + 6k⁴ψ²` (independently computed from components) ✓
+
+#### R□R and Ric□Ric
+
+On flat: `δ²(R□R) = 2p²(δR)²` and `δ²(Ric□Ric) = 2p²(δRic)²`.
+
+So β₁ and β₂ contributions are just the R² and Ric² contributions multiplied by `p² = ω²-k²`.
+
+### Total Scalar Matrix (WITH sign convention from code)
+
+Using the code's minus-sign convention (`δ²S = κ·FP - 2α·(δcurv)²`):
+
 ```julia
-if isdefined(Main, :Symbolics) || try @eval(using Symbolics); true catch; false end
-    include("test_cas_integration.jl")
-    import TensorGR: simplify
-    include("test_symbolic_components.jl")
-else
-    @info "Skipping CAS/symbolic component tests: Symbolics.jl not available"
+M_ΦΦ = -(8α₁+4α₂)k⁴ - (8β₁+4β₂)p²k⁴
+
+M_Φψ = -2κk² - [-4α₁k²(4k²-6ω²) + α₂(8ω²k²-4k⁴)]
+                - p²[-4β₁k²(4k²-6ω²) + β₂(8ω²k²-4k⁴)]
+
+M_ψψ = κ(2k²-6ω²) - [2α₁(4k²-6ω²)² + 2α₂(12ω⁴-16ω²k²+6k⁴)]
+                     - p²[2β₁(4k²-6ω²)² + 2β₂(12ω⁴-16ω²k²+6k⁴)]
+```
+
+**WARNING**: The signs above assume the code's convention. If the cross-check fails, try flipping the minus signs on the 4-deriv and 6-deriv contributions to plus signs. The EH contribution signs are definitely correct.
+
+### Tensor Sector
+
+From Path A directly (no ambiguity):
+```
+M_TT = κk²·f₂(k²) = κk² - α₂k⁴ - β₂k⁶
+```
+
+where `k² = p²` (Lorentz invariant 4-momentum squared).
+
+### Vector Sector
+
+Should vanish identically (gauge invariance). Assert `M_V = 0`.
+
+## Implementation Plan
+
+### Step 1: New file `src/action/svt_quadratic.jl` (~100 lines)
+
+```julia
+"""
+    svt_quadratic_forms_6deriv(; κ, α₁=0, α₂=0, β₁=0, β₂=0,
+                                 ω²=:ω², k²=:k²) -> NamedTuple
+
+Build SVT-decomposed QuadraticForms for 6-derivative gravity on flat background.
+Returns `(tensor=QuadraticForm, scalar=QuadraticForm, vector_vanishes=true)`.
+
+Uses Symbolics.jl variables for CAS if available, otherwise Expr trees.
+"""
+function svt_quadratic_forms_6deriv(; κ, α₁=0, α₂=0, β₁=0, β₂=0,
+                                      ω²=:ω², k²=:k²)
+    p² = _sym_sub(ω², k²)  # p² = ω² - k²
+
+    # Tensor sector: 1×1
+    # M_TT = κk² - α₂k⁴ - β₂k⁶ (from Path A, k² here is 4-momentum p²)
+    M_TT = _sym_sub(_sym_sub(_sym_mul(κ, p²), _sym_mul(α₂, _sym_mul(p², p²))),
+                     _sym_mul(β₂, _sym_mul(p², _sym_mul(p², p²))))
+    qf_tensor = quadratic_form(Dict((:hTT,:hTT) => M_TT), [:hTT])
+
+    # Scalar sector: 2×2 matrix M for (Φ, ψ)
+    # [use formulas from handoff, with Symbolics arithmetic]
+    M_ΦΦ = ...  # build from δR², δRic² entries
+    M_Φψ = ...
+    M_ψψ = ...
+    entries = Dict((:Phi,:Phi) => M_ΦΦ, (:Phi,:psi) => M_Φψ, (:psi,:psi) => M_ψψ)
+    qf_scalar = quadratic_form(entries, [:Phi, :psi])
+
+    (tensor=qf_tensor, scalar=qf_scalar, vector_vanishes=true)
 end
 ```
 
-Also updated CLAUDE.md:
-- Fixed outdated "Stubs (Not Yet Implemented)" → "Stubs / Stretch Goals"
-- Corrected test count from "4,100+" to "~2,900"
+### Step 2: Add to `src/TensorGR.jl`
 
-### 3. Feature: Generalize sym_det/sym_inv (commit 086374f)
+```julia
+include("action/svt_quadratic.jl")  # after kernel_extraction.jl
+export svt_quadratic_forms_6deriv
+```
 
-`sym_det` and `sym_inv` were limited to 3×3 matrices, throwing errors for larger. Generalized using recursive cofactor expansion:
+### Step 3: Tests in `test/test_6deriv_spectrum.jl` (~80 lines)
 
-- Fast paths for 1×1, 2×2, 3×3 retained (no performance change)
-- New: general n×n via `_sym_minor` helper + cofactor expansion along first row
-- Tested: 4×4 (det=85, inverse verified M·M⁻¹=I) and 5×5 (det=492, inverse verified)
-- 17 new tests added to `test/test_quadratic_action.jl`
+```julia
+@testset "SVT Path B: quadratic forms" begin
+    # 1. Tensor sector: propagator poles match Path A
+    # Evaluate at random (κ, α₂, β₂) values
+    # Check f₂(p²) = 0 ↔ M_TT(p²) = 0
 
-**Why it matters**: SVT sector analysis with >3 fields needs 4×4+ quadratic forms. The 3×3 limit was blocking Step 2.2 (SVT QuadraticForms).
+    # 2. Scalar sector: determinant zeros match Path A
+    # det(M_scalar) should have zeros matching f₀(p²) = 0
+    # Evaluate at random (κ, α₁, α₂, β₁, β₂, ω, k) points
 
-### 4. Docs: bc_* Function Docstrings (commit c066fbc)
+    # 3. Vector sector vanishes
 
-All 9 `bc_*` functions (`bc_EH`, `bc_R2`, `bc_RicSq`, `bc_R3`, `bc_RRicSq`, `bc_Ric3`, `bc_RRiem2`, `bc_RicRiem2`, `bc_Riem3`) now have proper docstrings with signatures, parameter descriptions, and which BC params (a,b,c,e) each term produces.
+    # 4. Special limits:
+    #    - GR (α=β=0): det = -4κ²k⁴ (no scalar mode)
+    #    - Stelle (β=0): correct Stelle masses
 
-## Files Changed
+    # 5. GR scalar matrix: M_ΦΦ=0, M_Φψ=-2κk², M_ψψ=κ(2k²-6ω²)
+end
+```
 
-| File | Change |
-|------|--------|
-| `CLAUDE.md` | Fix stubs section, correct test count |
-| `test/runtests.jl` | Guard Symbolics-dependent test includes |
-| `src/action/quadratic_action.jl` | Generalize sym_det/sym_inv to arbitrary n×n |
-| `test/test_quadratic_action.jl` | Add 4×4 det + inverse tests (17 new) |
-| `src/action/kernel_extraction.jl` | Add proper docstrings to 9 bc_* functions |
+### Step 4: Cross-check (TGR-tztc)
+
+Once the SVT forms are verified, the cross-check compares:
+- Tensor poles from `M_TT = 0` vs zeros of `f₂(p²)` from `flat_6deriv_spin_projections`
+- Scalar poles from `det(M_scalar) = 0` vs zeros of `f₀(p²)`
+- At 100+ random parameter points with `rtol=1e-10`
+
+## Key Reference Files
+
+| File | Purpose |
+|------|---------|
+| `src/action/kernel_extraction.jl:296-372` | `build_FP/R2/Ric2_momentum_kernel` — sign conventions |
+| `src/action/kernel_extraction.jl:600+` | `build_6deriv_flat_kernel` — the MINUS sign combination |
+| `src/action/quadratic_action.jl` | `QuadraticForm`, `sym_det`, `sym_inv`, `_sym_*` helpers |
+| `examples/08_postquantum_gravity.jl` | Complete SVT pipeline template (4th-order case) |
+| `test/test_6deriv_spectrum.jl` | Existing Path A tests (add Path B tests here) |
+| `ext/TensorGRSymbolicsExt.jl` | Symbolics.jl dispatch for `_sym_*` operations |
+
+## Debugging Tips
+
+1. **If signs don't match**: The EH scalar matrix is definitely `[[0, -2κk²], [-2κk², κ(2k²-6ω²)]]`. If the higher-derivative corrections have wrong signs, flip the `-` to `+` on the `(8α₁+4α₂)` etc. terms.
+
+2. **Normalization**: The overall normalization of M_TT vs O₂ doesn't matter for pole locations. Only the RATIO of polynomial coefficients matters.
+
+3. **Lorentzian vs Euclidean**: The code uses `k²` as a Lorentz invariant (`p² = ω²-|k|²`). For the SVT matrix, entries depend on BOTH `ω²` and `k²` separately. But the POLES (propagator singularities) depend only on `p² = ω²-k²`.
+
+4. **Symbolics.jl**: Use `@variables ω² k² κ α₁ α₂ β₁ β₂` for full symbolic computation. The `_sym_*` functions dispatch on `Symbolics.Num` when the extension is loaded.
+
+5. **Quick numerical test**: For EH only (α=β=0), scalar det should be `-4κ²k⁴`. For Stelle (α₂=-1, κ=1, β=0), spin-2 mass at `p²=κ/α₂=-1` and scalar mass at `p²=-κ/(6α₁+2α₂)`.
 
 ## Beads Status
 
-Beads DB is stuck between SQLite and Dolt versions. `bd` commands fail with:
+Beads DB stuck in Dolt migration. Commands fail with:
 ```
-Error: failed to connect to dolt server: invalid database name "TensorGR.jl"
+Error: database "beads" not found on Dolt server at 127.0.0.1:13359
 ```
-The `.beads/issues.jsonl` file is readable and has the full issue list. To fix:
-- Either downgrade to `bd v0.49.6` (SQLite) or run `bd migrate --to-dolt` with a running Dolt server.
-- The backup is at `.beads/beads.backup-pre-dolt-20260312-162256.db`
+Use `.beads/issues.jsonl` for issue data. To fix: `rm -rf .beads/dolt && bd init` or downgrade bd.
 
 ## Open Issues (from .beads/issues.jsonl)
 
 ### P2 — Active Pipeline
 | ID | Title | Status | Blocked By |
 |----|-------|--------|------------|
-| TGR-pr04 | Step 2.2: SVT QuadraticForms + propagators (flat) | open | — |
+| TGR-pr04 | Step 2.2: SVT QuadraticForms + propagators (flat) | open | — (READY) |
 | TGR-tztc | Step 2.3: Cross-check Path A vs Path B (flat) | open | TGR-pr04 |
 | TGR-j6r9 | Step 5: Tests + benchmark for symbolic spectrum | open | TGR-tztc |
 | TGR-af4a | Step 6: Example script + results + module integration | open | TGR-j6r9 |
@@ -114,53 +265,3 @@ The `.beads/issues.jsonl` file is readable and has the full issue list. To fix:
 | TGR-dhp | TOV equation solver | P3 |
 | TGR-293h | Symmetry-reduced metric ansatz | P4 |
 | TGR-38d | H6: Invar database | P4 |
-
-## Recommended Next Steps (Priority Order)
-
-### 1. TGR-pr04: SVT QuadraticForms + Propagators (Path B)
-
-**Most impactful** — unblocks 3 downstream issues. Estimated 150 lines + 20 tests.
-
-The idea: decompose δ²S using 3+1 foliation (instead of covariant Barnes-Rivers projectors), extract SVT sector quadratic forms, compute propagators, and verify they match the covariant Path A results.
-
-**Implementation plan**:
-1. Build flat-background foliation: `define_foliation!(reg, :flat31; manifold=:M4, temporal=0, spatial=[1,2,3])`
-2. Decompose perturbation: `foliate_and_decompose(δ²S, :h; foliation=fol)` → Dict of SVT sectors
-3. For scalar sector: extract 3×3 QuadraticForm for (Φ, B, ψ) fields
-4. Compute propagator via `sym_inv` (now supports 3×3+)
-5. Verify scalar form factors match Path A's `f₀(z)`
-6. Verify tensor sector matches Path A's `f₂(z)`
-
-**Key files**:
-- `src/foliation/` — complete, ready to use
-- `src/svt/decompose.jl` — SVTFields, svt_substitute
-- `src/action/quadratic_action.jl` — QuadraticForm, sym_inv (now generalized)
-- `examples/08_postquantum_gravity.jl` — 4th-order analog template
-
-### 2. Documentation Gaps
-
-Add API doc pages for:
-- Product manifolds (17 functions, extend `docs/src/api/gr.md`)
-- Symbolic components (11 functions, new page `docs/src/api/symbolic_components.md`)
-- Kernel extraction (10 functions, extend `docs/src/api/action.md`)
-
-### 3. Fix Beads DB
-
-Either:
-- `bd migrate --to-dolt` (requires running Dolt server: `bd dolt start`)
-- Or downgrade `bd` to v0.49.6
-
-### 4. Push to Remote
-
-The 3 commits are local only. Remote push needs GitHub auth (HTTPS remote at `https://github.com/tobiasosborne/TensorGR.jl.git`). Either:
-- Configure SSH remote: `git remote set-url origin git@github.com:tobiasosborne/TensorGR.jl.git`
-- Or use a GitHub token
-
-## Key Caveats
-
-- `commute_covds` may need `maxiter=200` for large expressions (300-1500 terms)
-- Spin projection: `Tr(K·P^J)`, NOT `f_J` — divide by `dim(sector)` = {5,3,1,1}
-- On MSS: R₀ = 4Λ, Ric₀ = Λg, Riem₀ = (Λ/3)(g⊗g − g⊗g)
-- Bueno-Cano convention: Λ_BC = Λ/3 (their Λ vs TGR's Λ)
-- `_expand_pert(tensor, mp, 0)` returns tensor itself (background), NOT zero
-- `delta_riemann`/`delta_ricci`/`delta_ricci_scalar` return ZERO at order 0
