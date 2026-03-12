@@ -52,14 +52,18 @@ using TensorGR
     include("test_latex_parser.jl")
     # 3+1 Foliation
     include("test_foliation.jl")
-    # CAS integration (Symbolics.jl)
-    include("test_cas_integration.jl")
-    # Resolve simplify name collision (TensorGR vs Symbolics)
-    import TensorGR: simplify
+    # CAS integration (Symbolics.jl) — requires Symbolics in test deps
+    if isdefined(Main, :Symbolics) || try @eval(using Symbolics); true catch; false end
+        include("test_cas_integration.jl")
+        # Resolve simplify name collision (TensorGR vs Symbolics)
+        import TensorGR: simplify
+        # Symbolic components (Symbolics.jl)
+        include("test_symbolic_components.jl")
+    else
+        @info "Skipping CAS/symbolic component tests: Symbolics.jl not available"
+    end
     # Tensor equation solver
     include("test_solve.jl")
-    # Symbolic components (Symbolics.jl)
-    include("test_symbolic_components.jl")
     # Smooth mappings (pullback/pushforward)
     include("test_mapping.jl")
     # Product manifolds
