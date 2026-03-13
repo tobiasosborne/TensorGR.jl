@@ -52,11 +52,52 @@ function _fourier_transform(p::TProduct, conv::FourierConvention, cn::Set{Symbol
     tproduct(p.scalar, TensorExpr[_fourier_transform(f, conv, cn) for f in p.factors])
 end
 
+"""
+Count field-type factors in a product (tensors that are not metrics/deltas).
+TDeriv factors count as field factors; TScalar and metric/delta do not.
+"""
+function _count_field_factors(p::TProduct)
+    reg = current_registry()
+    n = 0
+    for f in p.factors
+        if f isa TDeriv
+            n += 1
+        elseif f isa Tensor
+            if has_tensor(reg, f.name)
+                props = get_tensor(reg, f.name)
+                if !props.is_metric && !props.is_delta
+                    n += 1
+                end
+            else
+                n += 1  # unknown tensor → assume field
+            end
+        end
+    end
+    n
+end
+
 function _fourier_transform(d::TDeriv, conv::FourierConvention, cn::Set{Symbol})
     # Only transform partial derivatives and named CovDs listed in covd_names
     if d.covd != :partial && d.covd ∉ cn
         error("to_fourier: unexpected covariant derivative :$(d.covd). " *
               "Pass covd_names=Set([:$(d.covd)]) to treat it as a momentum replacement.")
+    end
+
+    # Distribute derivative over sums: ∂(A+B) → ∂A + ∂B.
+    # This ensures each resulting TDeriv wraps a single term, so the
+    # bilinear-product check below can correctly identify ∂(h₁ h₂).
+    if d.arg isa TSum
+        terms = TensorExpr[TDeriv(d.index, t, d.covd) for t in d.arg.terms]
+        return _fourier_transform(tsum(terms), conv, cn)
+    end
+
+    # In quadratic forms under ∫dx, a derivative acting on a product
+    # that is bilinear in field tensors vanishes: the two fields carry
+    # opposite momenta k and -k, so ∂_c(h₁ h₂) ~ i(k+(-k)) h₁h₂ = 0.
+    # Products with only one field factor (e.g., g × ∂h) are NOT bilinear
+    # and must be kept.
+    if d.arg isa TProduct && _count_field_factors(d.arg) >= 2
+        return ZERO
     end
 
     # Replace D_a with momentum k_a

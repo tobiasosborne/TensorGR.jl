@@ -1,136 +1,88 @@
-# HANDOFF: Session 30 — Root Cause Found: to_fourier + contract_metrics bugs
+# HANDOFF: Session 31 — Fourier ∂(bilinear) fix applied, partial spin-2 fix
 
-## Status: Root cause identified, no code changes, ready for fix
+## Status: Fourier pipeline partially fixed, spin-2 needs further work
 
-- **All 7267 tests pass**: no changes to source
-- **TGR-dp3 remains open**: root cause fully diagnosed
+- **All 7146 tests pass**: fourier.jl change only, no contraction.jl changes
+- **TGR-dp3 remains open**: spin-2 coefficient still incorrect
 
-## Root Cause (Two Interacting Bugs)
+## What Was Done
 
-### Bug 1: `to_fourier` mishandles `∂(product)` for quadratic forms
+### Fix Applied: `src/svt/fourier.jl`
 
-`_fourier_transform(d::TDeriv)` in `src/svt/fourier.jl:55-76` replaces:
-```
-∂_a(arg) → k_a × fourier(arg)
-```
+Two changes to `_fourier_transform(TDeriv)`:
 
-When `arg` is a **product** of two h-fields (like `h^{cd} × ∂_b h_{ad}` from δ²Christoffel),
-this treats the derivative as acting on the whole product as a single entity. But in a
-quadratic action `S₂ = ∫dx h K h`, the derivative distributes via Leibniz over both h-fields,
-and each h carries **different momentum** (k and -k). The correct physics gives:
+1. **TSum distribution**: When a TDeriv wraps a TSum, distribute the derivative
+   over the sum (`∂(A+B) → ∂A + ∂B`) before processing. This exposes individual
+   product terms for the bilinear check.
 
-- `∫dx ∂_c(h₁ × ∂_b h₂)` = 0 (total derivative, boundary term vanishes)
-- Code gives: `k_c × k_b × h₁ × h₂` (nonzero — **wrong**)
+2. **Bilinear product dropping**: When a TDeriv wraps a TProduct that is bilinear
+   in field tensors (≥2 non-metric/delta factors), return ZERO. This correctly
+   handles the physics: in quadratic forms under ∫d⁴x, derivatives of bilinear
+   field products vanish because the two fields carry opposite momenta (k and -k).
 
-This only affects **second-order** perturbations where `∂[Γ₂]` terms wrap products.
-First-order terms work correctly because all derivatives act on a single h-field.
+A helper `_count_field_factors(p::TProduct)` counts factors that are "field-like"
+(TDeriv or non-metric/non-delta Tensor), excluding background metrics.
 
-### Bug 2: `contract_metrics` can't contract metrics with TDeriv partners
+### Results
 
-`_try_metric_contraction` in `src/algebra/contraction.jl:124-183` only checks
-`fj isa Tensor` partners, skipping TDeriv factors. So `g^{ab} × ∂_b(h_{cd})` where
-the dummy `b` appears in the metric AND the derivative index remains uncontracted.
+Spin projections for δ²R at k²=1:
 
-After simplify, 18 of 20 δ²Ric terms still have `g^{_d1,_d2} × g^{_d3,_d4}` factors
-because the metric's dummies only appear in TDeriv factors (derivative indices or
-indices inside derivatives).
+| Component | Before Fix | After Fix | Expected (δ²R) |
+|-----------|-----------|-----------|-----------------|
+| spin-2    | 6.25      | 3.75      | 2.50            |
+| spin-1    | 0.0       | 0.0       | 0.0             |
+| spin-0s   | 0.5       | 0.0       | ???             |
+| spin-0w   | 0.0       | 0.0       | 0.0             |
 
-**Note**: Inside each TDeriv's arg, the g's DO share dummies with bare Tensor h-factors,
-so `contract_metrics(TDeriv)` should recurse and contract them. Need to verify why
-this doesn't happen — possible that the simplify loop structure or TDeriv wrapping
-prevents the contraction from reaching the inner products.
+spin-1 and spin-0w are correct. spin-2 improved but not resolved.
+spin-0s changed from 0.5 to 0.0 — needs verification against known results.
 
-## Quantitative Evidence
+### What Was Attempted But Reverted
 
-```
-δ²Ric after simplify: 20 terms
-  18 "expanded" terms: (∂h)(∂h) products with uncontracted g's  → spin-2 = 1.25
-   2 "unexpanded" terms: ∂(h × ∂h) with outer ∂ not distributed → spin-2 = 2.50
-  Total η^{ab}δ²Ric spin-2 = 3.75 (should be 0)
+1. **Bug 2 fix (contraction.jl)**: Extended `_try_metric_contraction` to handle
+   TDeriv factors (Case A: raise/lower derivative index; Case B: push metric
+   inside derivative). This correctly contracted metrics paired with TDeriv
+   factors in the ΓΓ terms. However, it changed the expression structure during
+   simplify, cascading into different term counts and spin projections. All
+   contraction.jl changes were reverted.
 
-Cross term -h^{ab}δ¹Ric_{ab} spin-2 = 2.50 (CORRECT, = FP)
-Full δ²R spin-2 = 6.25 (should be 2.50)
+2. **Factor recursion in `contract_metrics(TProduct)`**: Adding recursion into
+   TDeriv factors broke the simplify convergence, causing spin-0s to become 0.0
+   (wrong) and spin-2 to become 3.75 (same as no fix).
 
-Naive Leibniz fix (expand_derivatives before to_fourier):
-  η^{ab}×(unexpanded with Leibniz) spin-2 = 10.0 (WORSE — uniform-k convention
-  double-counts total-derivative contributions instead of canceling them)
-```
+## Root Cause Analysis (Refined)
 
-## The Physics
+The original handoff identified two bugs. The fourier.jl fix addresses Bug 1.
+Bug 2 remains unresolved.
 
-In a quadratic form `S₂ = ∫dx Q(h, ∂h, ∂²h)`:
-- Each h(x) decomposes as `∫dk h(k) e^{ikx}`
-- The two h-fields carry momenta k₁ and k₂ = -k₁ (from ∫dx → δ(k₁+k₂))
-- A derivative ∂_a acting on h(k) gives `ik_a`, acting on h(-k) gives `-ik_a`
-- Total derivatives `∂_c J^c` give `i(k₁+k₂)_c J^c = 0` — they vanish!
-- The "uniform k" convention (all ∂ → k) is only correct when each ∂ acts on ONE h-factor
+### Bug 1 (FIXED): `to_fourier` mishandles `∂(bilinear product)`
 
-The code's uniform-k convention works for `(∂h)(∂h)` products (first order Γ₁² terms)
-but fails for `∂(h×∂h)` products (second order ∂[Γ₂] terms).
+`_fourier_transform(TDeriv)` now:
+- Distributes derivatives over sums before processing
+- Drops derivatives wrapping bilinear field products (≥2 field factors)
 
-## Recommended Fix Strategy
+This correctly handles the physics of quadratic forms under ∫d⁴x.
 
-### Option A: Fix at the source (perturbation engine) — RECOMMENDED
+### Bug 2 (UNRESOLVED): Uncontracted metrics paired with TDeriv factors
 
-Modify `δriemann` in `src/perturbation/expand.jl:177-261` to expand the Leibniz rule
-on the ∂[Γ₂] terms immediately, rather than wrapping them in TDeriv:
+In the ΓΓ terms of δ²Ric, products like `g^{af} × ∂_c(h_{ef}) × g^{eg} × ∂_d(h_{gb})`
+have metrics paired with TDeriv factors. `_try_metric_contraction` only checks
+`fj isa Tensor` partners, skipping TDeriv. The metrics remain uncontracted through
+the Fourier pipeline.
 
-```julia
-# Instead of:
-push!(terms, TDeriv(c, δnΓ_adb, _rcovd))
+**Why the fix was hard**: Extending `_try_metric_contraction` to handle TDeriv
+partners (pushing metrics inside derivatives) works algebraically but changes the
+expression structure during simplify, causing cascading differences in canonicalization
+and term collection. This led to wrong spin projections.
 
-# Do:
-wrapped = TDeriv(c, δnΓ_adb, _rcovd)
-expanded = expand_derivatives(wrapped)
-push!(terms, expanded)  # or push each term of the expanded TSum
-```
-
-But this introduces `∂(g)` terms from the uncontracted g's in δ²Γ. Need to either:
-1. Simplify δ²Γ first (contract g's), then wrap in TDeriv, then expand Leibniz
-2. Or add a rule that `∂(metric) = 0` on flat background
-
-### Option B: Fix to_fourier for quadratic forms
-
-Add a Leibniz-aware Fourier transform that handles TDeriv(TProduct):
-
-```julia
-function _fourier_transform(d::TDeriv, conv, cn)
-    if d.arg isa TProduct
-        # Apply Fourier-space Leibniz: sum over which factor gets the k
-        # BUT: need to handle the momentum sign correctly for quadratic forms
-        # (k for "right" h, -k for "left" h)
-    end
-    ...
-end
-```
-
-This is more complex because it requires knowing which h is "left" vs "right" in
-the quadratic form — information that to_fourier doesn't currently have.
-
-### Option C: Integration by parts before Fourier transform
-
-Add an IBP step that moves all derivatives to one side of the quadratic form before
-Fourier transforming. This would:
-1. Turn `∂_c(h × ∂_b h)` into `(∂_c h)(∂_b h) + h(∂_c ∂_b h)` [Leibniz]
-2. IBP the `h(∂_c ∂_b h)` term: → `-(∂_c h)(∂_b h)` + boundary [IBP]
-3. Total: `(∂_c h)(∂_b h) - (∂_c h)(∂_b h)` = 0 (total derivative cancels)
-
-After IBP, all remaining terms have `(∂h)(∂h)` structure where to_fourier works correctly.
-
-### Option D: Drop total-derivative terms before Fourier
-
-Detect terms of the form `∂_c(...)` where c is a contracted dummy and remove them,
-since they're total divergences that vanish under ∫dx.
-
-**This is the simplest fix** and directly targets the 2 problematic terms.
-
-## Files to Modify
-
-| File | What to change |
-|------|---------------|
-| `src/svt/fourier.jl:55-76` | Fix `_fourier_transform(TDeriv)` for product args |
-| `src/perturbation/expand.jl:196-209` | Optionally expand Leibniz at source in δriemann |
-| `src/algebra/contraction.jl:124-183` | Optionally extend metric contraction to TDeriv partners |
+**Proposed path forward**:
+- Option A: Add a dedicated `contract_metrics_deep(expr)` function that runs ONCE
+  as a preprocessing step before `to_fourier`, rather than modifying the general
+  `contract_metrics` used in the simplify loop. This avoids convergence issues.
+- Option B: Fix the kernel extraction / spin projection pipeline to handle
+  uncontracted `g` tensors correctly (treating them as η^{ab} on flat background).
+- Option C: Add metric contraction to TDeriv partners only for partial derivatives
+  (where ∂g=0 is guaranteed), with careful handling to preserve simplify convergence.
 
 ## Key Diagnostic Script
 
@@ -140,31 +92,32 @@ reg = TensorRegistry()
 with_registry(reg) do
     @manifold M4 dim=4 metric=g
     define_curvature_tensors!(reg, :M4, :g)
-    @define_tensor h on=M4 rank=(0,2) symmetry=TensorGR.Symmetric(1,2)
-    @define_tensor k on=M4 rank=(0,1)
-    mp = define_metric_perturbation!(reg, :g, :h; curved=false)
+    @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+    mp = define_metric_perturbation!(reg, :g, :h)
     set_vanishing!(reg, :Ric)
+    set_vanishing!(reg, :RicScalar)
+    set_vanishing!(reg, :Riem)
 
-    δ2Ric = simplify(δricci(mp, down(:a), down(:b), 2); registry=reg, maxiter=200)
-    # Should have 20 terms: 18 expanded + 2 unexpanded (∂(product))
-
-    # Cross term (CORRECT reference):
-    δ1Ric = simplify(δricci(mp, down(:c), down(:d), 1); registry=reg, maxiter=200)
-    cross = simplify(tproduct(-1//1, TensorExpr[Tensor(:h, [up(:c), up(:d)]), δ1Ric]); registry=reg)
-    Cf = to_fourier(cross); Cf = simplify(Cf; registry=reg); Cf = fix_dummy_positions(Cf)
-    KC = extract_kernel(Cf, :h; registry=reg)
-    println("Cross spin-2 = $(_eval_spin_scalar(spin_project(KC, :spin2; registry=reg), 1.0))")
-    # Should print 2.5
-
-    # η^{ab}δ²Ric (BUGGY):
-    traced = simplify(Tensor(:g, [up(:a), up(:b)]) * δ2Ric; registry=reg, maxiter=200)
-    Tf = to_fourier(traced); Tf = simplify(Tf; registry=reg); Tf = fix_dummy_positions(Tf)
-    KT = extract_kernel(Tf, :h; registry=reg)
-    println("η^{ab}δ²Ric spin-2 = $(_eval_spin_scalar(spin_project(KT, :spin2; registry=reg), 1.0))")
-    # Prints 3.75, should be 0.0
+    δ2R = simplify(δricci_scalar(mp, 2); registry=reg)
+    f = to_fourier(δ2R); f = simplify(f; registry=reg); f = fix_dummy_positions(f)
+    K = extract_kernel(f, :h; registry=reg)
+    println("spin-2  = $(_eval_spin_scalar(spin_project(K, :spin2; registry=reg), 1.0))")
+    println("spin-0s = $(_eval_spin_scalar(spin_project(K, :spin0s; registry=reg), 1.0))")
+    println("spin-1  = $(_eval_spin_scalar(spin_project(K, :spin1; registry=reg), 1.0))")
+    println("spin-0w = $(_eval_spin_scalar(spin_project(K, :spin0w; registry=reg), 1.0))")
 end
 ```
 
-## Changes Made This Session
+## Files Modified
 
-None. Pure diagnosis session.
+| File | Change |
+|------|--------|
+| `src/svt/fourier.jl` | Added `_count_field_factors`, TSum distribution, bilinear dropping |
+
+## Changes This Session
+
+- Added `_count_field_factors` helper to distinguish field tensors from background metrics
+- Added TSum distribution in `_fourier_transform(TDeriv)` (∂(A+B) → ∂A + ∂B)
+- Added bilinear product dropping (∂(h₁h₂) → 0 in quadratic forms)
+- Attempted and reverted Bug 2 fix to `contract_metrics` (TDeriv partner handling)
+- Attempted and reverted factor recursion in `contract_metrics(TProduct)`
