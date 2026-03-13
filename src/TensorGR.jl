@@ -243,7 +243,7 @@ export foliate_and_decompose
 # Exports: Quadratic action
 export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic_form
 export sym_det, sym_inv, sym_eval
-export KineticKernel, extract_kernel, spin_project, contract_momenta
+export KineticKernel, extract_kernel, extract_kernel_direct, spin_project, contract_momenta
 export build_FP_momentum_kernel, build_R2_momentum_kernel, build_Ric2_momentum_kernel
 export scale_kernel, combine_kernels, build_6deriv_flat_kernel, flat_6deriv_spin_projections
 export _eval_spin_scalar
