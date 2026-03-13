@@ -430,3 +430,61 @@ end
 function _apply_position_fixes(s::TScalar, base_slot::Int, fixes::Dict{Int, IndexPosition})
     s
 end
+
+"""
+    normalize_field_positions(expr, field; metric=:g) -> TensorExpr
+
+Lower all Up indices on `field` tensors to Down by inserting inverse metric
+connectors (g^{old_up, fresh_up}). The metrics become part of the product,
+ensuring that when `extract_kernel` separates h factors from the coefficient,
+the h factors are all-Down with disjoint index names.
+
+IMPORTANT: Do NOT call `simplify` after this — `contract_metrics` will undo
+the lowering. Pass the result directly to `extract_kernel`.
+"""
+normalize_field_positions(s::TScalar, field::Symbol; metric::Symbol=:g) = s
+normalize_field_positions(d::TDeriv, field::Symbol; metric::Symbol=:g) =
+    TDeriv(d.index, normalize_field_positions(d.arg, field; metric), d.covd)
+
+function normalize_field_positions(t::Tensor, field::Symbol; metric::Symbol=:g)
+    t.name != field && return t
+    any(idx -> idx.position == Up, t.indices) || return t
+    normalize_field_positions(tproduct(1 // 1, TensorExpr[t]), field; metric)
+end
+
+function normalize_field_positions(s::TSum, field::Symbol; metric::Symbol=:g)
+    tsum(TensorExpr[normalize_field_positions(t, field; metric) for t in s.terms])
+end
+
+function normalize_field_positions(p::TProduct, field::Symbol; metric::Symbol=:g)
+    all_names = Set{Symbol}()
+    for f in p.factors
+        for idx in indices(f)
+            push!(all_names, idx.name)
+        end
+    end
+
+    new_factors = TensorExpr[]
+    for f in p.factors
+        if f isa Tensor && f.name == field
+            lowered_idxs = TIndex[]
+            connectors = TensorExpr[]
+            for idx in f.indices
+                if idx.position == Up
+                    fn = fresh_index(all_names)
+                    push!(all_names, fn)
+                    push!(lowered_idxs, TIndex(fn, Down, idx.vbundle))
+                    push!(connectors, Tensor(metric, [idx, TIndex(fn, Up, idx.vbundle)]))
+                else
+                    push!(lowered_idxs, idx)
+                end
+            end
+            push!(new_factors, Tensor(field, lowered_idxs))
+            append!(new_factors, connectors)
+        else
+            push!(new_factors, f)
+        end
+    end
+
+    tproduct(p.scalar, new_factors)
+end

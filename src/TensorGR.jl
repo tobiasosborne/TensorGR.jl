@@ -154,7 +154,7 @@ export symmetry_generators
 
 # Exports: Algebra
 export tproduct, tsum, contract_metrics, canonicalize, expand_derivatives
-export expand_products, collect_terms, ibp, ibp_product, fix_dummy_positions
+export expand_products, collect_terms, ibp, ibp_product, fix_dummy_positions, normalize_field_positions
 export simplify
 export collect_tensors, remove_constants, remove_tensors, index_collect
 export make_ansatz

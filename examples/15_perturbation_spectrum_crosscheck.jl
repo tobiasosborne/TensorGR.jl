@@ -38,7 +38,7 @@ function _subst_lambda(d::TDeriv, Λ_val)
     TDeriv(d.index, _subst_lambda(d.arg, Λ_val), d.covd)
 end
 
-"""Build √g correction: ½h·δL + (¼h² - ¼h_{ab}h^{ab})·L₀.
+"""Build √g correction: ½h·δL + (⅛h² - ¼h_{ab}h^{ab})·L₀.
 Uses indices :z1-:z8 to avoid clashes."""
 function sqrt_g_correction(L0::TensorExpr, δL::TensorExpr, metric::Symbol)
     h_A = Tensor(metric, [up(:z1), up(:z2)]) * Tensor(:h, [down(:z1), down(:z2)])
@@ -46,7 +46,7 @@ function sqrt_g_correction(L0::TensorExpr, δL::TensorExpr, metric::Symbol)
     hh  = Tensor(:h, [down(:z5), down(:z6)]) * Tensor(:h, [up(:z5), up(:z6)])
     h_C = Tensor(metric, [up(:z7), up(:z8)]) * Tensor(:h, [down(:z7), down(:z8)])
 
-    tproduct(1 // 4, TensorExpr[h_A * h_B]) * L0 +
+    tproduct(1 // 8, TensorExpr[h_A * h_B]) * L0 +
     tproduct(-1 // 4, TensorExpr[hh]) * L0 +
     tproduct(1 // 2, TensorExpr[h_C]) * δL
 end
@@ -101,11 +101,12 @@ with_registry(reg) do
     n_Q = Q_EH isa TSum ? length(Q_EH.terms) : 1
     println("  Q_EH: $n_Q terms")
 
-    # Fourier → kernel → spin project
+    # Fourier → lower h indices → kernel → spin project
     println("  Fourier transforming...")
     Qf = to_fourier(Q_EH; covd_names=Set([:∇g]))
     Qf = simplify(Qf; registry=reg)
     Qf = fix_dummy_positions(Qf)
+    Qf = normalize_field_positions(Qf, :h; metric=:g)  # lower h → all-Down before extract
     K_EH = extract_kernel(Qf, :h; registry=reg)
     println("  Kernel: $(length(K_EH.terms)) bilinear terms")
 
@@ -177,6 +178,7 @@ with_registry(reg) do
         Qf3 = to_fourier(Q_R3; covd_names=Set([:∇g]))
         Qf3 = simplify(Qf3; registry=reg)
         Qf3 = fix_dummy_positions(Qf3)
+        Qf3 = normalize_field_positions(Qf3, :h; metric=:g)
         K_R3 = extract_kernel(Qf3, :h; registry=reg)
         println("  R³ Kernel: $(length(K_R3.terms)) bilinear terms")
 
