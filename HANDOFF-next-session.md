@@ -1,130 +1,141 @@
-# HANDOFF: Session 28 — Corrected Diagnosis of TGR-76k Crosscheck Failure
+# HANDOFF: Session 29 — Deep Diagnosis of δ²R A-type Coefficient Bug
 
-## Status: TGR-wm8 closed, TGR-dp3 rediagnosed, 1 new issue needed
+## Status: Bug localized to η^{ab}δ²Ric_{ab}, no code changes
 
-- **All 7267 tests pass**: full suite unchanged
-- **TGR-wm8 CLOSED**: √g coefficient reverted 1/4→1/8 in example 15
-- **TGR-dp3 MISDIAGNOSED**: the bug is NOT in collect_terms/canonicalize
+- **All 7267 tests pass**: no changes to source
+- **TGR-dp3 remains open**: root cause further narrowed
 
 ## What Was Done This Session
 
-### 1. Attempted TGR-dp3 fix (canonicalizer mixed positions)
+### 1. Four-agent parallel research on perturbation conventions
 
-Implemented `normalize_field_positions` in `src/algebra/canonicalize.jl` — lowers
-all Up indices on a specified field by inserting inverse metric connectors. Function
-works correctly and is exported. However, **it doesn't fix the crosscheck failure**
-because the root cause is elsewhere.
+- **Subagent A**: Confirmed perturbation engine uses **Taylor coefficient convention** (no factorial divisors, no binomial coefficients). `_expand_pert(TProduct)` uses `all_compositions` without multinomial weights. Internally consistent.
+- **Subagent B**: Verified `δinverse_metric` at order 2 gives `h^{ac}h_c^b` (correct for Taylor convention). Recursion works for order ≤ 2.
+- **Subagent C**: Analyzed the mathematical structure of δ²R and confirmed the A-type excess.
+- **Subagent D**: Verified example 15 formula Q = δ²R + √g_correction is structurally correct. FP kernel is standard Fierz-Pauli.
 
-### 2. Fixed TGR-wm8 (√g coefficient)
+### 2. Decomposition of δ²R into Leibniz contributions
 
-Changed `examples/15_perturbation_spectrum_crosscheck.jl` line 49: `1//4` → `1//8`.
-The standard √g expansion to second order has (1/8)(tr h)², not (1/4).
-
-### 3. Deep diagnosis: identified real root cause
-
-**The bug is NOT in collect_terms or canonicalize.** Verified by:
-- `spin_project` correctly handles shared dummies between h factors (confirmed with FP kernel: exact 2.5k², 0, -k², 0)
-- `_standardize_h_indices` properly lowers mixed-position indices
-- `normalize_field_positions` correctly lowers all h to Down position
-
-**The actual bug: the perturbation engine produces wrong δ²R on flat background.**
-
-## Root Cause: Wrong δ²R Coefficients
-
-### Evidence
+On flat background (curved=false, Ric vanishing), at k²=1:
 
 ```
-δ²R alone (flat):     spin-2=6.25,  spin-0s=0.5    (at k²=1)
-√g correction (flat): spin-2=0.0,   spin-0s=-1.5
-Sum:                  spin-2=6.25,  spin-0s=-1.0
-FP kernel:            spin-2=2.5,   spin-0s=-1.0   ← correct
+δ²R = η^{ab}δ²Ric_{ab} + (-h^{ab})δ¹Ric_{ab}
+
+Contribution breakdown (spin-2 projections at k²=1):
+  (-h^{ab})δ¹Ric_{ab}  spin-2 = 2.5   ← CORRECT (matches FP alone!)
+  η^{ab}δ²Ric_{ab}     spin-2 = 3.75  ← WRONG (should be 0)
+  Total δ²R             spin-2 = 6.25  ← WRONG (should be 2.5)
+
+Further decomposition of η^{ab}δ²Ric_{ab}:
+  ∂[Γ₂] terms           spin-2 = 2.5   (A-coeff = 1/2)
+  Γ₁×Γ₁ terms           spin-2 = 1.25  (A-coeff = 1/4)
+  Total                  spin-2 = 3.75  (A-coeff = 3/4, should be 0)
 ```
 
-- **spin-0s is correct**: 0.5 + (-1.5) = -1.0 ✓
-- **spin-2 is 2.5× too large**: 6.25 instead of 2.5
+### 3. Full kernel comparison (δ²R vs FP)
 
-The √g correction contributes 0 to spin-2 (it only has trace-type structures).
-So δ²R alone should give spin-2 = 2.5, but gives 6.25.
+```
+Type     δ²R     FP      Ratio    Correct δ²R*
+A (k²hh) 5/4    1/2     5/2      1/2
+B (kkhh) -5/2   -1      5/2      -1
+C (kkhtr) 3/2    1      3/2      1/2
+D (k²tr²) -1/4  -1/2    1/2     0
 
-### Specific coefficient error
+* Correct δ²R = L_FP - (1/2)h·δR (on flat, √g correction)
+  On TT modes: correct δ²R = L_FP (since δR=0 on TT)
+```
 
-The Fourier-transformed δ²R has 8 terms. The h^{ab}h_{ab}k² term (A-type)
-has coefficient **5/4**, but it should contribute to give total spin-2 = 2.5.
+### 4. TT-mode analysis proves engine bug
 
-The spin-2 projection of the A-type structure gives: Tr(P²) × coeff × k² = 5 × coeff × k².
-With coeff=5/4: 5 × 5/4 = 25/4 = 6.25. All other terms (B,C,D-type) project to 0
-for spin-2. So the A-type coefficient is the sole source of error.
+On transverse-traceless (TT) perturbations:
+- δR = 0 (linearized Ricci scalar vanishes on TT)
+- √g correction = 0 (involves traces)
+- Therefore: Q = δ²R on TT = L_FP on TT = (1/2)k²|h|²
+- But code gives: δ²R on TT = (5/4)k²|h|² (WRONG, 5/2× too large)
 
-Expected: 5 × coeff = 2.5 → coeff = 1/2. Got: 5/4.
+## Root Cause Analysis
 
-### Where to investigate
+The bug is in the **second-order Ricci tensor** δ²Ric_{ab}. When traced with η^{ab}, it gives nonzero spin-2 projection (3.75) when mathematically it must give zero (because all spin-2 content of δ²R comes from the cross term).
 
-The excess 3/4 in the A-type coefficient comes from δ²R itself. Possible causes:
+### Manual calculation vs code for η^{ab}δ²Ric (TT modes)
 
-1. **δricci_scalar convention**: Does `δricci_scalar(mp, 2)` return d²R/dε² or
-   (1/2)d²R/dε²? The crosscheck formula may assume one convention while the
-   engine uses another.
+Manual calculation of A-type coefficients on TT:
+- Step 1: η^{ab}∂_c[Γ^c_{ba}]₂ → A-type = 0 (all terms involve ∂^α h_{fα}=0)
+- Step 2: -η^{ab}∂_b[Γ^c_{ca}]₂ → A-type = 1 (two contributions of 1/2 each)
+- Step 3: Γ₁²  → A-type = 1/4 (three terms: -1/4, +1/4, +1/4)
+- Manual total: 5/4
 
-2. **Inverse metric perturbation**: δ²R involves δ(g^{-1}) terms. If the
-   expansion of g^{ab} to second order has wrong coefficients, it would
-   propagate into δ²R.
+Code gives: 3/4 for η^{ab}δ²Ric A-type.
+Manual gives: 5/4.
+Correct answer: 0.
 
-3. **Term cancellation failure**: The 22-term position-space δ²R may contain
-   terms that should cancel but don't due to a simplification issue (not in
-   collect_terms, but perhaps in contract_curvature or expand_products).
+Both disagree! This suggests:
+1. The code's simplification pipeline loses some terms (giving 3/4 instead of 5/4)
+2. There should be additional cancellations not captured (bringing 5/4 down to 0)
 
-## Recommended Next Session: Deep Research Plan
+### Likely suspects
 
-### Phase 1: Isolate the δ²R discrepancy (use parallel subagents)
+**Hypothesis A: The simplification pipeline fails to cancel terms in δ²Ric.**
+The 20-term δ²Ric_{ab} may have terms that should cancel but don't, due to:
+- `canonicalize` not detecting equivalent terms with different dummy arrangements
+- `contract_metrics` missing contractions in nested derivative products
+- `expand_products` not fully distributing derivatives through products
 
-**Subagent A**: Read `src/perturbation/expand.jl` and `src/perturbation/linearize.jl`.
-Document the exact convention: does `expand_perturbation(R, mp, n)` return
-dⁿR/dεⁿ or (1/n!)dⁿR/dεⁿ? Check the docstrings and the base cases (n=0,1).
+**Hypothesis B: The Leibniz expansion of ∂_c(h^{cf} × ∂h) in δ²Christoffel is incorrect.**
+When δriemann wraps δ²Christoffel in a TDeriv, the outer derivative must distribute through the product. If `expand_derivatives` doesn't fully distribute, terms are missing.
 
-**Subagent B**: Read `src/perturbation/metric_perturbation.jl`. Check how
-δ(g^{ab}) is computed at order 2. The standard formula is:
-δ²(g^{ab}) = 2h^{ac}h^b_c (convention-dependent). Verify the coefficient.
+**Hypothesis C: Index clash or dummy collision in δ²Riemann.**
+The `fresh_index` / `ensure_no_dummy_clash` logic might be incorrect for the deeply nested expressions in δ²Riemann, leading to terms being dropped or miscombined.
 
-**Subagent C**: Compute δ²R by hand for a minimal case. Take h_{ab} = εδ_{a0}δ_{b0}
-on flat 4D background. Compute R(ε) analytically to second order. Compare with
-what `expand_perturbation` gives for this specific perturbation.
+## Recommended Next Session: Focused Bug Hunt
 
-**Subagent D**: Check if the crosscheck formula in example 15 has the right
-overall factor. The formula Q = δ²L + √g_correction should be
-Q = (1/2)(d²/dε²)(√g L)|_{ε=0} if the action is S = (1/2)∫h K h.
-Verify whether example 15 accounts for this 1/2 correctly.
+### Phase 1: Check expand_derivatives on δ²Christoffel (30 min)
 
-### Phase 2: Fix and verify
+```julia
+# Compute ∂_c[Γ₂] and check if expand_derivatives distributes correctly
+δ2Γ = δchristoffel(mp, up(:c), down(:b), down(:a), 2)
+wrapped = TDeriv(down(:c), δ2Γ, :partial)
+expanded = expand_derivatives(wrapped)
+# Count terms: should have (∂h)(∂h) AND h(∂²h) terms
+# If only h(∂²h), the Leibniz distribution is buggy
+```
 
-Once the convention mismatch is identified:
-1. Fix either the perturbation engine or the example 15 formula
-2. Re-run example 15 → FP check should pass
-3. Run full test suite
-4. Close TGR-dp3 (with corrected description) and TGR-76k
+### Phase 2: Numeric verification (30 min)
+
+Compute R(ε) = R[η + ε h] using the COMPONENT engine (CTensor) for a specific TT polarization, extract ε² coefficient, compare with the abstract engine's δ²R.
+
+```julia
+# Use symbolic_ricci_scalar with g = η + ε*h for specific h_{12}=h_{21}=ε
+# Extract coefficient of ε² → this is [R]₂ numerically
+# Compare with abstract δ²R evaluated on same h
+```
+
+### Phase 3: Fix and verify
+
+Once the specific bug is found:
+1. Fix the engine (likely in expand_derivatives, canonicalize, or contract_metrics)
+2. Re-run the diagnostic: δ²R spin-2 should give 2.5
+3. Run example 15: FP check should pass
+4. Run full test suite
+5. Close TGR-dp3
 
 ## Key Files
 
 | File | Role |
 |------|------|
-| `src/perturbation/expand.jl` | `expand_perturbation`, `_expand_pert` — convention lives here |
-| `src/perturbation/linearize.jl` | `δricci_scalar` — delegates to expand_perturbation |
-| `src/perturbation/metric_perturbation.jl` | `MetricPerturbation`, inverse metric expansion |
-| `src/algebra/canonicalize.jl:434` | `normalize_field_positions` — NEW, works, may be useful later |
-| `src/action/kernel_extraction.jl:302` | `build_FP_momentum_kernel` — CORRECT reference |
-| `examples/15_perturbation_spectrum_crosscheck.jl` | crosscheck pipeline — may need factor fix |
+| `src/perturbation/expand.jl:60-157` | `δchristoffel` — builds [Γ]₂ as product h^{cf}×(∂h bracket) |
+| `src/perturbation/expand.jl:177-261` | `δriemann` — wraps [Γ]₂ in TDeriv, adds Γ₁² |
+| `src/perturbation/expand.jl:278-298` | `δricci` — traces Riemann |
+| `src/perturbation/expand.jl:312-359` | `δricci_scalar` — Leibniz over (g^{ab}, Ric) |
+| `src/algebra/simplify.jl` | `simplify` pipeline (expand_products, canonicalize, etc.) |
+| `src/algebra/derivatives.jl` | `expand_derivatives` — distributes ∂ through products |
+| `src/action/kernel_extraction.jl:302-308` | `build_FP_momentum_kernel` — reference (VERIFIED CORRECT) |
+| `examples/15_perturbation_spectrum_crosscheck.jl` | crosscheck pipeline |
 
-## Changes Made This Session
-
-| File | Change |
-|------|--------|
-| `src/algebra/canonicalize.jl` | Added `normalize_field_positions` (metric-insertion approach) |
-| `src/TensorGR.jl` | Exported `normalize_field_positions` |
-| `examples/15_perturbation_spectrum_crosscheck.jl` | Fixed √g coeff 1/4→1/8, added normalize call |
-
-## Key Diagnostic Commands (copy-paste ready)
+## Key Diagnostic Commands
 
 ```julia
-# Quick reproducer: compare δ²R spin-2 with FP
+# Quick reproducer: decompose δ²R
 using TensorGR
 reg = TensorRegistry()
 with_registry(reg) do
@@ -135,16 +146,31 @@ with_registry(reg) do
     mp = define_metric_perturbation!(reg, :g, :h; curved=false)
     set_vanishing!(reg, :Ric)
 
-    δ2R = simplify(δricci_scalar(mp, 2); registry=reg, maxiter=200)
-    Qf = to_fourier(δ2R)
-    Qf = simplify(Qf; registry=reg)
-    Qf = fix_dummy_positions(Qf)
-    K = extract_kernel(Qf, :h; registry=reg)
-    s2 = _eval_spin_scalar(spin_project(K, :spin2; registry=reg), 1.0)
-    println("δ²R spin-2 = $s2 (should be 2.5 if convention matches FP)")
+    # Cross term alone = correct FP!
+    δ1Ric = simplify(δricci(mp, down(:a), down(:b), 1); registry=reg, maxiter=200)
+    cross = tproduct(-1//1, TensorExpr[Tensor(:h, [up(:c), up(:d)]),
+            simplify(δricci(mp, down(:c), down(:d), 1); registry=reg, maxiter=200)])
+    cross = simplify(cross; registry=reg, maxiter=200)
+    Cf = to_fourier(cross)
+    Cf = simplify(Cf; registry=reg)
+    Cf = fix_dummy_positions(Cf)
+    KC = extract_kernel(Cf, :h; registry=reg)
+    println("Cross term spin-2 = $(_eval_spin_scalar(spin_project(KC, :spin2; registry=reg), 1.0))")
+    # Should print 2.5 (CORRECT)
 
-    K_FP = build_FP_momentum_kernel(reg)
-    s2_FP = _eval_spin_scalar(spin_project(K_FP, :spin2; registry=reg), 1.0)
-    println("FP spin-2  = $s2_FP (reference)")
+    # η^{ab}δ²Ric is the buggy part
+    δ2Ric = simplify(δricci(mp, down(:a), down(:b), 2); registry=reg, maxiter=200)
+    traced = Tensor(:g, [up(:a), up(:b)]) * δ2Ric
+    traced = simplify(traced; registry=reg, maxiter=200)
+    Tf = to_fourier(traced)
+    Tf = simplify(Tf; registry=reg)
+    Tf = fix_dummy_positions(Tf)
+    KT = extract_kernel(Tf, :h; registry=reg)
+    println("η^{ab}δ²Ric spin-2 = $(_eval_spin_scalar(spin_project(KT, :spin2; registry=reg), 1.0))")
+    # Prints 3.75, should be 0.0
 end
 ```
+
+## Changes Made This Session
+
+None. Pure research/diagnosis session.
