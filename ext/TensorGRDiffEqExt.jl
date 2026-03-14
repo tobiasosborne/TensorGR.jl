@@ -62,4 +62,67 @@ function TensorGR.integrate_geodesic(geod::TensorGR.GeodesicEquation,
     TensorGR.GeodesicSolution(t_vals, x_vals, v_vals, retcode, sol)
 end
 
+"""
+    solve_tov(tov::TOVSystem, r_max::Real; solver=Tsit5(), kwargs...)
+
+Integrate the TOV equations from the center outward until the pressure drops
+to zero (stellar surface) or `r_max` is reached.
+
+Returns a [`TensorGR.TOVSolution`](@ref).
+"""
+function TensorGR.solve_tov(tov::TensorGR.TOVSystem, r_max::Real;
+                             solver=Tsit5(), kwargs...)
+    # ContinuousCallback: stop when pressure <= 0
+    condition(u, r, integrator) = u[2]  # pressure
+    affect!(integrator) = terminate!(integrator)
+    cb = ContinuousCallback(condition, affect!)
+
+    # Build ODE problem
+    tspan = (tov.r0, Float64(r_max))
+    prob = ODEProblem(TensorGR.tov_rhs!, tov.u0, tspan, tov)
+
+    # Merge user callbacks with surface callback
+    solve_kwargs = Dict{Symbol,Any}(kwargs...)
+    if haskey(solve_kwargs, :callback)
+        solve_kwargs[:callback] = CallbackSet(cb, solve_kwargs[:callback])
+    else
+        solve_kwargs[:callback] = cb
+    end
+
+    sol = solve(prob, solver; solve_kwargs...)
+
+    # Extract profiles
+    r_vals = sol.t
+    m_vals = [sol.u[i][1] for i in eachindex(sol.u)]
+    p_vals = [sol.u[i][2] for i in eachindex(sol.u)]
+    rho_vals = [TensorGR._density_from_pressure(tov.eos, pv) for pv in p_vals]
+
+    r_surface = r_vals[end]
+    M_total = m_vals[end]
+
+    TensorGR.TOVSolution(r_surface, M_total, r_vals, m_vals, p_vals, rho_vals, sol)
+end
+
+"""
+    mass_radius_curve(eos::EquationOfState, rho_c_range; r_max=50.0, kwargs...)
+
+Compute a mass-radius curve by solving the TOV equations for each central
+density in `rho_c_range`.
+
+Returns a named tuple `(R=..., M=...)` of vectors.
+"""
+function TensorGR.mass_radius_curve(eos::TensorGR.EquationOfState,
+                                     rho_c_range::AbstractVector;
+                                     r_max=50.0, kwargs...)
+    R_vals = Float64[]
+    M_vals = Float64[]
+    for rho_c in rho_c_range
+        tov = TensorGR.setup_tov(eos, rho_c)
+        sol = TensorGR.solve_tov(tov, r_max; kwargs...)
+        push!(R_vals, sol.r_surface)
+        push!(M_vals, sol.M_total)
+    end
+    (R=R_vals, M=M_vals)
+end
+
 end # module

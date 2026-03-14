@@ -14,6 +14,26 @@ into spin sectors:
   T^(ws)    transfer operator (0-w → 0-s)
 
 Reference: Barnes & Rivers (1963); PSALTer (Barker+ 2024)
+
+## Usage on maximally symmetric spaces (dS/AdS)
+
+On a maximally symmetric space (MSS) with R_{μν} = Λg_{μν}, the flat
+Barnes-Rivers projectors are algebraically correct (they still form a
+complete, orthogonal, idempotent basis for symmetric rank-2 tensors).
+However, spin_project(K, :spin2) gives the FULL kinetic operator trace
+including the Lichnerowicz mass term, not just the kinetic form factor.
+
+For the Einstein-Hilbert action on MSS:
+  Tr(K_EH · P²_flat) = (5/2)(k² − 2Λ)     [full operator including mass]
+  bc_to_form_factors(bc_EH(κ,Λ)) = (5/2)κk²  [kinetic form factor only]
+
+The discrepancy of −5Λ is the spin-2 Lichnerowicz mass on MSS, which is
+physical but should be separated from the kinetic form factor for spectrum
+analysis (propagator poles, ghost conditions, unitarity bounds).
+
+Use `spin_project_mss` (in kernel_extraction.jl) to automatically extract
+the kinetic form factor by subtracting the k²-independent mass term.
+This matches the Bueno-Cano convention (arXiv:1607.06463).
 =#
 
 """

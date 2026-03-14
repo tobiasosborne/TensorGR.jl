@@ -192,3 +192,52 @@ function tov_rhs!(du, u, p::TOVSystem, r)
 
     nothing
 end
+
+# ---------------------------------------------------------------------------
+# TOVSolution  --  result of integrating the TOV system
+# ---------------------------------------------------------------------------
+
+"""
+    TOVSolution
+
+Result of integrating the TOV equations to find the stellar structure.
+
+# Fields
+- `r_surface::Float64` -- areal radius at the stellar surface (where p→0).
+- `M_total::Float64` -- total gravitational mass M(R).
+- `r::Vector{Float64}` -- radial coordinate values along the profile.
+- `m::Vector{Float64}` -- enclosed mass m(r).
+- `p::Vector{Float64}` -- pressure p(r).
+- `rho::Vector{Float64}` -- energy density rho(r).
+- `raw::Any` -- raw ODE solution from DifferentialEquations.jl.
+"""
+struct TOVSolution
+    r_surface::Float64
+    M_total::Float64
+    r::Vector{Float64}
+    m::Vector{Float64}
+    p::Vector{Float64}
+    rho::Vector{Float64}
+    raw::Any
+end
+
+"""
+    solve_tov(tov::TOVSystem, r_max::Real; solver=Tsit5(), kwargs...)
+
+Integrate the TOV equations from the center outward until the pressure drops
+to zero (stellar surface) or `r_max` is reached.  Requires
+DifferentialEquations.jl.
+
+Returns a [`TOVSolution`](@ref).
+"""
+function solve_tov end
+
+"""
+    mass_radius_curve(eos::EquationOfState, rho_c_range; r_max=50.0, kwargs...)
+
+Compute a mass-radius curve by solving the TOV equations for each central
+density in `rho_c_range`.  Requires DifferentialEquations.jl.
+
+Returns a named tuple `(R=..., M=...)` of vectors.
+"""
+function mass_radius_curve end

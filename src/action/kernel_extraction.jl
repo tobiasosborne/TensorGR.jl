@@ -1040,3 +1040,264 @@ function flat_6deriv_spin_projections(reg; κ=1//1, α₁=0//1, α₂=0//1, β�
         (spin2 = s2, spin1 = s1, spin0s = s0s, spin0w = s0w)
     end
 end
+
+# ─── MSS-corrected spin projection ──────────────────────────────────
+# On a maximally symmetric space (MSS) with R_{μν} = Λ g_{μν}, the flat
+# Barnes-Rivers spin projection Tr(K·P^J) gives the FULL kinetic operator
+# including a k²-independent Lichnerowicz mass term.  The Bueno-Cano
+# form factor convention (arXiv:1607.06463) reports only the k²-dependent
+# part (the kinetic form factor), which determines the propagator poles
+# and residues.
+#
+# spin_project_mss extracts the kinetic form factor by evaluating the flat
+# projection at several k² points and fitting a polynomial, then discarding
+# the constant (mass) term.  This is equivalent to using dS-adapted
+# Barnes-Rivers projectors that account for the Lichnerowicz eigenvalue
+# shifts on MSS, but avoids the complexities of modifying the algebraic
+# projector structures.
+#
+# Key identity exploited:
+#   Tr(K_MSS · P^J_flat) = mass_J(Λ) + f_J(k²)
+# where mass_J is k²-independent (Lichnerowicz mass for spin-J on MSS)
+# and f_J is the kinetic form factor matching bc_to_form_factors.
+
+"""
+    _subst_lambda_val(expr::TensorExpr, Λ_val::Real) -> TensorExpr
+
+Substitute `Tensor(:Λ, [])` with `TScalar(Λ_val)` throughout the expression.
+Used to evaluate symbolic MSS spin projections at a numeric Λ value.
+"""
+_subst_lambda_val(s::TScalar, Λ_val::Real) = s
+function _subst_lambda_val(t::Tensor, Λ_val::Real)
+    t.name == :Λ && isempty(t.indices) && return TScalar(Λ_val)
+    t
+end
+function _subst_lambda_val(p::TProduct, Λ_val::Real)
+    tproduct(p.scalar, TensorExpr[_subst_lambda_val(f, Λ_val) for f in p.factors])
+end
+function _subst_lambda_val(s::TSum, Λ_val::Real)
+    tsum(TensorExpr[_subst_lambda_val(t, Λ_val) for t in s.terms])
+end
+function _subst_lambda_val(d::TDeriv, Λ_val::Real)
+    TDeriv(d.index, _subst_lambda_val(d.arg, Λ_val), d.covd)
+end
+
+"""
+    spin_project_mss(K::KineticKernel, spin::Symbol;
+                     cosmological_constant::Real,
+                     k2_eval::Real=1.0,
+                     form_factor_order::Int=2,
+                     dim::Int=4, metric::Symbol=:g,
+                     k_name::Symbol=:k, k_sq=:k²,
+                     lambda_symbol::Symbol=:Λ,
+                     registry=current_registry()) -> Float64
+
+MSS-corrected spin projection for maximally symmetric backgrounds.
+
+On a maximally symmetric space (R_{μν} = Λg_{μν}), the flat Barnes-Rivers
+projection `Tr(K·P^J)` gives the full kinetic operator including a
+k²-independent Lichnerowicz mass term.  This function extracts the kinetic
+form factor by subtracting that mass term, matching the Bueno-Cano
+convention (arXiv:1607.06463).
+
+The extraction works by evaluating the flat projection at multiple k² points,
+fitting a polynomial of degree `form_factor_order`, and returning only the
+k²-dependent part.
+
+# Arguments
+- `K`: kinetic kernel (from `extract_kernel` or `extract_kernel_direct`)
+- `spin`: one of `:spin2`, `:spin1`, `:spin0s`, `:spin0w`
+- `cosmological_constant`: numeric Λ value in R_{μν} = Λg_{μν}
+- `k2_eval`: k² value at which to evaluate the form factor (default 1.0)
+- `form_factor_order`: polynomial degree to extract (1 for 2-derivative
+  theories, 2 for 4-derivative, 3 for 6-derivative; default 2)
+- `lambda_symbol`: name of the symbolic Λ tensor in the kernel (default `:Λ`)
+
+# Returns
+The kinetic form factor evaluated at `k2_eval`, with the mass term removed.
+
+# Ground truth
+For pure EH with κ=1 on MSS, `bc_to_form_factors` predicts:
+- spin-2: f₂ = (5/2)k² (Λ-independent)
+- spin-0s: f₀ = -k² (Λ-independent)
+Flat `spin_project` gives `(5/2)k² - 5Λ` for spin-2 (wrong mass term).
+`spin_project_mss` correctly returns `(5/2)k²`.
+
+# Example
+```julia
+bc = bc_EH(1.0, 0.1)
+ff = bc_to_form_factors(bc, 1.0, 0.1)
+f2 = spin_project_mss(K_dS, :spin2; cosmological_constant=0.1, k2_eval=1.0)
+@test isapprox(f2, ff.f_spin2; atol=1e-8)
+```
+"""
+function spin_project_mss(K::KineticKernel, spin::Symbol;
+                          cosmological_constant::Real,
+                          k2_eval::Real=1.0,
+                          form_factor_order::Int=2,
+                          dim::Int=4, metric::Symbol=:g,
+                          k_name::Symbol=:k, k_sq=:k²,
+                          lambda_symbol::Symbol=:Λ,
+                          registry=current_registry())
+    # Compute flat Barnes-Rivers projection (symbolic in k² and possibly Λ)
+    result = spin_project(K, spin; dim, metric, k_name, k_sq, registry)
+
+    # Substitute numeric Λ value if expression contains symbolic Λ tensors
+    Λ_val = Float64(cosmological_constant)
+    if Λ_val != 0.0
+        result = _subst_lambda_val(result, Λ_val)
+    end
+
+    # Shortcut: if Λ=0, just evaluate directly (no mass term to subtract)
+    if cosmological_constant == 0
+        return _eval_spin_scalar(result, Float64(k2_eval))
+    end
+
+    # Evaluate at (order+1) distinct k² points to fit polynomial
+    n = form_factor_order + 1
+    # Use well-separated points to ensure numerical stability
+    k2_pts = Float64[Float64(i) for i in 1:n]
+    f_vals = Float64[_eval_spin_scalar(result, kv) for kv in k2_pts]
+
+    # Extract polynomial coefficients via analytic Vandermonde inversion.
+    # f(x) = c₀ + c₁x + c₂x² + ... where x = k²
+    # The mass term is c₀; the kinetic form factor is c₁x + c₂x² + ...
+    coeffs = _vandermonde_solve(k2_pts, f_vals)
+
+    # Return form factor (kinetic part only, no mass term c₀)
+    kv = Float64(k2_eval)
+    sum(coeffs[j+1] * kv^j for j in 1:form_factor_order)
+end
+
+"""
+    _vandermonde_solve(x::Vector{Float64}, y::Vector{Float64}) -> Vector{Float64}
+
+Solve the Vandermonde system V·c = y for polynomial coefficients c, where
+V_{ij} = x_i^{j-1}.  Uses analytic formulas for n <= 4 and Gaussian
+elimination for larger systems.
+"""
+function _vandermonde_solve(x::Vector{Float64}, y::Vector{Float64})
+    n = length(x)
+    @assert length(y) == n
+
+    if n == 2
+        # f(x) = c₀ + c₁x
+        c1 = (y[2] - y[1]) / (x[2] - x[1])
+        c0 = y[1] - c1 * x[1]
+        return [c0, c1]
+    elseif n == 3
+        # f(x) = c₀ + c₁x + c₂x²
+        # Using points x₁, x₂, x₃:
+        x1, x2, x3 = x
+        y1, y2, y3 = y
+        d12 = x1 - x2; d13 = x1 - x3; d23 = x2 - x3
+        c2 = (y1 / (d12 * d13) - y2 / (d12 * d23) + y3 / (d13 * d23))
+        c1 = (y2 - y1) / (x2 - x1) - c2 * (x1 + x2)
+        c0 = y1 - c1 * x1 - c2 * x1^2
+        return [c0, c1, c2]
+    elseif n == 4
+        # f(x) = c₀ + c₁x + c₂x² + c₃x³ -- Lagrange interpolation
+        c = zeros(4)
+        for i in 1:4
+            # Lagrange basis polynomial L_i evaluated at coefficients
+            li = y[i]
+            for j in 1:4
+                j == i && continue
+                li /= (x[i] - x[j])
+            end
+            # Expand L_i(t) = li * prod_{j≠i}(t - x_j) into polynomial coefficients
+            poly = [1.0]  # start with constant 1
+            for j in 1:4
+                j == i && continue
+                # Multiply poly by (t - x_j)
+                new_poly = zeros(length(poly) + 1)
+                for k in eachindex(poly)
+                    new_poly[k+1] += poly[k]        # t * poly[k]
+                    new_poly[k]   -= x[j] * poly[k] # -x_j * poly[k]
+                end
+                poly = new_poly
+            end
+            for k in 1:4
+                c[k] += li * poly[k]
+            end
+        end
+        return c
+    else
+        # General case: Gaussian elimination on Vandermonde matrix
+        V = zeros(n, n)
+        for i in 1:n, j in 1:n
+            V[i, j] = x[i]^(j - 1)
+        end
+        # Simple pivoted Gaussian elimination
+        A = hcat(V, reshape(copy(y), n, 1))
+        for col in 1:n
+            # Partial pivoting
+            max_row = col
+            for row in (col+1):n
+                if abs(A[row, col]) > abs(A[max_row, col])
+                    max_row = row
+                end
+            end
+            if max_row != col
+                A[col, :], A[max_row, :] = A[max_row, :], A[col, :]
+            end
+            # Elimination
+            for row in (col+1):n
+                factor = A[row, col] / A[col, col]
+                A[row, :] .-= factor .* A[col, :]
+            end
+        end
+        # Back-substitution
+        c = zeros(n)
+        for i in n:-1:1
+            c[i] = A[i, n+1]
+            for j in (i+1):n
+                c[i] -= A[i, j] * c[j]
+            end
+            c[i] /= A[i, i]
+        end
+        return c
+    end
+end
+
+"""
+    mss_form_factors(K::KineticKernel;
+                     cosmological_constant::Real,
+                     k2_eval::Real=1.0,
+                     form_factor_order::Int=2,
+                     dim::Int=4, metric::Symbol=:g,
+                     k_name::Symbol=:k, k_sq=:k²,
+                     lambda_symbol::Symbol=:Λ,
+                     registry=current_registry()) -> NamedTuple
+
+Compute all spin-sector form factors on a maximally symmetric background.
+
+Returns a NamedTuple with `f_spin2`, `f_spin1`, `f_spin0s`, `f_spin0w`
+evaluated at `k2_eval`, with Lichnerowicz mass terms removed.
+
+This is the MSS analog of `flat_6deriv_spin_projections`, returning numeric
+values (at a given k²) instead of symbolic expressions.
+
+# Example
+```julia
+ff = mss_form_factors(K_dS; cosmological_constant=0.1, k2_eval=1.0, registry=reg)
+bc = bc_to_form_factors(bc_EH(1.0, 0.1), 1.0, 0.1)
+@test isapprox(ff.f_spin2, bc.f_spin2; atol=1e-8)
+```
+"""
+function mss_form_factors(K::KineticKernel;
+                          cosmological_constant::Real,
+                          k2_eval::Real=1.0,
+                          form_factor_order::Int=2,
+                          dim::Int=4, metric::Symbol=:g,
+                          k_name::Symbol=:k, k_sq=:k²,
+                          lambda_symbol::Symbol=:Λ,
+                          registry=current_registry())
+    kw = (; cosmological_constant, k2_eval, form_factor_order,
+            dim, metric, k_name, k_sq, lambda_symbol, registry)
+    f2  = spin_project_mss(K, :spin2;  kw...)
+    f1  = spin_project_mss(K, :spin1;  kw...)
+    f0s = spin_project_mss(K, :spin0s; kw...)
+    f0w = spin_project_mss(K, :spin0w; kw...)
+    (f_spin2=f2, f_spin1=f1, f_spin0s=f0s, f_spin0w=f0w)
+end

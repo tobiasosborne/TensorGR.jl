@@ -86,4 +86,8 @@ using TensorGR
     include("test_eos.jl")
     # Submanifold & boundary tests (GHY, Gauss-Codazzi, ibp_with_boundary)
     include("test_submanifold_boundary.jl")
+    # TOV solver
+    include("test_tov.jl")
+    # dS-adapted spin projectors (MSS form factors)
+    include("test_ds_spin_projectors.jl")
 end

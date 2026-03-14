@@ -314,7 +314,7 @@ export Worldline, define_worldline!, pn_order, truncate_pn
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic
 
 # Exports: TOV solver
-export TOVSystem, setup_tov, tov_rhs!
+export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
