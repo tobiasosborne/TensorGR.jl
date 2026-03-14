@@ -86,7 +86,7 @@ end
     israel_equation(K_plus, K_minus, induced_metric;
                     dim=4, idx_a=down(:a), idx_b=down(:b)) -> TensorExpr
 
-Return the Israel junction condition as a tensor equation (LHS - RHS = 0):
+Return the Israel junction condition as a tensor equation (LHS = 0):
 
     [K_{ab}] - gamma_{ab} [K] + 8 pi S_{ab} = 0
 
@@ -106,7 +106,6 @@ Arguments:
 # Example
 ```julia
 eq = israel_equation(:Kp, :Km, :gamma_jc)
-# Returns: Kp_{ab} - Km_{ab} - gamma_jc_{ab} gamma_jc^{cd}(Kp_{cd} - Km_{cd}) + 8pi S_{ab}
 ```
 """
 function israel_equation(K_plus::Symbol, K_minus::Symbol,
@@ -117,22 +116,22 @@ function israel_equation(K_plus::Symbol, K_minus::Symbol,
     c = fresh_index(used); push!(used, c)
     d = fresh_index(used)
 
-    # Jump: [K_{ab}] = K+_{ab} - K-_{ab}
-    jump_ab = Tensor(K_plus, [idx_a, idx_b]) - Tensor(K_minus, [idx_a, idx_b])
-
-    # Trace of jump: [K] = gamma^{cd} [K_{cd}]
-    jump_trace = tproduct(1 // 1, TensorExpr[
-        Tensor(induced_metric, [up(c), up(d)]),
-        Tensor(K_plus, [down(c), down(d)]) - Tensor(K_minus, [down(c), down(d)])
-    ])
-
-    # Israel equation: [K_{ab}] - gamma_{ab}[K] + 8pi S_{ab} = 0
     gamma_ab = Tensor(induced_metric, [idx_a, idx_b])
+    gamma_up = Tensor(induced_metric, [up(c), up(d)])
     S_ab = Tensor(:S, [idx_a, idx_b])
 
+    # Build expanded form:
+    #   K+_{ab} - K-_{ab}
+    #   - gamma_{ab} gamma^{cd} K+_{cd}
+    #   + gamma_{ab} gamma^{cd} K-_{cd}
+    #   + 8 pi S_{ab}
     tsum(TensorExpr[
-        jump_ab,
-        tproduct(-1 // 1, TensorExpr[gamma_ab, jump_trace]),
+        Tensor(K_plus, [idx_a, idx_b]),
+        tproduct(-1 // 1, TensorExpr[Tensor(K_minus, [idx_a, idx_b])]),
+        tproduct(-1 // 1, TensorExpr[gamma_ab, gamma_up,
+                                      Tensor(K_plus, [down(c), down(d)])]),
+        tproduct(1 // 1, TensorExpr[gamma_ab, gamma_up,
+                                     Tensor(K_minus, [down(c), down(d)])]),
         tproduct(8 // 1, TensorExpr[TScalar(:pi), S_ab])
     ])
 end
@@ -156,7 +155,6 @@ Arguments:
 # Example
 ```julia
 S_expr = junction_stress_energy(:Kp, :Km, :gamma_jc)
-# Returns: -(1/8pi) (Kp_{ab} - Km_{ab} - gamma_jc_{ab} gamma_jc^{cd}(Kp_{cd} - Km_{cd}))
 ```
 """
 function junction_stress_energy(K_plus::Symbol, K_minus::Symbol,
@@ -167,20 +165,25 @@ function junction_stress_energy(K_plus::Symbol, K_minus::Symbol,
     c = fresh_index(used); push!(used, c)
     d = fresh_index(used)
 
-    # Jump: [K_{ab}] = K+_{ab} - K-_{ab}
-    jump_ab = Tensor(K_plus, [idx_a, idx_b]) - Tensor(K_minus, [idx_a, idx_b])
-
-    # Trace of jump: [K] = gamma^{cd} [K_{cd}]
-    jump_trace = tproduct(1 // 1, TensorExpr[
-        Tensor(induced_metric, [up(c), up(d)]),
-        Tensor(K_plus, [down(c), down(d)]) - Tensor(K_minus, [down(c), down(d)])
-    ])
+    gamma_ab = Tensor(induced_metric, [idx_a, idx_b])
+    gamma_up = Tensor(induced_metric, [up(c), up(d)])
 
     # S_{ab} = -(1/8pi) ([K_{ab}] - gamma_{ab} [K])
-    gamma_ab = Tensor(induced_metric, [idx_a, idx_b])
-
+    # Expanded:
+    #   -(1/8pi) K+_{ab} + (1/8pi) K-_{ab}
+    #   + (1/8pi) gamma_{ab} gamma^{cd} K+_{cd}
+    #   - (1/8pi) gamma_{ab} gamma^{cd} K-_{cd}
+    #
+    # We represent 1/pi as the scalar symbol :inv_pi so the expression
+    # stays rational in coefficients.
     tsum(TensorExpr[
-        tproduct(-1 // 8, TensorExpr[TScalar(:inv_pi), jump_ab]),
-        tproduct(1 // 8, TensorExpr[TScalar(:inv_pi), gamma_ab, jump_trace])
+        tproduct(-1 // 8, TensorExpr[TScalar(:inv_pi),
+                                      Tensor(K_plus, [idx_a, idx_b])]),
+        tproduct(1 // 8, TensorExpr[TScalar(:inv_pi),
+                                     Tensor(K_minus, [idx_a, idx_b])]),
+        tproduct(1 // 8, TensorExpr[TScalar(:inv_pi), gamma_ab, gamma_up,
+                                     Tensor(K_plus, [down(c), down(d)])]),
+        tproduct(-1 // 8, TensorExpr[TScalar(:inv_pi), gamma_ab, gamma_up,
+                                      Tensor(K_minus, [down(c), down(d)])])
     ])
 end
