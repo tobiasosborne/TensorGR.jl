@@ -296,7 +296,7 @@ export @manifold, @define_tensor, @covd
 export Worldline, define_worldline!, pn_order, truncate_pn
 
 # Exports: Geodesics
-export GeodesicEquation, setup_geodesic, geodesic_rhs!
+export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

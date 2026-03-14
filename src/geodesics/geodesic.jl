@@ -146,3 +146,60 @@ function geodesic_rhs!(du, u, p::GeodesicEquation, tau)
 
     nothing
 end
+
+"""
+    GeodesicSolution
+
+Result of integrating a geodesic equation via `integrate_geodesic`.
+
+# Fields
+- `t::Vector{Float64}` -- proper time (or affine parameter) values.
+- `x::Vector{Vector{Float64}}` -- positions x^mu at each time step.
+- `v::Vector{Vector{Float64}}` -- velocities dx^mu/dtau at each time step.
+- `retcode::Symbol` -- return code from the ODE solver (e.g. `:Success`).
+- `raw` -- the underlying ODE solution object (solver-dependent).
+"""
+struct GeodesicSolution
+    t::Vector{Float64}
+    x::Vector{Vector{Float64}}
+    v::Vector{Vector{Float64}}
+    retcode::Symbol
+    raw::Any
+end
+
+"""
+    integrate_geodesic(geod::GeodesicEquation, x0, v0, tau_span; kwargs...)
+
+Integrate the geodesic equation numerically using DifferentialEquations.jl.
+
+Requires `using DifferentialEquations` to be loaded (weak dependency extension).
+
+# Arguments
+- `geod::GeodesicEquation` -- geodesic equation from `setup_geodesic`.
+- `x0::AbstractVector` -- initial position x^mu(0).
+- `v0::AbstractVector` -- initial velocity dx^mu/dtau(0).
+- `tau_span::Tuple{Real,Real}` -- integration interval (tau_start, tau_end).
+
+# Keyword Arguments
+- `solver` -- ODE solver algorithm (default: `Tsit5()` from DifferentialEquations.jl).
+- `callback` -- optional callback for event detection.
+- All other keyword arguments are forwarded to the ODE `solve` call
+  (e.g. `abstol`, `reltol`, `saveat`, `maxiters`, `dtmax`).
+
+# Returns
+A `GeodesicSolution` with fields `.t`, `.x`, `.v`, `.retcode`, `.raw`.
+
+# Example
+```julia
+using DifferentialEquations
+
+geq = setup_geodesic(metric_fn; dim=4)
+x0 = [0.0, 10.0, pi/2, 0.0]
+v0 = [1.1, 0.0, 0.0, 0.02]
+sol = integrate_geodesic(geq, x0, v0, (0.0, 100.0))
+sol.t   # proper time values
+sol.x   # positions at each time step
+sol.v   # velocities at each time step
+```
+"""
+function integrate_geodesic end
