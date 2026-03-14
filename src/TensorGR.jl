@@ -52,6 +52,7 @@ include("gr/symmetry_ansatz.jl")
 include("gr/metric_ansatz_gen.jl")
 include("gr/matter.jl")
 include("gr/hypersurface.jl")
+include("gr/junction.jl")
 include("gr/mapping.jl")
 include("gr/product_manifold.jl")
 include("gr/invariants.jl")
@@ -111,6 +112,9 @@ include("matter/eos.jl")
 
 # Layer 5.5: Geodesics
 include("geodesics/geodesic.jl")
+
+# Layer 5.5: Solvers (TOV, etc.)
+include("solvers/tov.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -191,6 +195,7 @@ export define_submanifold!, define_hypersurface!
 export extrinsic_curvature_expr, induced_metric_expr, projector_expr
 export ghy_boundary_term, ibp_with_boundary
 export gauss_equation, codazzi_equation, gauss_codazzi_rules
+export JunctionData, define_junction!, israel_equation, junction_stress_energy
 export MappingProperties, define_mapping!, get_mapping, has_mapping
 export pullback, pushforward, pullback_metric
 export ProductManifoldProperties, define_product_manifold!
@@ -307,6 +312,9 @@ export Worldline, define_worldline!, pn_order, truncate_pn
 
 # Exports: Geodesics
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic
+
+# Exports: TOV solver
+export TOVSystem, setup_tov, tov_rhs!
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

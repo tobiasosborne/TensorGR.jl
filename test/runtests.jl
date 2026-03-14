@@ -74,6 +74,8 @@ using TensorGR
     include("test_6deriv_spectrum.jl")
     # Kernel extraction and spin projection (two-momentum-correct)
     include("test_kernel_extraction.jl")
+    # Curvature invariant catalog
+    include("test_invariants.jl")
     # Curvature syzygies (Gauss-Bonnet, dim-dependent identities)
     include("test_syzygies.jl")
     # Regression and coverage tests
@@ -82,4 +84,6 @@ using TensorGR
     include("test_geodesics.jl")
     # Equation of state
     include("test_eos.jl")
+    # Submanifold & boundary tests (GHY, Gauss-Codazzi, ibp_with_boundary)
+    include("test_submanifold_boundary.jl")
 end
