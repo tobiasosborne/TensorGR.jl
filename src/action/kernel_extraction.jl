@@ -660,8 +660,42 @@ tree containing :k² symbols) at a numeric k² value.
 function _eval_spin_scalar(expr::TScalar, k2)
     _eval_ksq_val(expr.val, k2)
 end
-function _eval_spin_scalar(expr::TProduct, k2)
-    Float64(expr.scalar) * prod(_eval_spin_scalar(f, k2) for f in expr.factors)
+function _eval_spin_scalar(expr::TProduct, k2; dim::Int=4)
+    # Before evaluating factors, contract same-name k-pairs and metric traces
+    # that contract_momenta missed (e.g. k^o k^o with both Up from projector).
+    factors = collect(expr.factors)
+    scalar = Float64(expr.scalar)
+    changed = true
+    while changed
+        changed = false
+        for i in eachindex(factors)
+            fi = factors[i]
+            fi isa Tensor || continue
+            if fi.name == :k && length(fi.indices) == 1
+                for j in (i+1):length(factors)
+                    fj = factors[j]
+                    fj isa Tensor && fj.name == :k && length(fj.indices) == 1 || continue
+                    if fi.indices[1].name == fj.indices[1].name
+                        factors[i] = TScalar(:k²)
+                        deleteat!(factors, j)
+                        changed = true
+                        break
+                    end
+                end
+            elseif length(fi.indices) == 2 && fi.indices[1].name == fi.indices[2].name
+                props = try
+                    reg = current_registry()
+                    has_tensor(reg, fi.name) ? get_tensor(reg, fi.name) : nothing
+                catch; nothing end
+                if props !== nothing && (props.is_metric || props.is_delta)
+                    factors[i] = TScalar(dim)
+                    changed = true
+                end
+            end
+            changed && break
+        end
+    end
+    scalar * prod(_eval_spin_scalar(f, k2) for f in factors)
 end
 function _eval_spin_scalar(expr::TSum, k2)
     sum(_eval_spin_scalar(t, k2) for t in expr.terms)
