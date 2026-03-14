@@ -1,5 +1,7 @@
 [deps]
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+TensorGR = "7336a8e7-6d30-4255-8f1d-f4d86d88ac00"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

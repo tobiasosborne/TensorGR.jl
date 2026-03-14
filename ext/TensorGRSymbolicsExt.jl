@@ -420,4 +420,65 @@ function TensorGR.metric_ansatz(reg::TensorGR.TensorRegistry, manifold::Symbol,
     return (metric=sm, free_functions=[A_func, B_func], radial_coord=r_sym)
 end
 
+"""
+    metric_ansatz(reg, manifold, ::AxialSymmetry; coords) -> NamedTuple
+
+Generate the Lewis-Papapetrou metric for a stationary axisymmetric spacetime:
+
+    ds² = -N² dt² + g_rr dr² + g_θθ dθ² + g_φφ (dφ - ω dt)²
+
+which expands to the metric components:
+
+    g_tt   = -N² + g_φφ ω²
+    g_tφ   = -g_φφ ω        (= g_φt)
+    g_rr   = g_rr
+    g_θθ   = g_θθ
+    g_φφ   = g_φφ
+
+The 5 free functions N, g_rr, g_θθ, g_φφ, ω all depend on (r, θ).
+
+Returns `(metric=SymbolicMetric, free_functions=[N, grr, gthth, gphph, omega])`.
+"""
+function TensorGR.metric_ansatz(reg::TensorGR.TensorRegistry, manifold::Symbol,
+                                 ans::TensorGR.AxialSymmetry;
+                                 coords::Vector{Symbol}=[:t, :r, :theta, :phi])
+    length(coords) == 4 || error("Axial symmetry ansatz requires exactly 4 coordinates")
+
+    # Create symbolic coordinate variables
+    _c1 = coords[1]; _c2 = coords[2]; _c3 = coords[3]; _c4 = coords[4]
+    t_sym = first(Symbolics.@variables $_c1)
+    r_sym = first(Symbolics.@variables $_c2)
+    theta_sym = first(Symbolics.@variables $_c3)
+    phi_sym = first(Symbolics.@variables $_c4)
+
+    # Free functions of (r, theta): N, grr, gthth, gphph, omega
+    N_func = first(Symbolics.@variables N($(r_sym), $(theta_sym)))
+    grr_func = first(Symbolics.@variables grr($(r_sym), $(theta_sym)))
+    gthth_func = first(Symbolics.@variables gthth($(r_sym), $(theta_sym)))
+    gphph_func = first(Symbolics.@variables gphph($(r_sym), $(theta_sym)))
+    omega_func = first(Symbolics.@variables omega($(r_sym), $(theta_sym)))
+
+    # Build 4x4 metric matrix in Lewis-Papapetrou form:
+    # ds² = -N² dt² + grr dr² + gthth dθ² + gphph (dφ - ω dt)²
+    # Expanding: g_tt = -N² + gphph ω², g_tφ = -gphph ω, g_rr, g_θθ, g_φφ
+    g = Matrix{Any}(undef, 4, 4)
+    for i in 1:4, j in 1:4
+        g[i, j] = 0
+    end
+
+    g[1, 1] = -N_func^2 + gphph_func * omega_func^2   # g_tt
+    g[1, 4] = -gphph_func * omega_func                  # g_tφ
+    g[4, 1] = -gphph_func * omega_func                  # g_φt (symmetric)
+    g[2, 2] = grr_func                                   # g_rr
+    g[3, 3] = gthth_func                                 # g_θθ
+    g[4, 4] = gphph_func                                 # g_φφ
+
+    sm = TensorGR.symbolic_metric(
+        [t_sym, r_sym, theta_sym, phi_sym],
+        g
+    )
+
+    return (metric=sm, free_functions=[N_func, grr_func, gthth_func, gphph_func, omega_func])
+end
+
 end # module

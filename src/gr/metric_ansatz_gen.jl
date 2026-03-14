@@ -17,6 +17,11 @@ Dispatches on `ansatz` type:
 - `SphericalSymmetry` -- static spherically symmetric metric with free functions `A(r)`, `B(r)`.
   Returns `(metric=SymbolicMetric, free_functions=[A, B], radial_coord=r_sym)`.
 
+- `AxialSymmetry` -- stationary axisymmetric metric in Lewis-Papapetrou form with free
+  functions `N(r,theta)`, `grr(r,theta)`, `gthth(r,theta)`, `gphph(r,theta)`, `omega(r,theta)`.
+  The line element is ds^2 = -N^2 dt^2 + grr dr^2 + gthth dtheta^2 + gphph (dphi - omega dt)^2.
+  Returns `(metric=SymbolicMetric, free_functions=[N, grr, gthth, gphph, omega])`.
+
 # Keyword arguments
 
 - `coords::Vector{Symbol}` -- coordinate names (defaults depend on ansatz type)
