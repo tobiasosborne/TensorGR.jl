@@ -1,62 +1,25 @@
-# HANDOFF: Session 32 — Massive Progress
+# HANDOFF: Session 32 — 35/38 Issues Closed
 
-## Summary
+## Critical Bug Fix: δ²R Spin Projection (TGR-dp3)
 
-Started with the critical δ²R spin projection bug (TGR-dp3). Clean-room reimplementation confirmed the root cause and produced a correct `extract_kernel_direct` with two-momentum phase formula `(-1)^{n/2+n_R}`. Then cleared 30+ issues across the board.
+Clean-room reimplementation of `extract_kernel_direct` with correct two-momentum phase `(-1)^{n/2+n_R}`. Verified against FP, R², Ric², and full 4-derivative Buoninfante form factors. 59 new kernel extraction tests.
 
-## Issues Closed This Session
+**Correct pipeline**: Pre-simplify factors individually, form bilinear, extract kernel directly. EH bilinear = `h^{ab}δ¹G_{ab}`. Full kernel: `K = κ·K_EH - 2α₁·K_{R²} - 2α₂·K_{Ric²}`.
 
-### P1 Critical Bug Fix
-- **TGR-dp3**: δ²R spin projection bug — FIXED via clean-room `extract_kernel_direct`
-- **TGR-6l7**: simplify corrupts bilinear structure — documented workaround
-- **TGR-9ab**: to_fourier uniform-k wrong for asymmetric derivatives — bypassed
-- **TGR-lnj**: extract_kernel_v2 integration — DONE, 59 new tests
+## Features Added
+- Geodesic integration (`integrate_geodesic` in DiffEq extension) + Schwarzschild validation
+- Killing equation auto-registration as rewrite rules
+- Curvature syzygies (Gauss-Bonnet identity)
+- Gauss-Codazzi relations for hypersurfaces
+- GHY boundary term + `ibp_with_boundary`
+- Equation of state types (Barotropic, Polytropic, Tabular, PerfectFluid)
+- Lewis-Papapetrou axial symmetry metric ansatz
+- 6 cubic curvature invariants (I₁-I₆)
+- TOV equation ODE system
+- Israel junction conditions
+- Geodesic orbits example (examples/27)
 
-### P2 Features & Validation
-- **TGR-nzk**: `integrate_geodesic()` in DiffEq extension
-- **TGR-ak3**: Geodesic validation on Schwarzschild (ISCO, null, eccentric)
-- **TGR-om8**: HANDOFF formula corrections
-- **TGR-7fj**: -2 sign convention documented and tested
-
-### P3 Features
-- **TGR-zkw**: Killing equation auto-registration as rewrite rules
-- **TGR-adq**: Geodesic integration example (examples/27)
-- **TGR-3gx**: Order-2 curvature syzygies (Gauss-Bonnet)
-- **TGR-0mg**: Gauss-Codazzi relations
-- **TGR-760**: GHY boundary term + `ibp_with_boundary`
-- **TGR-vhp**: Equation of state types (BarotropicEOS, PolytropicEOS, etc.)
-- **TGR-f0c**: Axial symmetry (Lewis-Papapetrou) metric ansatz
-
-### P4 Features
-- **TGR-141**: Cubic curvature invariants (I₁-I₆)
-
-### Other
-- **TGR-68n**: spin_project index collision fix + eval fallback
-- **TGR-3sd**: to_fourier field kwarg — deprioritized
-- **TGR-ogo**: Cleanup (worktrees, HANDOFFs, CLAUDE.md)
-
-## Correct Kernel Extraction Pipeline
-
-```julia
-# Pre-simplify each FACTOR individually
-d1R_ab = simplify(δricci(mp, down(:a), down(:b), 1); registry=reg)
-d1R    = simplify(δricci_scalar(mp, 1); registry=reg)
-
-# EH kernel: linearized Einstein tensor contracted with h
-K_EH = extract_kernel_direct(
-    h_up * d1R_ab - (1//2) * trh * d1R, :h; registry=reg)
-
-# Full kernel: K = κ·K_EH - 2α₁·K_{R²} - 2α₂·K_{Ric²}
-```
-
-## Remaining Open Issues
-- **TGR-76k** (P1): dS crosscheck — blocked by need for dS-adapted Barnes-Rivers projectors
-- **TGR-soo** (P2): Symmetry ansatz tests — in progress
-- **TGR-dcw** (P3): Invariant catalog tests — in progress
-- **TGR-ugs** (P3): Submanifold/boundary tests — in progress
-- **TGR-r4i** (P3): TOV equation system — in progress
-- **TGR-prb** (P4): Israel junction conditions — in progress
-- **TGR-3q9** (P3): solve_tov() in DiffEq — blocked by TGR-r4i
+## Remaining (3 issues)
+- **TGR-76k** (P1): dS crosscheck — needs dS-adapted Barnes-Rivers projectors. Flat projectors on dS kernel give spin-2 = 2.5-5Λ instead of constant 2.5.
+- **TGR-3q9** (P3): `solve_tov()` in DiffEq extension — straightforward, mirrors `integrate_geodesic` pattern
 - **TGR-8ea** (P3): TOV validation — blocked by TGR-3q9
-
-## Test Count: 336,985+ (all passing)
