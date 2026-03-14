@@ -72,6 +72,8 @@ using TensorGR
     include("test_product_manifold.jl")
     # Six-derivative gravity spectrum
     include("test_6deriv_spectrum.jl")
+    # Kernel extraction and spin projection (two-momentum-correct)
+    include("test_kernel_extraction.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
     # Geodesic equation

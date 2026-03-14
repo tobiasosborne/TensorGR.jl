@@ -62,176 +62,258 @@ function extract_kernel(expr::TensorExpr, field::Symbol;
 end
 
 # ─── Position-space kernel extraction (two-momentum correct) ─────────
+#
+# In a bilinear integral ∫dx h₁(x) K(∂) h₂(x), the two fields carry
+# opposite momenta: h₁ → +k, h₂ → -k.  Converting ∂ → momentum:
+#   ∂ on h₁: ∂_a → +ik_a        ∂ on h₂: ∂_a → -ik_a
+#
+# With n_L derivatives on h₁ and n_R on h₂, the physical coefficient is:
+#   (ik)^{n_L} (-ik)^{n_R} = i^n (-1)^{n_R} k^n
+# vs the uniform-k convention (dropping all i's): k^n.
+#
+# For even n (real actions), i^n = (-1)^{n/2}, giving the correction:
+#   phase = (-1)^{n/2 + n_R}
+#
+# Verified against FP ground truth, analytic R²/Ric² kernels, and the
+# full 4-derivative flat spectrum (Buoninfante 2012.11829 Eq.2.13).
 
 """
-    extract_kernel_direct(expr, field; k_name=:k, registry=current_registry()) -> KineticKernel
+    _distribute_derivs_sums(expr::TensorExpr) -> TensorExpr
 
-Extract the kinetic kernel directly from a position-space expression, correctly
-handling the two-momentum physics of quadratic forms.
+Recursively distribute TDeriv over TSum at every level:
+    ∂(A + B) → ∂A + ∂B
 
-Unlike the `to_fourier` → `extract_kernel` pipeline (which uses a uniform-k
-convention that gives wrong signs for imbalanced derivative terms), this function:
-
-1. Identifies each bilinear term's derivative chains on left-h vs right-h
-2. Converts ∂ → k with the correct two-momentum phase: `i^{n₁}(-i)^{n₂}`
-3. Drops ∂(bilinear) terms (derivatives wrapping products of two fields = 0 under ∫dx)
-
-The result is a `KineticKernel` compatible with `spin_project`.
+Does NOT apply the Leibniz rule to products — only linearizes
+derivatives over sums so that after `expand_products` we get a flat
+sum of product terms.
 """
-# Distribute all TDeriv over TSum at every level, then expand products.
-function _expand_deriv_sums(expr::TensorExpr)
-    if expr isa TDeriv
-        arg = _expand_deriv_sums(expr.arg)
-        if arg isa TSum
-            return tsum(TensorExpr[_expand_deriv_sums(TDeriv(expr.index, t, expr.covd))
-                                   for t in arg.terms])
-        end
-        return TDeriv(expr.index, arg, expr.covd)
-    elseif expr isa TProduct
-        new_factors = TensorExpr[_expand_deriv_sums(f) for f in expr.factors]
-        return expand_products(tproduct(expr.scalar, new_factors))
-    elseif expr isa TSum
-        return tsum(TensorExpr[_expand_deriv_sums(t) for t in expr.terms])
-    end
-    expr
+_distribute_derivs_sums(expr::Tensor) = expr
+_distribute_derivs_sums(expr::TScalar) = expr
+
+function _distribute_derivs_sums(expr::TSum)
+    tsum(TensorExpr[_distribute_derivs_sums(t) for t in expr.terms])
 end
 
-function extract_kernel_direct(expr::TensorExpr, field::Symbol;
-                               k_name::Symbol=:k,
-                               registry::TensorRegistry=current_registry())
-    with_registry(registry) do
-        # Distribute derivatives over sums and expand products fully
-        expanded = _expand_deriv_sums(expand_products(expr))
-        expanded = expand_products(expanded)  # catch any remaining nested products
-        raw_terms = expanded isa TSum ? expanded.terms : TensorExpr[expanded]
+function _distribute_derivs_sums(expr::TProduct)
+    TProduct(expr.scalar, TensorExpr[_distribute_derivs_sums(f) for f in expr.factors])
+end
 
-        bilinears = @NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}[]
-
-        for term in raw_terms
-            bt = _extract_bilinear_direct(term, field, k_name)
-            bt === nothing && continue
-            push!(bilinears, bt)
-        end
-
-        KineticKernel(field, bilinears)
+function _distribute_derivs_sums(expr::TDeriv)
+    inner = _distribute_derivs_sums(expr.arg)
+    if inner isa TSum
+        terms = TensorExpr[_distribute_derivs_sums(TDeriv(expr.index, t, expr.covd))
+                           for t in inner.terms]
+        tsum(terms)
+    else
+        TDeriv(expr.index, inner, expr.covd)
     end
 end
 
-"""
-Unwrap a field tensor from its derivative chain, returning
-`(derivative_indices, field_indices, extra_coeff_factors)` or `nothing`.
+# ─── Field counting ──────────────────────────────────────────────────
 
-Handles three structures:
-- `Tensor(:h, idx)` → no derivatives, no extras
-- `TDeriv(∂, TDeriv(..., Tensor(:h)))` → derivative chain, no extras
-- `TDeriv(∂, TProduct([g, TDeriv(..., h)]))` → derivative passes through
-  constant (non-field) factors, which become extras in the coefficient
+"""Count how many times a tensor named `field` appears at any nesting depth."""
+function _count_fields_in(expr::Tensor, field::Symbol)
+    expr.name == field ? 1 : 0
+end
+_count_fields_in(::TScalar, ::Symbol) = 0
+
+function _count_fields_in(expr::TProduct, field::Symbol)
+    sum(_count_fields_in(f, field) for f in expr.factors; init=0)
+end
+
+function _count_fields_in(expr::TSum, field::Symbol)
+    isempty(expr.terms) ? 0 : maximum(_count_fields_in(t, field) for t in expr.terms)
+end
+
+function _count_fields_in(expr::TDeriv, field::Symbol)
+    _count_fields_in(expr.arg, field)
+end
+
+# ─── Field unwrapping from derivative chains ─────────────────────────
+
 """
-function _unwrap_field_chain(expr::TensorExpr, field::Symbol)
-    if expr isa Tensor && expr.name == field
-        return (TIndex[], copy(expr.indices), TensorExpr[])
-    elseif expr isa TDeriv
-        # Direct chain: TDeriv wrapping field or deeper TDeriv chain
-        inner = _unwrap_field_chain(expr.arg, field)
-        if inner !== nothing
-            derivs, findices, extras = inner
-            return (vcat(TIndex[expr.index], derivs), findices, extras)
-        end
-        # TDeriv wrapping a product: derivative passes through non-field factors.
-        # Only valid when exactly one factor contains the field.
-        if expr.arg isa TProduct
-            nf = count(f -> _count_fields_in(f, field) > 0, expr.arg.factors)
-            if nf == 1
-                field_idx = findfirst(f -> _count_fields_in(f, field) > 0, expr.arg.factors)
-                field_factor = expr.arg.factors[field_idx]
-                non_field = TensorExpr[expr.arg.factors[i]
-                                       for i in eachindex(expr.arg.factors) if i != field_idx]
-                # Handle scalar on inner product
-                if expr.arg.scalar != 1 // 1
-                    pushfirst!(non_field, TScalar(expr.arg.scalar))
-                end
-                inner2 = _unwrap_field_chain(field_factor, field)
-                if inner2 !== nothing
-                    derivs, findices, extras = inner2
-                    return (vcat(TIndex[expr.index], derivs), findices,
-                            vcat(non_field, extras))
-                end
-            end
-        end
+    _unwrap_field_chain(expr, field) -> NamedTuple or nothing
+
+Determine if `expr` is a "field unit" — a single occurrence of `field`
+possibly wrapped in derivative chains and multiplied by constant tensors.
+
+Returns `nothing` if the expression doesn't contain the field, or contains
+it in an unrecognizable structure.
+
+Returns `(deriv_indices, field_indices, extra_factors)` where:
+- `deriv_indices`: derivative indices acting on the field
+- `field_indices`: the field tensor's own indices
+- `extra_factors`: non-field factors extracted from derivative chains
+  (e.g. metric tensors in ∂(g × ∂h) on flat background)
+"""
+function _unwrap_field_chain(expr::Tensor, field::Symbol)
+    expr.name != field && return nothing
+    (deriv_indices=TIndex[], field_indices=collect(expr.indices),
+     extra_factors=TensorExpr[])
+end
+
+_unwrap_field_chain(::TScalar, ::Symbol) = nothing
+_unwrap_field_chain(::TSum, ::Symbol) = nothing
+
+function _unwrap_field_chain(expr::TDeriv, field::Symbol)
+    nf = _count_fields_in(expr.arg, field)
+    nf == 0 && return nothing
+    nf >= 2 && return nothing  # ∂(bilinear) → vanishes under ∫dx
+
+    inner = _unwrap_field_chain(expr.arg, field)
+    if inner !== nothing
+        return (deriv_indices=vcat(TIndex[expr.index], inner.deriv_indices),
+                field_indices=inner.field_indices,
+                extra_factors=inner.extra_factors)
+    end
+
+    # TDeriv wrapping a product: derivative passes through non-field factors
+    if expr.arg isa TProduct
+        return _unwrap_deriv_product(expr.index, expr.arg, field)
     end
     nothing
 end
 
-"""Count how many field tensors appear in an expression."""
-function _count_fields_in(expr::TensorExpr, field::Symbol)
-    if expr isa Tensor
-        return expr.name == field ? 1 : 0
-    elseif expr isa TDeriv
-        return _count_fields_in(expr.arg, field)
-    elseif expr isa TProduct
-        return sum(_count_fields_in(f, field) for f in expr.factors; init=0)
-    elseif expr isa TSum
-        return maximum(_count_fields_in(t, field) for t in expr.terms; init=0)
-    end
-    0
+function _unwrap_field_chain(expr::TProduct, field::Symbol)
+    nf = _count_fields_in(expr, field)
+    nf == 0 && return nothing
+    nf >= 2 && return nothing
+
+    field_idx = findfirst(f -> _count_fields_in(f, field) > 0, expr.factors)
+    field_idx === nothing && return nothing
+
+    inner = _unwrap_field_chain(expr.factors[field_idx], field)
+    inner === nothing && return nothing
+
+    extras = TensorExpr[expr.factors[i] for i in eachindex(expr.factors) if i != field_idx]
+    expr.scalar != 1 // 1 && pushfirst!(extras, TScalar(expr.scalar))
+
+    (deriv_indices=inner.deriv_indices, field_indices=inner.field_indices,
+     extra_factors=vcat(extras, inner.extra_factors))
 end
 
+"""Unwrap ∂(product) where the product has exactly 1 field factor."""
+function _unwrap_deriv_product(deriv_idx::TIndex, prod::TProduct, field::Symbol)
+    nf = count(f -> _count_fields_in(f, field) > 0, prod.factors)
+    nf != 1 && return nothing
+
+    fi = findfirst(f -> _count_fields_in(f, field) > 0, prod.factors)
+    inner = _unwrap_field_chain(prod.factors[fi], field)
+    inner === nothing && return nothing
+
+    extras = TensorExpr[prod.factors[i] for i in eachindex(prod.factors) if i != fi]
+    prod.scalar != 1 // 1 && pushfirst!(extras, TScalar(prod.scalar))
+
+    (deriv_indices=vcat(TIndex[deriv_idx], inner.deriv_indices),
+     field_indices=inner.field_indices,
+     extra_factors=vcat(extras, inner.extra_factors))
+end
+
+# ─── Single-term bilinear extraction ─────────────────────────────────
+
 """
-Extract a single bilinear term from a position-space product.
+Extract bilinear data from a single flat product term.
 
 Finds two field units (h or ∂ⁿh), converts derivative chains to k-factors
-with the correct two-momentum phase, and returns the bilinear data.
-Returns `nothing` for terms that vanish (∂ wrapping bilinear products) or
-that don't have exactly 2 field factors.
+with the correct two-momentum phase `(-1)^{n/2 + n_R}`, and returns
+`(coeff, left, right)` or `nothing`.
 """
 function _extract_bilinear_direct(term::TensorExpr, field::Symbol, k_name::Symbol)
     sc, factors = _kernel_term_parts(term)
 
-    # Scan factors for field units and check for bilinear-derivative terms
-    field_units = []   # (factor_index, deriv_indices, field_indices, extra_factors)
-    other_indices = Int[]
+    field_units = []
+    coeff_factors = TensorExpr[]
 
     for (i, f) in enumerate(factors)
         info = _unwrap_field_chain(f, field)
         if info !== nothing
-            push!(field_units, (i, info[1], info[2], info[3]))
+            push!(field_units, (idx=i, info=info))
         elseif _count_fields_in(f, field) >= 2
-            # Factor contains 2+ field tensors inside a derivative-wrapped product.
-            # This is ∂(bilinear): vanishes under ∫dx (opposite momenta cancel).
-            return nothing
+            return nothing  # ∂(bilinear) → vanishes under ∫dx
         elseif _count_fields_in(f, field) == 1
-            # Single field inside a structure we can't unwrap — skip term
-            return nothing
+            return nothing  # field in unrecognizable structure
         else
-            push!(other_indices, i)
+            push!(coeff_factors, f)
         end
     end
 
-    length(field_units) == 2 || return nothing
+    length(field_units) != 2 && return nothing
 
-    (_, left_derivs, left_indices, left_extras) = field_units[1]
-    (_, right_derivs, right_indices, right_extras) = field_units[2]
-
-    n_L = length(left_derivs)
-    n_R = length(right_derivs)
+    fu1, fu2 = field_units[1].info, field_units[2].info
+    n_L = length(fu1.deriv_indices)
+    n_R = length(fu2.deriv_indices)
     n = n_L + n_R
 
-    # Build k-factor tensors from derivative indices
-    k_factors = TensorExpr[Tensor(k_name, [idx]) for idx in vcat(left_derivs, right_derivs)]
+    # Odd total derivatives → imaginary, vanishes in real action
+    isodd(n) && return nothing
 
-    # Two-momentum phase correction: i^{n₁}(-i)^{n₂} = (-1)^{n/2 + n₂} for even n.
-    # This accounts for h₂ carrying momentum -k instead of +k.
-    phase = (iseven(n) && iseven(div(n, 2) + n_R)) ? 1 // 1 : -1 // 1
+    # Two-momentum phase: (-1)^{n/2 + n_R}
+    phase = iseven(div(n, 2) + n_R) ? (1 // 1) : (-1 // 1)
 
-    # Assemble coefficient: phase × scalar × other_factors × extras × k_factors
-    coeff_factors = TensorExpr[factors[i] for i in other_indices]
-    append!(coeff_factors, left_extras)
-    append!(coeff_factors, right_extras)
-    append!(coeff_factors, k_factors)
-    coeff = isempty(coeff_factors) ? TScalar(sc * phase) :
-            tproduct(sc * phase, coeff_factors)
+    # Build k-factors from derivative indices
+    k_factors = TensorExpr[Tensor(k_name, [idx])
+                           for idx in vcat(fu1.deriv_indices, fu2.deriv_indices)]
 
-    (coeff = coeff, left = left_indices, right = right_indices)
+    all_parts = vcat(coeff_factors, fu1.extra_factors, fu2.extra_factors, k_factors)
+    coeff = isempty(all_parts) ? TScalar(sc * phase) : tproduct(sc * phase, all_parts)
+
+    (coeff = coeff, left = fu1.field_indices, right = fu2.field_indices)
+end
+
+# ─── Main entry point ────────────────────────────────────────────────
+
+"""
+    extract_kernel_direct(expr, field; k_name=:k, registry=current_registry()) -> KineticKernel
+
+Extract the kinetic kernel directly from a position-space bilinear expression,
+correctly handling two-momentum physics of quadratic forms under ∫dx.
+
+Unlike `to_fourier` → `extract_kernel` (uniform-k, wrong for asymmetric
+derivatives), this function:
+
+1. Distributes all derivatives over sums: ∂(A+B) → ∂A + ∂B
+2. Expands products to get a flat sum of product terms
+3. Identifies the two field factors and their derivative chains per term
+4. Converts derivatives to momentum factors with correct phase:
+   `(ik)^{n_L}(-ik)^{n_R} = (-1)^{n/2 + n_R} k^n`
+5. Drops total-derivative bilinear terms (∂(h₁h₂) = 0 under ∫dx)
+
+**Important**: For complex expressions, pre-simplify each *factor* individually
+before forming the bilinear product. Do NOT simplify the full bilinear expression
+as `simplify` can merge terms into ∂(bilinear) structures that break extraction.
+
+# Example
+```julia
+# EH kernel via linearized Einstein tensor:
+d1R_ab = simplify(δricci(mp, down(:a), down(:b), 1); registry=reg)
+d1R    = simplify(δricci_scalar(mp, 1); registry=reg)
+EH_bilinear = h_up * d1R_ab - (1//2) * trh * d1R
+K = extract_kernel_direct(EH_bilinear, :h; registry=reg)
+# → spin-2=2.5, spin-0s=-1.0 (matches FP)
+
+# R² kernel (pre-simplified factors):
+K_R2 = extract_kernel_direct(d1R * d1R, :h; registry=reg)
+# → spin-2=0, spin-0s=3.0
+```
+"""
+function extract_kernel_direct(expr::TensorExpr, field::Symbol;
+                               k_name::Symbol=:k,
+                               registry = current_registry())
+    # Distribute ∂(TSum) and expand products in a single pass.
+    # Do NOT iterate: further rounds change derivative assignments
+    # (n_L, n_R) and corrupt the phase calculation.
+    expanded = expand_products(_distribute_derivs_sums(expr))
+    raw_terms = expanded isa TSum ? expanded.terms : TensorExpr[expanded]
+
+    bilinears = @NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}[]
+
+    for term in raw_terms
+        bt = _extract_bilinear_direct(term, field, k_name)
+        bt === nothing && continue
+        push!(bilinears, bt)
+    end
+
+    KineticKernel(field, bilinears)
 end
 
 """
@@ -459,6 +541,9 @@ end
 function _kernel_term_parts(t::TSum)
     # Single-term sum (shouldn't happen, but handle gracefully)
     length(t.terms) == 1 ? _kernel_term_parts(t.terms[1]) : (1 // 1, TensorExpr[t])
+end
+function _kernel_term_parts(t::TDeriv)
+    (1 // 1, TensorExpr[t])
 end
 
 # ─── Direct momentum-space kernel builders ──────────────────────────
