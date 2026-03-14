@@ -69,6 +69,6 @@ This corrects the uniform-k convention (which drops all i factors) by accounting
 - `test/runtests.jl` — added include
 
 ## Next Steps
-- TGR-76k: Validate dS crosscheck (now unblocked since TGR-dp3 is closed)
-- TGR-3sd: Add `field` kwarg to `to_fourier` (P3, nice-to-have)
-- TGR-ogo: Clean up worktree branches and old HANDOFF files (P3)
+- TGR-76k: dS crosscheck blocked — needs dS-adapted Barnes-Rivers projectors. Flat projectors on dS kernel give spin-2 = 2.5 - 5Λ (wrong). BC predicts 2.5 (constant). The eigenvalue spectrum of the Lichnerowicz operator on MSS differs from flat.
+- Ready P2: TGR-nzk (geodesic integration in DiffEq extension)
+- Ready P3: TGR-3gx (curvature syzygies), TGR-0mg (Gauss-Codazzi), TGR-760 (GHY boundary), TGR-vhp (EOS types), TGR-zkw (Killing rules), TGR-f0c (axial metric ansatz)
