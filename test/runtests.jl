@@ -74,8 +74,12 @@ using TensorGR
     include("test_6deriv_spectrum.jl")
     # Kernel extraction and spin projection (two-momentum-correct)
     include("test_kernel_extraction.jl")
+    # Curvature syzygies (Gauss-Bonnet, dim-dependent identities)
+    include("test_syzygies.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
     # Geodesic equation
     include("test_geodesics.jl")
+    # Equation of state
+    include("test_eos.jl")
 end
