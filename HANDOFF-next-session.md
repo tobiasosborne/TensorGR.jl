@@ -1,191 +1,74 @@
-# HANDOFF: Session 31 — δ²R Spin-2 Bug (TGR-dp3): Deep Progress, Not Yet Resolved
+# HANDOFF: Session 32 — δ²R Bug RESOLVED (TGR-dp3 closed)
 
-## Status: Two approaches implemented, both partially working. Path forward is clear.
+## Status: FIXED. All 7298 tests pass. Pushed to master.
 
-- **All 7146 tests pass** on committed code (fourier.jl fix only)
-- **TGR-dp3 remains open**: position-space kernel extraction is the right solution but needs debugging
-- Uncommitted WIP: `extract_kernel_direct` in kernel_extraction.jl + export in TensorGR.jl
+## What Was Done
 
-## Root Cause (Fully Understood This Session)
+### Clean-room reimplementation (the key insight)
 
-### The uniform-k convention is fundamentally limited
+Two subagents were spawned with the full spec but NOT the buggy source code:
+- **Agent A**: reimplemented `fourier.jl` (phase formula was wrong: `(-1)^{n_R}` instead of `(-1)^{n/2+n_R}`)
+- **Agent B**: reimplemented `kernel_extraction_v2.jl` (correct phase, verified against FP ground truth)
 
-In a quadratic form `∫dx h₁(x) K h₂(x)`, the two fields carry **opposite momenta**:
-- h₁ carries +k, h₂ carries -k (from ∫dx → δ(k₁+k₂))
-- Derivative on h₁: ∂_a → ik_a. Derivative on h₂: ∂_a → -ik_a.
+Agent B's implementation was integrated into `kernel_extraction.jl` as the new `extract_kernel_direct`.
 
-The code's `to_fourier` uses **uniform-k**: ALL ∂ → k_a regardless of which field. This gives:
-- **(∂h₁)(∂h₂)** terms: (ik)(-ik) = k² vs uniform (k)(k) = k² → **SAME** ✓
-- **h₁(∂²h₂)** terms: (-ik)(-ik) = -k² vs uniform (k)(k) = k² → **WRONG SIGN** ✗
-- **∂(h₁ × ∂h₂)** terms: (ik+(-ik))=0 vs uniform k×stuff ≠ 0 → **WRONG** ✗
+### Three interlocking root causes identified
 
-This means uniform-k is correct ONLY when each derivative in a term acts on a DIFFERENT field. When two derivatives act on the same field, the sign is wrong.
+1. **`simplify` corrupts bilinear structure**: merges ΓΓ+∂Γ terms into ∂(bilinear) nodes that can't be decomposed
+2. **`to_fourier` uniform-k wrong for asymmetric derivatives**: h₁(∂²h₂) gets k² instead of -k²
+3. **Wrong formula in HANDOFFs**: δ²R + (1/2)tr(h)δ¹R does NOT produce the FP kernel. The correct EH bilinear is `h^{ab}δ¹G_{ab} = h^{ab}(δ¹R_{ab} - (1/2)g_{ab}δ¹R)`
 
-### Why simplify makes it worse
-
-The simplify pipeline (canonicalize + collect_terms) **merges ΓΓ terms and ∂Γ₂ terms** during term collection. After merging, you cannot cleanly separate "terms where each ∂ acts on one h" from "terms where ∂ wraps a product". This is why the fourier.jl fix (dropping ∂(bilinear) terms) only partially works — it can only drop terms still in ∂(product) form, missing the merged ones.
-
-### The correct physics (verified numerically)
-
-For the EH action on flat background:
-- **FP kernel** (hand-built reference): spin-2=2.5, spin-0s=-1.0 at k²=1
-- **δ²R alone** (not the full action): spin-2=1.25, spin-0s=-0.5
-- **δ²(√g R) = δ²R + h×δ¹R**: should match FP when both pieces are correct
-- The **handoff from session 30 had the wrong expected value**: it compared δ²R (partial) against FP (full action), giving an apparent discrepancy of 2.5 vs 6.25.
-
-The position-space extraction gives δ²R spin-2=1.25 (before the deriv-sum expansion broke it). This is **consistent with FP** when combined with the √g cross term.
-
-## What Was Implemented
-
-### 1. fourier.jl fix (COMMITTED, all tests pass)
-
-Three changes to `_fourier_transform(TDeriv)`:
-- **TSum distribution**: ∂(A+B) → ∂A + ∂B before checking
-- **Field-aware bilinear detection**: `_count_field_factors` counts non-metric/delta factors
-- **Bilinear dropping**: ∂(product with ≥2 field factors) → ZERO
-
-This partially fixes the bug (reduces spin-2 from 6.25 to 3.75) but can't fix the merged terms.
-
-### 2. extract_kernel_direct (UNCOMMITTED WIP in kernel_extraction.jl)
-
-Position-space kernel extraction that bypasses `to_fourier` entirely:
-
-```
-extract_kernel_direct(expr, :h; registry=reg) → KineticKernel
-```
-
-**Algorithm:**
-1. `_expand_deriv_sums`: Distribute all TDeriv over TSum recursively
-2. `expand_products`: Flatten all products
-3. For each term, `_extract_bilinear_direct`:
-   a. Find "field units" via `_unwrap_field_chain` (h or ∂ⁿh, including h inside ∂(g×∂h))
-   b. Skip terms with ∂(bilinear): `_count_fields_in(factor) >= 2` → return nothing
-   c. Convert derivative chains to k-factors
-   d. Apply **two-momentum phase**: `(-1)^{n/2 + n_R}` where n_R = derivatives on right h
-   e. Build (coeff, left_indices, right_indices) for KineticKernel
-
-**Key helpers:**
-- `_unwrap_field_chain(expr, field)`: Returns `(deriv_indices, field_indices, extra_coeff_factors)`. Handles bare Tensor, TDeriv chains, AND TDeriv(TProduct([non-field, field_chain])) where the derivative passes through constant (metric) factors.
-- `_count_fields_in(expr, field)`: Counts field occurrences at any depth.
-- `_expand_deriv_sums(expr)`: Recursively distributes ∂(TSum) → TSum(∂).
-
-### Current state of extract_kernel_direct
-
-**What works:**
-- δ²R extraction: 19→25 bilinear terms (with deriv-sum expansion), spin-2=1.25, spin-0s=-0.5 ✓ (before deriv-sum expansion)
-- Correctly skips ∂(bilinear) terms (ΓΓ terms are NOT affected)
-- Two-momentum phase correction for imbalanced derivative terms
-
-**What's broken (last test before stopping):**
-- The `_expand_deriv_sums` function introduced sign errors: full action gives spin-2=-1.25 (should be +2.5). The deriv-sum expansion creates many more terms and the phase correction may be wrong for the expanded terms.
-- The √g cross term `h×δ¹R` extraction gives wrong values after deriv-sum expansion.
-
-**Most likely cause of the sign error:**
-The two-momentum phase `(-1)^{n/2 + n_R}` assumes the code drops -i from each derivative. But after `_expand_deriv_sums`, the derivative chains on each field unit are different from the original. The n_R counting might be wrong because the expansion redistributes which derivatives belong to which field.
-
-## Recommended Fix Strategy for Next Session
-
-### Option A: Fix the phase correction (most direct)
-
-The phase `(-1)^{n/2 + n_R}` may be incorrect. The correct phase for each bilinear term is:
-
-```
-physical_coefficient = position_space_coeff × i^{n_L} × (-i)^{n_R} × k_{a1}...k_{an}
-```
-
-where n_L = derivatives on left h, n_R = derivatives on right h. For n_L+n_R = even:
-- n_L=1, n_R=1: phase = i(-i) = 1 → no correction
-- n_L=0, n_R=2: phase = 1×(-i)² = -1 → multiply by -1
-- n_L=2, n_R=0: phase = i²×1 = -1 → multiply by -1
-
-Verify by checking against the **FP kernel** term by term:
-```julia
-K_FP = build_FP_momentum_kernel(reg)
-# FP has 4 known-correct bilinear terms
-# Compare each with the corresponding term from extract_kernel_direct
-```
-
-### Option B: Skip extract_kernel_direct, use two-pass Fourier (simpler)
-
-Instead of extracting in position space:
-1. Use the EXISTING `to_fourier` + `extract_kernel` pipeline
-2. After extracting each bilinear term, determine n_L and n_R by tracing which k-factors in the coefficient came from left vs right field derivatives
-3. Apply the phase correction post-hoc
-
-This avoids the complexity of position-space extraction but requires a way to determine the derivative origin of each k-factor.
-
-### Option C: Validate without √g first
-
-The δ²R result (spin-2=1.25, spin-0s=-0.5) from the pre-expansion `extract_kernel_direct` was **already correct**. The bug only manifested when computing the √g cross term. Consider:
-1. Validate δ²R alone by checking that δ²R + h×δ¹R = FP (using the FP kernel as ground truth)
-2. Fix only the √g cross term extraction
-3. The cross term h×δ¹R has simpler structure: h(0 derivs) × δ¹Ric(2 derivs)
-
-## Key Diagnostic Script
+### The correct pipeline (verified against Buoninfante form factors)
 
 ```julia
-using TensorGR
-reg = TensorRegistry()
-with_registry(reg) do
-    @manifold M4 dim=4 metric=g
-    define_curvature_tensors!(reg, :M4, :g)
-    @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
-    mp = define_metric_perturbation!(reg, :g, :h)
-    set_vanishing!(reg, :Ric); set_vanishing!(reg, :RicScalar); set_vanishing!(reg, :Riem)
+# Pre-simplify each FACTOR individually
+d1R_ab = simplify(δricci(mp, down(:a), down(:b), 1); registry=reg)
+d1R    = simplify(δricci_scalar(mp, 1); registry=reg)
+d1Ric_cd = simplify(δricci(mp, down(:c), down(:d), 1); registry=reg)
 
-    # Position-space kernel extraction
-    δ2R = δricci_scalar(mp, 2)
-    K_R = extract_kernel_direct(δ2R, :h; registry=reg)
+# EH kernel: linearized Einstein tensor contracted with h
+K_EH = extract_kernel_direct(
+    Tensor(:h, [up(:a), up(:b)]) * d1R_ab -
+    (1//2) * Tensor(:g, [up(:p), up(:q)]) * Tensor(:h, [down(:p), down(:q)]) * d1R,
+    :h; registry=reg)
 
-    # √g cross term
-    δ1R = δricci_scalar(mp, 1)
-    h_trace = Tensor(:g, [up(:p), up(:q)]) * Tensor(:h, [down(:p), down(:q)])
-    K_cross = extract_kernel_direct(h_trace * δ1R, :h; registry=reg)
+# R² and Ric² kernels (from pre-simplified factors)
+K_R2 = extract_kernel_direct(d1R * d1R, :h; registry=reg)
+K_Ric2 = extract_kernel_direct(
+    d1R_ab * d1Ric_cd * Tensor(:g, [up(:a), up(:c)]) * Tensor(:g, [up(:b), up(:d)]),
+    :h; registry=reg)
 
-    K_full = combine_kernels([K_R, K_cross])
-    K_FP = build_FP_momentum_kernel(reg)
+# Full kernel: note the -2 sign convention!
+K = combine_kernels([K_EH, scale_kernel(K_R2, -2α₁), scale_kernel(K_Ric2, -2α₂)])
 
-    for s in [:spin2, :spin1, :spin0s, :spin0w]
-        f = _eval_spin_scalar(spin_project(K_full, s; registry=reg), 1.0)
-        fp = _eval_spin_scalar(spin_project(K_FP, s; registry=reg), 1.0)
-        println("$s: full=$f  FP=$fp  $(isapprox(f, fp, atol=1e-8) ? "✓" : "✗")")
-    end
-end
+# Spin project → matches Buoninfante 2012.11829 Eq.2.13
+spin_project(K, :spin2; registry=reg)
 ```
 
-**Expected output when fixed:** All four spins match FP (2.5, 0, -1.0, 0).
+### Key sign convention: -2
 
-## Files Modified (Uncommitted WIP)
+The full kinetic kernel for S = ∫√g(κR + α₁R² + α₂Ric²) on flat is:
+```
+K = κ·K_EH - 2α₁·K_{R²} - 2α₂·K_{Ric²}
+```
 
-| File | Change |
-|------|--------|
-| `src/action/kernel_extraction.jl` | Added `extract_kernel_direct`, `_expand_deriv_sums`, `_unwrap_field_chain` (new version), `_count_fields_in`, `_extract_bilinear_direct` |
-| `src/TensorGR.jl` | Added `extract_kernel_direct` to exports |
+The -2 is NOT a bug. It comes from the relationship between the action's second variation and the kinetic operator. Verified against all Buoninfante form factors.
 
-## Files Modified (Committed)
+### Two-momentum phase formula
 
-| File | Change |
-|------|--------|
-| `src/svt/fourier.jl` | Added `_count_field_factors`, TSum distribution, bilinear dropping in `_fourier_transform(TDeriv)` |
+For a bilinear term with n_L derivatives on h₁ and n_R on h₂:
+```
+phase = (-1)^{n/2 + n_R}   (n = n_L + n_R, must be even)
+```
 
-## Critical Implementation Notes
+This corrects the uniform-k convention (which drops all i factors) by accounting for the fact that h₂ carries momentum -k in the integral ∫dx h₁(x) K(∂) h₂(x).
 
-1. **`tproduct` already flattens nested TProducts** (arithmetic.jl:27-29) and absorbs ZERO factors (line 39-40). No need to worry about nested products from Fourier transform.
+## Files Changed
+- `src/action/kernel_extraction.jl` — clean-room `extract_kernel_direct` + helpers
+- `test/test_kernel_extraction.jl` — 59 new tests (NEW)
+- `test/runtests.jl` — added include
 
-2. **The simplify pipeline merges ΓΓ and ∂Γ₂ terms.** This is why the fourier fix alone can't fully solve the problem — it can only drop terms still in ∂(product) form. The position-space approach works on the RAW perturbation engine output, bypassing simplify entirely.
-
-3. **The FP kernel uses the PHYSICAL convention** where (ik)(−ik) = k². The perturbation engine's to_fourier uses uniform-k where all ∂→k. The position-space extraction must produce coefficients matching the FP convention.
-
-4. **contraction.jl Bug 2 fix was attempted and reverted.** Extending `_try_metric_contraction` to handle TDeriv partners (Cases A+B) worked algebraically but caused cascading changes in the simplify fixed-point loop, breaking spin projections. All contraction.jl changes were reverted. The position-space approach doesn't need them — it works on raw expressions where g's are explicit factors in the coefficient, and spin_project's internal simplify handles the contraction.
-
-5. **The handoff from session 30 had wrong expected values.** The expected "δ²R spin-2 = 2.50" was actually the FP value for the FULL action δ²(√gR), not δ²R alone. The correct δ²R spin-2 is 1.25 at k²=1. The relationship is: δ²(√gR) = δ²R + h×δ¹R, and FP represents δ²(√gR).
-
-## Changes This Session
-
-- Diagnosed the uniform-k convention as the root cause (not contraction or AST structure)
-- Implemented and committed fourier.jl fix (all tests pass)
-- Implemented position-space kernel extraction (`extract_kernel_direct`)
-- Verified δ²R spin-2=1.25 is correct (consistent with FP via √g)
-- Identified phase correction as remaining issue in the position-space approach
-- Attempted and reverted Bug 2 contraction.jl fix (3 variants tried)
-- Corrected the expected values from session 30 handoff
+## Next Steps
+- TGR-76k: Validate dS crosscheck (now unblocked since TGR-dp3 is closed)
+- TGR-3sd: Add `field` kwarg to `to_fourier` (P3, nice-to-have)
+- TGR-ogo: Clean up worktree branches and old HANDOFF files (P3)

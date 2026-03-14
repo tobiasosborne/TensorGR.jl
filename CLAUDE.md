@@ -222,10 +222,17 @@ ext/                                         # Weak dependency extensions
 - `collect_sectors` -- group by SVT field type
 - `foliate_and_decompose(expr, :h; foliation=fol)` -> `Dict{Symbol,TensorExpr}`
 
-### Quadratic Action
+### Quadratic Action / Spectrum Analysis
 
 - `QuadraticForm`, `quadratic_form`, `propagator`, `determinant`
 - `spin2_projector`, `spin1_projector`, `spin0s_projector`, `spin0w_projector` -- Barnes-Rivers
+- `extract_kernel_direct(expr, field)` -- position-space kernel extraction (two-momentum correct)
+- `extract_kernel(expr, field)` -- Fourier-space kernel extraction (uniform-k, use only after `to_fourier`)
+- `spin_project(K, :spin2)` -- project kernel onto spin sector via Barnes-Rivers
+- `build_FP_momentum_kernel`, `build_R2_momentum_kernel`, `build_Ric2_momentum_kernel` -- analytic kernels
+- `contract_momenta(expr)` -- contract k_a k^a → k²
+- `_eval_spin_scalar(expr, k²_val)` -- evaluate spin projection at numeric k²
+- `BuenoCanoParams`, `dS_spectrum_6deriv` -- de Sitter spectrum analysis
 
 ### Smooth Maps (Pullback/Pushforward)
 
@@ -305,6 +312,16 @@ These are hard-won lessons. Violating them causes subtle bugs or test regression
 - Symbolics.jl is in [weakdeps] and test/Project.toml (NOT [deps])
 - Extension overrides dispatch hooks (`_simplify_scalar_val`, `_try_simplify_entry`) -- cannot overwrite methods with same signature as base
 - `_sym_mul/_sym_add/_sym_sub/_sym_neg/_sym_div` dispatch on `Symbolics.Num` in extension
+
+### Kernel Extraction Pipeline
+
+- `extract_kernel_direct` uses phase `(-1)^{n/2 + n_R}` for two-momentum correction
+- Do NOT simplify the full bilinear product -- simplify merges terms into ∂(bilinear) that breaks extraction
+- Pre-simplify individual FACTORS before forming the bilinear product
+- The EH bilinear is `h^{ab}δ¹G_{ab}` = `h^{ab}(δ¹R_{ab} - (1/2)g_{ab}δ¹R)`, NOT `δ²R + (1/2)tr(h)δ¹R`
+- Full kernel: `K = κ·K_EH - 2α₁·K_{R²} - 2α₂·K_{Ric²}` (note -2 sign convention)
+- Odd total derivatives (n_L+n_R odd) are dropped (imaginary, vanish in real actions)
+- `to_fourier` uniform-k is WRONG for asymmetric derivative bilinears; use `extract_kernel_direct` instead
 
 ### xperm.c FFI
 
