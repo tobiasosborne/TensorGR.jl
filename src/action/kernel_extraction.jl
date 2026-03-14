@@ -346,12 +346,32 @@ function spin_project(K::KineticKernel, spin::Symbol;
 
         P = _kernel_build_projector(spin, μ, ν, ρ, σ; dim, metric, k_name, k_sq)
 
-        # Combine projector + metric connectors + coefficient
+        # Combine projector + metric connectors + coefficient.
+        # ensure_no_dummy_clash only renames dummies that clash with OTHER
+        # dummies, but the coefficient may have internal dummies that clash
+        # with the projector's FREE indices (μ,ν,ρ,σ). Rename those too.
         all_factors = TensorExpr[P]
         append!(all_factors, metric_factors)
         combined = tproduct(1 // 1, all_factors)
-        combined = ensure_no_dummy_clash(bt.coeff, combined)
-        push!(projections, combined * bt.coeff)
+
+        # Collect ALL index names used by the projector side (free + dummy)
+        proj_all_names = Set{Symbol}(idx.name for idx in indices(combined))
+
+        # Rename any coefficient dummies that clash with projector names
+        coeff_fixed = bt.coeff
+        _, _, coeff_pairs = _analyze_indices(coeff_fixed)
+        coeff_all_names = Set{Symbol}(idx.name for idx in indices(coeff_fixed))
+        all_names = union(proj_all_names, coeff_all_names)
+        for (up_idx, _) in coeff_pairs
+            if up_idx.name in proj_all_names
+                new_name = fresh_index(all_names)
+                push!(all_names, new_name)
+                coeff_fixed = rename_dummy(coeff_fixed, up_idx.name, new_name)
+            end
+        end
+
+        combined = ensure_no_dummy_clash(coeff_fixed, combined)
+        push!(projections, combined * coeff_fixed)
     end
 
     with_registry(registry) do
@@ -646,7 +666,20 @@ end
 function _eval_spin_scalar(expr::TSum, k2)
     sum(_eval_spin_scalar(t, k2) for t in expr.terms)
 end
-function _eval_spin_scalar(expr::Tensor, k2)
+function _eval_spin_scalar(expr::Tensor, k2; dim::Int=4)
+    # Handle contracted metric/delta traces: g^a_a = delta^a_a = dim
+    if length(expr.indices) == 2
+        i1, i2 = expr.indices
+        if i1.name == i2.name && i1.position != i2.position && i1.vbundle == i2.vbundle
+            props = try
+                reg = current_registry()
+                has_tensor(reg, expr.name) ? get_tensor(reg, expr.name) : nothing
+            catch; nothing end
+            if props !== nothing && (props.is_metric || props.is_delta)
+                return Float64(dim)
+            end
+        end
+    end
     error("Uncontracted tensor in spin projection result: $expr")
 end
 
