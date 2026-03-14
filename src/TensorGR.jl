@@ -41,6 +41,7 @@ include("scalar/functions.jl")
 # Layer 3: GR objects
 include("gr/curvature.jl")
 include("gr/bianchi.jl")
+include("gr/syzygies.jl")
 include("gr/metric.jl")
 include("gr/covd.jl")
 include("gr/sort_covds.jl")
@@ -104,6 +105,9 @@ include("components/symbolic_metric.jl")
 
 # Layer 5.5: Worldline / PN
 include("worldline/worldline.jl")
+
+# Layer 5.5: Matter / EOS
+include("matter/eos.jl")
 
 # Layer 5.5: Geodesics
 include("geodesics/geodesic.jl")
@@ -172,6 +176,8 @@ export define_scalar_function!, scalar_function_derivative
 export define_curvature_tensors!, einstein_expr, ricci_from_riemann
 export cotton_expr, tensor_norm
 export bianchi_rules
+export gauss_bonnet_rule, weyl_vanishing_rule, ricci_trace_rule
+export riemann_vanishing_rule, syzygy_rules
 export define_killing!, check_killing
 export CovDProperties, define_covd!, get_covd
 export covd_to_christoffel, change_covd
@@ -183,6 +189,8 @@ export lie_derivative, lie_bracket, lie_to_covd
 export SubmanifoldProperties, HypersurfaceProperties
 export define_submanifold!, define_hypersurface!
 export extrinsic_curvature_expr, induced_metric_expr, projector_expr
+export ghy_boundary_term, ibp_with_boundary
+export gauss_equation, codazzi_equation, gauss_codazzi_rules
 export MappingProperties, define_mapping!, get_mapping, has_mapping
 export pullback, pushforward, pullback_metric
 export ProductManifoldProperties, define_product_manifold!
@@ -197,6 +205,8 @@ export metric_ansatz
 
 # Exports: Matter
 export PerfectFluidProperties, define_perfect_fluid!, perfect_fluid_expr, get_perfect_fluid
+export EquationOfState, BarotropicEOS, PolytropicEOS, TabularEOS
+export PerfectFluid, pressure, sound_speed
 
 # Exports: Curvature invariants
 export InvariantEntry, INVARIANT_CATALOG, curvature_invariant, list_invariants

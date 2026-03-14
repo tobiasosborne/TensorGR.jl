@@ -633,6 +633,54 @@
         end
     end
 
+    # ── Gauss-Codazzi relations ──
+    @testset "Gauss-Codazzi relations" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+            hs = define_hypersurface!(reg, :Σ; ambient=:M4, metric=:g,
+                                       normal_name=:n, extrinsic_name=:K,
+                                       signature=-1)
+
+            # Register intrinsic Riemann for the Gauss rule
+            register_tensor!(reg, TensorProperties(
+                name=:Riem3, manifold=:M4, rank=(0, 4),
+                symmetries=SymmetrySpec[RiemannSymmetry()]))
+
+            # ── gauss_equation: builds the RHS expression ──
+            ge = gauss_equation(down(:a), down(:b), down(:c), down(:d);
+                                Riem=:Riem, K=:K, signature=-1)
+            @test ge isa TSum
+            # Should have 3 terms: Riem_{abcd} + (-1)(K_{ac}K_{bd}) - (-1)(K_{ad}K_{bc})
+            @test length(ge.terms) == 3
+
+            # ── codazzi_equation: builds the RHS expression ──
+            ce = codazzi_equation(down(:a), down(:b), down(:c);
+                                  Riem=:Riem, K=:K, normal=:n, signature=-1)
+            @test ce isa TProduct
+            # Should be -1 * Riem_{dabc} * n^d
+            @test length(ce.factors) == 2
+
+            # ── gauss_codazzi_rules: rewrite rules ──
+            gc_rules = gauss_codazzi_rules(; Riem=:Riem, K=:K, normal=:n,
+                                             signature=-1, intrinsic_Riem=:Riem3)
+            @test length(gc_rules) == 2
+
+            # Apply the Gauss rule to Riem3_{abcd}
+            riem3 = Tensor(:Riem3, [down(:a), down(:b), down(:c), down(:d)])
+            result = apply_rules(riem3, gc_rules)
+            @test result isa TSum
+            @test result != riem3  # rule was applied
+
+            # Apply the Codazzi rule to Riem_{eabc} n^e
+            riem_n = Tensor(:Riem, [down(:e), down(:a), down(:b), down(:c)]) *
+                     Tensor(:n, [up(:e)])
+            result2 = apply_rules(riem_n, gc_rules)
+            @test result2 != riem_n  # rule was applied
+        end
+    end
+
     # ── wedge_power ──
     @testset "Wedge power" begin
         reg = TensorRegistry()

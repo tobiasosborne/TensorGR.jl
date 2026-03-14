@@ -294,3 +294,281 @@ function projector_expr(a::TIndex, b::TIndex,
     end
     result
 end
+
+# ── Gauss-Codazzi relations ──────────────────────────────────────────
+
+"""
+    gauss_equation(a, b, c, d; Riem=:Riem, K=:K, signature=-1) -> TensorExpr
+
+The Gauss equation relating the ambient Riemann tensor projected onto the
+hypersurface to the extrinsic curvature:
+
+    ³R_{abcd} = R_{abcd} + σ (K_{ac} K_{bd} - K_{ad} K_{bc})
+
+where σ = signature of the unit normal (n·n = σ). All indices are tangent
+to the hypersurface. Returns the right-hand side (ambient Riemann + K²
+terms) so that the intrinsic Riemann can be replaced by this expression.
+"""
+function gauss_equation(a::TIndex, b::TIndex, c::TIndex, d::TIndex;
+                        Riem::Symbol=:Riem, K::Symbol=:K, signature::Int=-1)
+    s = signature // 1
+    # Build a flat 3-term sum: Riem_{abcd} + σ K_{ac}K_{bd} - σ K_{ad}K_{bc}
+    tsum(TensorExpr[
+        Tensor(Riem, [a, b, c, d]),
+        tproduct(s, TensorExpr[Tensor(K, [a, c]), Tensor(K, [b, d])]),
+        tproduct(-s, TensorExpr[Tensor(K, [a, d]), Tensor(K, [b, c])])
+    ])
+end
+
+"""
+    codazzi_equation(a, b, c; Riem=:Riem, K=:K, normal=:n, signature=-1) -> TensorExpr
+
+The Codazzi(-Mainardi) equation relating the tangential derivative of the
+extrinsic curvature to the normal projection of the ambient Riemann tensor:
+
+    D_a K_{bc} - D_b K_{ac} = σ R_{dabc} n^d
+
+where σ = signature of the unit normal and D is the induced connection on
+the hypersurface. Returns the right-hand side (Riemann contracted with the
+normal) so that the antisymmetric CovD-of-K pattern can be replaced.
+
+The dummy index for the normal contraction is chosen automatically to avoid
+clashes with a, b, c.
+"""
+function codazzi_equation(a::TIndex, b::TIndex, c::TIndex;
+                          Riem::Symbol=:Riem, K::Symbol=:K,
+                          normal::Symbol=:n, signature::Int=-1)
+    used = Set{Symbol}([a.name, b.name, c.name])
+    d = fresh_index(used)
+    s = signature // 1
+    s * Tensor(Riem, [down(d), a, b, c]) * Tensor(normal, [up(d)])
+end
+
+"""
+    gauss_codazzi_rules(; Riem=:Riem, K=:K, normal=:n, signature=-1,
+                          intrinsic_Riem=:Riem3) -> Vector{RewriteRule}
+
+Create rewrite rules implementing the Gauss and Codazzi equations for a
+codimension-1 hypersurface embedding.
+
+Returns two rules:
+1. **Gauss**: replaces the intrinsic Riemann `Riem3_{abcd}` with the ambient
+   Riemann plus extrinsic curvature terms.
+2. **Codazzi**: replaces `Riem_{abcd} n^a` (Riemann contracted with the
+   normal in the first slot) with covariant derivatives of K.
+
+The Codazzi rule is a functional rule that detects a TProduct containing
+`Riem_{abcd}` contracted with `n^e` on the first index, and rewrites it to
+`σ (D_c K_{bd} - D_d K_{bc})` using the specified covariant derivative.
+"""
+function gauss_codazzi_rules(; Riem::Symbol=:Riem, K::Symbol=:K,
+                               normal::Symbol=:n, signature::Int=-1,
+                               intrinsic_Riem::Symbol=:Riem3,
+                               covd::Symbol=:partial)
+    rules = RewriteRule[]
+    s = signature // 1
+
+    # ── Rule 1: Gauss equation ──
+    # Riem3_{a_ b_ c_ d_} → Riem_{a_ b_ c_ d_} + σ(K_{a_ c_} K_{b_ d_} - K_{a_ d_} K_{b_ c_})
+    gauss_lhs = Tensor(intrinsic_Riem, [down(:a_), down(:b_), down(:c_), down(:d_)])
+    gauss_rhs = tsum(TensorExpr[
+        Tensor(Riem, [down(:a_), down(:b_), down(:c_), down(:d_)]),
+        tproduct(s, TensorExpr[Tensor(K, [down(:a_), down(:c_)]),
+                                Tensor(K, [down(:b_), down(:d_)])]),
+        tproduct(-s, TensorExpr[Tensor(K, [down(:a_), down(:d_)]),
+                                 Tensor(K, [down(:b_), down(:c_)])])
+    ])
+    push!(rules, RewriteRule(gauss_lhs, gauss_rhs))
+
+    # ── Rule 2: Codazzi equation ──
+    # Detect Riem_{abcd} * n^e where e contracts with the first Riemann index.
+    # Rewrite: σ Riem_{eabc} n^e → D_a K_{bc} - D_b K_{ac}
+    push!(rules, RewriteRule(
+        function(expr)
+            expr isa TProduct || return false
+            riem_idx = nothing
+            norm_idx = nothing
+            for (i, f) in enumerate(expr.factors)
+                if f isa Tensor && f.name == Riem && length(f.indices) == 4
+                    riem_idx = i
+                elseif f isa Tensor && f.name == normal && length(f.indices) == 1
+                    norm_idx = i
+                end
+            end
+            (riem_idx === nothing || norm_idx === nothing) && return false
+            riem_t = expr.factors[riem_idx]::Tensor
+            norm_t = expr.factors[norm_idx]::Tensor
+            # Check contraction: normal index matches first Riemann index
+            ni = norm_t.indices[1]
+            ri = riem_t.indices[1]
+            ni.name == ri.name && ni.position != ri.position
+        end,
+        function(expr)
+            riem_idx = nothing
+            norm_idx = nothing
+            for (i, f) in enumerate(expr.factors)
+                if f isa Tensor && f.name == Riem && length(f.indices) == 4
+                    riem_idx = i
+                elseif f isa Tensor && f.name == normal && length(f.indices) == 1
+                    norm_idx = i
+                end
+            end
+            riem_t = expr.factors[riem_idx]::Tensor
+            # Free indices: slots 2,3,4 of Riemann (slot 1 is contracted with n)
+            idx_a = riem_t.indices[2]
+            idx_b = riem_t.indices[3]
+            idx_c = riem_t.indices[4]
+            # Codazzi: σ R_{eabc} n^e = D_a K_{bc} - D_b K_{ac}
+            codazzi_val = TDeriv(idx_a, Tensor(K, [idx_b, idx_c]), covd) -
+                          TDeriv(idx_b, Tensor(K, [idx_a, idx_c]), covd)
+            # Carry through the scalar and any remaining factors
+            remaining = [expr.factors[k] for k in eachindex(expr.factors)
+                         if k != riem_idx && k != norm_idx]
+            result = (expr.scalar * (1 // s)) * codazzi_val
+            if !isempty(remaining)
+                result = tproduct(1 // 1, TensorExpr[result; remaining])
+            end
+            result
+        end
+    ))
+
+    rules
+end
+
+# ── GHY boundary term ───────────────────────────────────────────────
+
+"""
+    ghy_boundary_term(reg, hypersurface::Symbol) -> TensorExpr
+
+Return the Gibbons-Hawking-York boundary term as an abstract tensor expression:
+
+    S_GHY = 2 K
+
+where `K = g^{ab} K_{ab}` is the trace of the extrinsic curvature of the
+named hypersurface.  Adding this to the Einstein-Hilbert action makes the
+Dirichlet variational problem well-posed.
+
+The hypersurface must have been registered with `define_hypersurface!` or
+`define_submanifold!` (codimension 1).
+
+# Example
+```julia
+reg = TensorRegistry()
+@manifold M4 dim=4 metric=g
+define_hypersurface!(reg, :Sigma; ambient=:M4, metric=:g, signature=-1)
+S_ghy = ghy_boundary_term(reg, :Sigma)
+```
+"""
+function ghy_boundary_term(reg::TensorRegistry, hypersurface::Symbol)
+    key = Symbol(:hypersurface_, hypersurface)
+    haskey(reg.foliations, key) ||
+        error("No hypersurface ':$hypersurface' found in registry. " *
+              "Call define_hypersurface! first.")
+    sp = reg.foliations[key]
+    sp.codimension == 1 ||
+        error("GHY boundary term is defined only for codimension-1 " *
+              "hypersurfaces (got codimension $(sp.codimension)).")
+
+    K_name = sp.extrinsic_names[1]
+    metric = sp.metric
+
+    # K = g^{ab} K_{ab}  (trace of extrinsic curvature)
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used)
+
+    K_trace = tproduct(1 // 1, TensorExpr[
+        Tensor(metric, [up(a), up(b)]),
+        Tensor(K_name, [down(a), down(b)])
+    ])
+
+    # S_GHY = 2 K
+    tproduct(2 // 1, TensorExpr[K_trace])
+end
+
+# ── Integration by parts with boundary term ──────────────────────────
+
+"""
+    ibp_with_boundary(expr::TensorExpr, field::Symbol;
+                      registry::TensorRegistry=current_registry()) -> (bulk, boundary)
+
+Integration by parts that preserves the boundary term.
+
+Like `ibp_product`, this moves all derivatives off tensors named `field` in a
+product.  Instead of discarding the surface contribution it returns a
+`(bulk, boundary)` tuple where:
+
+- **bulk**: the IBP-transferred expression (same as `ibp_product`)
+- **boundary**: the total-derivative surface contribution that `ibp_product`
+  would discard.  Explicitly, for a factor `d_a1...d_an(field) * rest`:
+
+      expr = bulk + boundary
+
+  so `boundary = expr - bulk` (under the implicit integral sign).
+
+For expressions that are not products, or products with no derivatives on
+`field`, the result is trivially `(expr, 0)`.
+
+# Example
+```julia
+# d_a(phi) T^a  -->  bulk = -phi d_a(T^a),  boundary = expr - bulk
+phi = Tensor(:phi, TIndex[])
+T   = Tensor(:T, [up(:a)])
+expr = tproduct(1//1, TensorExpr[TDeriv(down(:a), phi), T])
+bulk, bdry = ibp_with_boundary(expr, :phi)
+```
+"""
+ibp_with_boundary(t::Tensor, ::Symbol;
+                  registry::TensorRegistry=current_registry()) = (t, ZERO)
+ibp_with_boundary(s::TScalar, ::Symbol;
+                  registry::TensorRegistry=current_registry()) = (s, ZERO)
+
+function ibp_with_boundary(s::TSum, field::Symbol;
+                           registry::TensorRegistry=current_registry())
+    bulks = TensorExpr[]
+    bdrys = TensorExpr[]
+    for t in s.terms
+        b, d = ibp_with_boundary(t, field; registry=registry)
+        push!(bulks, b)
+        push!(bdrys, d)
+    end
+    (tsum(bulks), tsum(bdrys))
+end
+
+function ibp_with_boundary(d::TDeriv, field::Symbol;
+                           registry::TensorRegistry=current_registry())
+    # Standalone derivative (not inside a product) -- IBP is a no-op.
+    (d, ZERO)
+end
+
+function ibp_with_boundary(p::TProduct, field::Symbol;
+                           registry::TensorRegistry=current_registry())
+    factors = p.factors
+    for (i, fi) in enumerate(factors)
+        base, idxs = _peel_all_derivs_of(fi, field)
+        isempty(idxs) && continue
+
+        # ── bulk: same logic as ibp_product ──
+        rest_factors = TensorExpr[factors[j] for j in eachindex(factors) if j != i]
+        rest = isempty(rest_factors) ? TScalar(1 // 1) : tproduct(1 // 1, rest_factors)
+
+        d_rest = rest
+        for idx in idxs
+            d_rest = TDeriv(idx, d_rest)
+        end
+        d_rest = expand_derivatives(d_rest)
+
+        sign = iseven(length(idxs)) ? 1 : -1
+        bulk = tproduct(Rational{Int}(sign) * p.scalar, TensorExpr[base, d_rest])
+
+        # ── boundary = original - bulk ──
+        # This is the total-derivative surface contribution:
+        #   d_a1(... field ... rest ...) type terms.
+        # We compute it as  expr - bulk  so that  expr = bulk + boundary.
+        boundary = tsum(TensorExpr[p, tproduct(-1 // 1, TensorExpr[bulk])])
+
+        return (bulk, boundary)
+    end
+    # No derivative of `field` found -- trivially no boundary term.
+    (p, ZERO)
+end
