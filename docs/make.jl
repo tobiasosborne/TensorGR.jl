@@ -19,7 +19,7 @@ makedocs(
             "3+1 Foliation" => "api/foliation.md",
             "SVT Decomposition" => "api/svt.md",
             "Quadratic Action" => "api/action.md",
-            "Ansatz & Maps" => "api/ansatz.md",
+            "Metric Ansatz" => "api/ansatz.md",
             "Advanced Features" => "api/advanced.md",
         ],
         "xperm.c Internals" => "xperm_internals.md",

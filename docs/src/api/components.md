@@ -1,6 +1,6 @@
 # Component Calculations
 
-This module bridges abstract tensor algebra and concrete numerical/symbolic computation. It provides coordinate charts, component tensor arrays (`CTensor`), metric-based curvature computation from components, component value storage with symmetry awareness, basis definitions, and conversion from abstract expressions to component representations.
+This module bridges abstract tensor algebra and concrete numerical/symbolic computation. It provides coordinate charts, component tensor arrays (`CTensor`), metric-based curvature computation from components, component value storage with symmetry awareness, basis definitions, conversion from abstract expressions to component representations, and the symbolic metric pipeline (via Symbolics.jl extension).
 
 ## Charts
 
@@ -50,7 +50,6 @@ ctensor_contract
 ctensor_trace
 ctensor_inverse
 ctensor_det
-basis_change
 ```
 
 ## Metric Computations
@@ -129,12 +128,16 @@ bp = define_basis!(reg, :tetrad; manifold=:M4, basis_type=:orthonormal)
 
 # Retrieve basis properties
 bp = get_basis(reg, :tetrad)
+
+# Basis change
+T_new = basis_change(T, jacobian_matrix)
 ```
 
 ```@docs
 BasisProperties
 define_basis!
 get_basis
+basis_change
 ```
 
 ## Abstract-to-Component Conversion
@@ -161,4 +164,45 @@ ct_num = to_ctensor(expr, chart, values)
 to_basis
 component_array
 to_ctensor
+```
+
+## Symbolic Components (Symbolics.jl Extension)
+
+Build metric and curvature components symbolically using Symbolics.jl. Requires `using Symbolics` (loaded as a weak dependency extension).
+
+```julia
+using Symbolics
+
+# Diagonal metric (e.g. Schwarzschild)
+@variables r theta
+sm = symbolic_diagonal_metric([:t,:r,:theta,:phi],
+    [-f(r), 1/f(r), r^2, r^2*sin(theta)^2])
+
+# Full metric from matrix
+sm = symbolic_metric([:t,:r,:theta,:phi], g_matrix)
+
+# Compute curvature from symbolic metric
+christoffel = symbolic_christoffel(sm)
+riemann     = symbolic_riemann(sm)
+ricci       = symbolic_ricci(sm)
+R           = symbolic_ricci_scalar(sm)
+einstein    = symbolic_einstein(sm)
+K           = symbolic_kretschmann(sm)
+
+# All curvature tensors at once
+curv = symbolic_curvature_from_metric(sm)
+```
+
+```@docs
+SymbolicMetric
+symbolic_diagonal_metric
+symbolic_metric
+sym_deriv
+symbolic_christoffel
+symbolic_riemann
+symbolic_ricci
+symbolic_ricci_scalar
+symbolic_einstein
+symbolic_kretschmann
+symbolic_curvature_from_metric
 ```

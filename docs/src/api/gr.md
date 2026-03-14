@@ -1,6 +1,6 @@
 # GR Objects
 
-This module provides the differential geometry and general relativity infrastructure: metric and curvature tensor definitions, covariant derivatives with Christoffel symbols, Lie derivatives, Killing vectors, hypersurface geometry, curvature conversions, and topological densities. Together these give a complete symbolic GR toolkit analogous to xAct's xTensor + xCoba.
+This module provides the differential geometry and general relativity infrastructure: metric and curvature tensor definitions, covariant derivatives with Christoffel symbols, Lie derivatives, Killing vectors, hypersurface geometry, curvature conversions, topological densities, curvature invariant catalog, and syzygies. Together these give a complete symbolic GR toolkit analogous to xAct's xTensor + xCoba.
 
 ## Metric Infrastructure
 
@@ -8,7 +8,7 @@ The `define_metric!` function is the primary entry point: it registers the metri
 
 ```julia
 reg = TensorRegistry()
-mp = ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f])
+mp = ManifoldProperties(:M4, 4, :g, :d, [:a,:b,:c,:d,:e,:f])
 register_manifold!(reg, mp)
 define_metric!(reg, :g; manifold=:M4, signature=lorentzian(4))
 ```
@@ -80,6 +80,27 @@ cotton_expr
 tensor_norm
 ```
 
+## Curvature Invariant Catalog
+
+A structured catalog of scalar curvature invariants at orders 1 (linear), 2 (quadratic), and 3 (cubic in curvature). The catalog includes Ricci scalar, Kretschmann, Weyl squared, and all 6 independent cubic invariants (including the Goroff-Sagnotti invariant).
+
+```julia
+# Look up an invariant by name
+K = curvature_invariant(:Kretschmann)
+W2 = curvature_invariant(:Weyl_sq; manifold=:M4, metric=:g)
+
+# List all available invariants
+list_invariants()
+list_invariants(order=3)  # only cubic invariants
+```
+
+```@docs
+InvariantEntry
+INVARIANT_CATALOG
+curvature_invariant
+list_invariants
+```
+
 ## Curvature Conversions
 
 Convert between different curvature tensor representations. These functions return the algebraic decomposition expressions.
@@ -140,6 +161,26 @@ riemann_to_christoffel
 kretschmann_expr
 ```
 
+## Curvature Syzygies
+
+Syzygies are algebraic identities between products of curvature tensors that hold in specific dimensions. They complement Bianchi identities (which are linear in curvature) with quadratic and higher-order relations.
+
+```julia
+# Gauss-Bonnet in 4D: Riem^2 -> 4 Ric^2 - R^2
+rules = gauss_bonnet_rule(; metric=:g, drop_euler=true)
+
+# All applicable syzygies for a given dimension
+rules = syzygy_rules(; dim=4, metric=:g)
+```
+
+```@docs
+gauss_bonnet_rule
+weyl_vanishing_rule
+ricci_trace_rule
+riemann_vanishing_rule
+syzygy_rules
+```
+
 ## Bianchi Identities
 
 Bianchi identity rules are auto-registered by `define_metric!`. The contracted Bianchi identities enforce divergence-freeness of the Einstein tensor and relate the divergence of Ricci to the gradient of the scalar curvature.
@@ -167,6 +208,7 @@ changed = change_covd(expr, :nabla1, :nabla2)
 CovDProperties
 define_covd!
 get_covd
+unregister_covd!
 covd_to_christoffel
 change_covd
 christoffel_to_grad_metric
@@ -180,9 +222,6 @@ Commute covariant derivatives into canonical order, generating Riemann curvature
 ```julia
 # Sort all CovDs alphabetically, inserting [nabla_a, nabla_b] = Riemann terms
 sorted = commute_covds(expr, :nabla)
-
-# Commute a specific pair only
-sorted = commute_covds(expr, :nabla, :b, :a)
 
 # Detect box operator patterns: d_a(d^a(T)) -> g^{ab} d_a d_b T
 boxed = sort_covds_to_box(expr; metric=:g)
@@ -246,7 +285,7 @@ lie_to_covd
 
 ## Killing Vectors
 
-Define Killing vector fields. The Killing equation is registered as metadata; use `make_rule` to impose it as a rewrite rule.
+Define Killing vector fields. The Killing equation is registered as metadata; use `check_killing` to verify the Killing condition.
 
 ```julia
 define_killing!(reg, :xi; manifold=:M4, metric=:g)
@@ -254,6 +293,7 @@ define_killing!(reg, :xi; manifold=:M4, metric=:g)
 
 ```@docs
 define_killing!
+check_killing
 ```
 
 ## Hypersurface Geometry
@@ -276,11 +316,32 @@ P = projector_expr(up(:a), down(:b), :n; signature=-1)
 ```
 
 ```@docs
+SubmanifoldProperties
 HypersurfaceProperties
+define_submanifold!
 define_hypersurface!
 extrinsic_curvature_expr
 induced_metric_expr
 projector_expr
+```
+
+### Boundary Terms
+
+Gibbons-Hawking-York boundary term and integration by parts with boundary contributions.
+
+```@docs
+ghy_boundary_term
+ibp_with_boundary
+```
+
+### Gauss-Codazzi Relations
+
+Relate the intrinsic curvature of a hypersurface to the ambient curvature via the Gauss equation and Codazzi equation.
+
+```@docs
+gauss_equation
+codazzi_equation
+gauss_codazzi_rules
 ```
 
 ## Topological Densities

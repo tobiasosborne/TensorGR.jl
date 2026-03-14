@@ -63,6 +63,7 @@ RiemannSymmetry
 FullySymmetric
 FullyAntiSymmetric
 SymmetrySpec
+symmetry_generators
 ```
 
 ## Registry
@@ -84,7 +85,7 @@ Register a manifold before defining tensors on it. The `@manifold` macro (see [M
 
 ```julia
 reg = TensorRegistry()
-mp = ManifoldProperties(:M4, 4, :g, :∂, [:a,:b,:c,:d,:e,:f])
+mp = ManifoldProperties(:M4, 4, :g, :d, [:a,:b,:c,:d,:e,:f])
 register_manifold!(reg, mp)
 ```
 
@@ -122,6 +123,8 @@ define_vbundle!(reg, :SU2; manifold=:M4, dim=3, indices=[:i,:j,:k])
 
 ```@docs
 define_vbundle!
+has_vbundle
+get_vbundle
 ```
 
 ### Registry Scoping
@@ -146,6 +149,7 @@ Rules added to a registry are applied during every `simplify` pass.
 
 ```@docs
 register_rule!
+get_rules
 ```
 
 ## Rewrite Rules
@@ -170,6 +174,7 @@ rule = RewriteRule(pattern, replacement, condition_fn)
 
 ```@docs
 RewriteRule
+is_pattern_variable
 ```
 
 ### Rule Application

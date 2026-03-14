@@ -1,6 +1,6 @@
 # Algebra
 
-The algebra module provides all operations for manipulating abstract tensor expressions: smart constructors that enforce normal forms, the full simplification pipeline, index utilities, symmetrization, ansatz construction, integration by parts, and linear equation solving.
+The algebra module provides all operations for manipulating abstract tensor expressions: smart constructors that enforce normal forms, the full simplification pipeline, index utilities, symmetrization, ansatz construction, integration by parts, linear equation solving, and scalar algebra.
 
 ## Smart Constructors
 
@@ -44,6 +44,8 @@ collect_terms
 contract_metrics
 canonicalize
 expand_derivatives
+fix_dummy_positions
+normalize_field_positions
 ```
 
 ## Index Utilities
@@ -228,4 +230,28 @@ rules = solve_tensors([eq1, eq2], [:T, :S]; take_traces=true)
 
 ```@docs
 solve_tensors
+```
+
+## Scalar Algebra
+
+Symbolic arithmetic operations on Julia `Number` and `Expr` trees for manipulating scalar coefficients. When Symbolics.jl is loaded, these dispatch through the CAS.
+
+```julia
+# Distribute multiplication over addition in scalar expressions
+scalar_expand(:(a * (b + c)))  # => :(a*b + a*c)
+
+# Collect like terms
+scalar_collect(:(a*x + b*x))  # => :((a+b)*x)
+
+# Substitute values
+scalar_subst(:(a + b), Dict(:a => 1))  # => :(1 + b)
+```
+
+```@docs
+scalar_expand
+scalar_collect
+scalar_subst
+scalar_cancel
+define_scalar_function!
+scalar_function_derivative
 ```

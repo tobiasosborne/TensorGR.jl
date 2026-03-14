@@ -1,26 +1,39 @@
-# Geodesics
+# Geodesic Integration
 
-Numerical integration of geodesic equations on curved spacetimes. Provides
-the geodesic ODE right-hand side for use with DifferentialEquations.jl or
-any ODE solver that accepts an in-place `f!(du, u, p, t)` signature.
+Numerical integration of geodesic equations on curved spacetimes. The module provides the ODE right-hand side for the geodesic equation, compatible with DifferentialEquations.jl for numerical solutions of both timelike and null geodesics.
 
-## Geodesic Equation Setup
+## Overview
 
-Construct a `GeodesicEquation` from a metric function. If no Christoffel
-function is supplied, Christoffel symbols are computed numerically via
-central finite differences at each evaluation point.
+The geodesic equation describes the motion of free-falling particles in curved spacetime:
+
+    d^2 x^mu / d tau^2 + Gamma^mu_{alpha beta} (dx^alpha / d tau)(dx^beta / d tau) = 0
+
+This is converted to a first-order system of 2\*dim ODEs by introducing the velocity v^mu = dx^mu/dtau. The `GeodesicEquation` struct stores the metric and Christoffel symbol functions, and `geodesic_rhs!` computes the right-hand side for the ODE integrator.
+
+## Setup
+
+Construct a geodesic equation from a metric function. If no Christoffel function is provided, Christoffel symbols are computed automatically via central finite differences.
 
 ```julia
-# Schwarzschild metric in spherical coordinates
-function schw_metric(x)
-    r, M = x[2], 1.0
-    f = 1 - 2M/r
-    g = diagm([-f, 1/f, r^2, r^2*sin(x[3])^2])
-    ginv = diagm([-1/f, f, 1/r^2, 1/(r^2*sin(x[3])^2)])
+# Minkowski metric
+function mink(x)
+    g = diagm([-1.0, 1.0, 1.0, 1.0])
+    ginv = diagm([-1.0, 1.0, 1.0, 1.0])
     (g, ginv)
 end
 
-geq = setup_geodesic(schw_metric; dim=4, is_timelike=true)
+geq = setup_geodesic(mink; dim=4)
+
+# Schwarzschild metric
+function schwarzschild(x; M=1.0)
+    r, theta = x[2], x[3]
+    f = 1 - 2M/r
+    g = diagm([-f, 1/f, r^2, r^2*sin(theta)^2])
+    ginv = diagm([-1/f, f, 1/r^2, 1/(r^2*sin(theta)^2)])
+    (g, ginv)
+end
+
+geq = setup_geodesic(schwarzschild; dim=4, is_timelike=true)
 ```
 
 ```@docs
@@ -30,37 +43,41 @@ setup_geodesic
 
 ## ODE Right-Hand Side
 
-The state vector `u` has length `2*dim`: positions `u[1:dim]` followed by
-velocities `u[dim+1:2*dim]`. The geodesic equation is:
-
-    dx^mu/dtau = v^mu
-    dv^mu/dtau = -Gamma^mu_{alpha beta} v^alpha v^beta
+The `geodesic_rhs!` function computes the time derivatives in-place, following the DifferentialEquations.jl convention. The state vector `u` has length `2*dim`: positions in `u[1:dim]`, velocities in `u[dim+1:2*dim]`.
 
 ```julia
+# Evaluate the RHS at a point (for manual stepping or testing)
+du = zeros(8)
+u = [0.0, 10.0, pi/2, 0.0,   # position: t, r, theta, phi
+     1.1, 0.0, 0.0, 0.02]    # velocity: dt/dtau, dr/dtau, dtheta/dtau, dphi/dtau
+geodesic_rhs!(du, u, geq, 0.0)
+
 # Use with DifferentialEquations.jl
-using DifferentialEquations
-x0 = [0.0, 10.0, pi/2, 0.0]
-v0 = [1.1, 0.0, 0.0, 0.02]
-u0 = vcat(x0, v0)
-prob = ODEProblem(geodesic_rhs!, u0, (0.0, 100.0), geq)
-sol = solve(prob, Tsit5())
+# using DifferentialEquations
+# prob = ODEProblem(geodesic_rhs!, u0, (0.0, 100.0), geq)
+# sol = solve(prob, Tsit5())
 ```
 
 ```@docs
 geodesic_rhs!
 ```
 
-## Integration Helper
+## Integration
 
-The `integrate_geodesic` function wraps the ODE setup and returns a
-structured `GeodesicSolution`. Requires DifferentialEquations.jl to be
-loaded (weak dependency extension).
+Integrate the geodesic equation numerically. Requires `DifferentialEquations.jl` to be loaded.
 
 ```julia
+using DifferentialEquations
+
+geq = setup_geodesic(schwarzschild; dim=4)
+x0 = [0.0, 10.0, pi/2, 0.0]        # initial position
+v0 = [1.1, 0.0, 0.0, 0.02]         # initial velocity
 sol = integrate_geodesic(geq, x0, v0, (0.0, 100.0))
-sol.t    # proper time / affine parameter values
-sol.x    # position vectors at each time step
-sol.v    # velocity vectors at each time step
+
+sol.t    # proper time values
+sol.x    # positions at each time step
+sol.v    # velocities at each time step
+sol.retcode  # :Success if integration completed
 ```
 
 ```@docs
@@ -68,12 +85,29 @@ GeodesicSolution
 integrate_geodesic
 ```
 
-## Numerical Christoffel Symbols
+## Example: Schwarzschild Orbit
 
-When no analytic Christoffel function is provided, `setup_geodesic` uses
-central finite differences internally. This function is also available
-directly for debugging or validation.
+```julia
+using TensorGR
+using DifferentialEquations
 
-```@docs
-TensorGR._numerical_christoffel
+# Schwarzschild metric with M = 1
+function schw(x)
+    r, theta = x[2], x[3]
+    f = 1 - 2.0/r
+    g = diagm([-f, 1/f, r^2, r^2*sin(theta)^2])
+    ginv = diagm([-1/f, f, 1/r^2, 1/(r^2*sin(theta)^2)])
+    (g, ginv)
+end
+
+geq = setup_geodesic(schw; dim=4, is_timelike=true)
+
+# Circular orbit at r = 6M (ISCO for Schwarzschild)
+r0 = 6.0
+E = (1 - 2/r0) / sqrt(1 - 3/r0)
+L = sqrt(r0) / sqrt(1 - 3/r0)
+x0 = [0.0, r0, pi/2, 0.0]
+v0 = [E/(1 - 2/r0), 0.0, 0.0, L/r0^2]
+
+sol = integrate_geodesic(geq, x0, v0, (0.0, 200.0))
 ```

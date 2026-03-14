@@ -23,6 +23,11 @@ Replace partial derivatives with momentum factors for momentum-space analysis.
 Each derivative d\_a becomes a momentum tensor k\_a. Sign conventions are
 configurable via `FourierConvention`.
 
+```julia
+# Transform an expression to Fourier space
+fourier_expr = to_fourier(expr)
+```
+
 ```@docs
 to_fourier
 FourierConvention

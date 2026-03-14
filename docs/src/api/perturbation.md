@@ -121,6 +121,9 @@ vacuum_background!(reg, :M4)
 
 # Maximally symmetric background (de Sitter / anti-de Sitter)
 maximally_symmetric_background!(reg, :M4; cosmological_constant=:Lambda)
+
+# Cosmological background (FRW)
+cosmological_background!(reg, :M4)
 ```
 
 ```@docs

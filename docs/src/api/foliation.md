@@ -9,6 +9,14 @@ Register a foliation on a manifold, specifying which component is temporal
 and which are spatial. A standard 4D spacetime uses component 0 as temporal
 and 1, 2, 3 as spatial.
 
+```julia
+reg = TensorRegistry()
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    fol = define_foliation!(reg, :flat31; manifold=:M4)
+end
+```
+
 ```@docs
 FoliationProperties
 define_foliation!
