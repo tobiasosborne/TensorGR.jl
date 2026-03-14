@@ -129,8 +129,8 @@
                             :R_Kretschmann, :Ric_Riem_sq, :Riem_cubed]
             for name in order3_names
                 expr = curvature_invariant(name; registry=reg, manifold=:M4, metric=:g)
-                @test expr isa TProduct "Expected $name to produce a TProduct"
-                @test isempty(free_indices(expr)) "Expected $name to be a scalar (no free indices)"
+                @test expr isa TProduct
+                @test isempty(free_indices(expr))
             end
 
             # R^3: should have three RicScalar factors
@@ -228,7 +228,7 @@
     # ─── Descriptions are non-empty ────────────────────────────────────
     @testset "Descriptions are non-empty" begin
         for (name, entry) in INVARIANT_CATALOG
-            @test !isempty(entry.description) "Invariant $name has empty description"
+            @test !isempty(entry.description)
         end
     end
 end
