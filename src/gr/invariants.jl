@@ -1,9 +1,15 @@
 #= Curvature invariant catalog.
 
-A structured catalog of scalar curvature invariants at order 1 (linear in
-curvature) and order 2 (quadratic in curvature).  Each entry stores a
+A structured catalog of scalar curvature invariants at orders 1 (linear),
+2 (quadratic), and 3 (cubic in curvature).  Each entry stores a
 constructor function `(registry, manifold, metric) -> TensorExpr` together
 with metadata (order, minimum dimension, description).
+
+The 6 cubic (order-3) invariants are the independent monomials cubic in
+curvature:
+  I1 = R^3,  I2 = R R_{ab}R^{ab},  I3 = R_a^b R_b^c R_c^a,
+  I4 = R R_{abcd}R^{abcd},  I5 = R_{ab}R^{acde}R^b_{cde},
+  I6 = R_{ab}^{cd}R_{cd}^{ef}R_{ef}^{ab}  (Goroff-Sagnotti)
 
 Public API:
   curvature_invariant(name; registry, manifold, metric) -> TensorExpr
@@ -83,13 +89,120 @@ function _build_Weyl_sq(reg::TensorRegistry, manifold::Symbol, metric::Symbol)
     Weyl_down * Weyl_up
 end
 
+# Order 3: R^3
+function _build_R_cubed(reg::TensorRegistry, manifold::Symbol, metric::Symbol)
+    Tensor(:RicScalar, TIndex[]) * Tensor(:RicScalar, TIndex[]) * Tensor(:RicScalar, TIndex[])
+end
+
+# Order 3: R * R_{ab} R^{ab}
+function _build_R_Ric_sq(reg::TensorRegistry, manifold::Symbol, metric::Symbol)
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used)
+
+    R = Tensor(:RicScalar, TIndex[])
+    Ric1 = Tensor(:Ric, [down(a), down(b)])
+    Ric2 = Tensor(:Ric, [down(c), down(d)])
+    R * Ric1 * Ric2 * Tensor(metric, [up(a), up(c)]) * Tensor(metric, [up(b), up(d)])
+end
+
+# Order 3: R_{a}^{b} R_{b}^{c} R_{c}^{a}  (Ricci cube trace)
+function _build_Ric_cubed(reg::TensorRegistry, manifold::Symbol, metric::Symbol)
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    e = fresh_index(used); push!(used, e)
+    f = fresh_index(used); push!(used, f)
+    g = fresh_index(used)
+
+    Ric1 = Tensor(:Ric, [down(a), down(e)])
+    Ric2 = Tensor(:Ric, [down(b), down(f)])
+    Ric3 = Tensor(:Ric, [down(c), down(g)])
+    Ric1 * Ric2 * Ric3 *
+        Tensor(metric, [up(e), up(b)]) * Tensor(metric, [up(f), up(c)]) * Tensor(metric, [up(g), up(a)])
+end
+
+# Order 3: R * R_{abcd} R^{abcd}  (scalar x Kretschmann)
+function _build_R_Kretschmann(reg::TensorRegistry, manifold::Symbol, metric::Symbol)
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used); push!(used, d)
+    e = fresh_index(used); push!(used, e)
+    f = fresh_index(used); push!(used, f)
+    g = fresh_index(used); push!(used, g)
+    h = fresh_index(used)
+
+    R = Tensor(:RicScalar, TIndex[])
+    Riem1 = Tensor(:Riem, [down(a), down(b), down(c), down(d)])
+    Riem2 = Tensor(:Riem, [down(e), down(f), down(g), down(h)])
+    R * Riem1 * Riem2 *
+        Tensor(metric, [up(a), up(e)]) * Tensor(metric, [up(b), up(f)]) *
+        Tensor(metric, [up(c), up(g)]) * Tensor(metric, [up(d), up(h)])
+end
+
+# Order 3: R_{ab} R^{acde} R^{b}_{cde}  (Ricci-Riemann contraction)
+function _build_Ric_Riem_sq(reg::TensorRegistry, manifold::Symbol, metric::Symbol)
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used); push!(used, d)
+    e = fresh_index(used); push!(used, e)
+    f = fresh_index(used); push!(used, f)
+    g = fresh_index(used); push!(used, g)
+    h = fresh_index(used); push!(used, h)
+    p = fresh_index(used); push!(used, p)
+    q = fresh_index(used)
+
+    Ric = Tensor(:Ric, [down(p), down(q)])
+    Riem1 = Tensor(:Riem, [down(a), down(c), down(d), down(e)])
+    Riem2 = Tensor(:Riem, [down(b), down(f), down(g), down(h)])
+    Ric * Riem1 * Riem2 *
+        Tensor(metric, [up(p), up(a)]) * Tensor(metric, [up(q), up(b)]) *
+        Tensor(metric, [up(c), up(f)]) * Tensor(metric, [up(d), up(g)]) * Tensor(metric, [up(e), up(h)])
+end
+
+# Order 3: R_{ab}^{cd} R_{cd}^{ef} R_{ef}^{ab}  (Riemann cycle / Goroff-Sagnotti)
+function _build_Riem_cubed(reg::TensorRegistry, manifold::Symbol, metric::Symbol)
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used); push!(used, d)
+    e = fresh_index(used); push!(used, e)
+    f = fresh_index(used); push!(used, f)
+    i = fresh_index(used); push!(used, i)
+    j = fresh_index(used); push!(used, j)
+    k = fresh_index(used); push!(used, k)
+    l = fresh_index(used); push!(used, l)
+    m = fresh_index(used); push!(used, m)
+    n = fresh_index(used)
+
+    Riem1 = Tensor(:Riem, [down(a), down(b), down(i), down(j)])
+    Riem2 = Tensor(:Riem, [down(c), down(d), down(k), down(l)])
+    Riem3 = Tensor(:Riem, [down(e), down(f), down(m), down(n)])
+    Riem1 * Riem2 * Riem3 *
+        Tensor(metric, [up(i), up(c)]) * Tensor(metric, [up(j), up(d)]) *
+        Tensor(metric, [up(k), up(e)]) * Tensor(metric, [up(l), up(f)]) *
+        Tensor(metric, [up(m), up(a)]) * Tensor(metric, [up(n), up(b)])
+end
+
 # ─── Catalog ───────────────────────────────────────────────────────
 
 """
     INVARIANT_CATALOG :: Dict{Symbol, InvariantEntry}
 
-Module-level catalog of curvature invariants.  Keys are canonical names
-(`:R`, `:R_sq`, `:Ric_sq`, `:Kretschmann`, `:Weyl_sq`).
+Module-level catalog of curvature invariants.  Keys are canonical names.
+
+Order 1: `:R`
+Order 2: `:R_sq`, `:Ric_sq`, `:Kretschmann`, `:Weyl_sq`
+Order 3: `:R_cubed`, `:R_Ric_sq`, `:Ric_cubed`, `:R_Kretschmann`,
+         `:Ric_Riem_sq`, `:Riem_cubed`
 """
 const INVARIANT_CATALOG = Dict{Symbol, InvariantEntry}(
     # ── Order 1 ──
@@ -117,6 +230,37 @@ const INVARIANT_CATALOG = Dict{Symbol, InvariantEntry}(
     :Weyl_sq => InvariantEntry(
         :Weyl_sq, 2, _build_Weyl_sq,
         "Weyl tensor squared C_{abcd}C^{abcd}",
+        4,
+    ),
+    # ── Order 3 (cubic curvature invariants) ──
+    :R_cubed => InvariantEntry(
+        :R_cubed, 3, _build_R_cubed,
+        "Ricci scalar cubed R^3",
+        2,
+    ),
+    :R_Ric_sq => InvariantEntry(
+        :R_Ric_sq, 3, _build_R_Ric_sq,
+        "Scalar times Ricci squared R R_{ab}R^{ab}",
+        2,
+    ),
+    :Ric_cubed => InvariantEntry(
+        :Ric_cubed, 3, _build_Ric_cubed,
+        "Ricci cube trace R_{a}^{b}R_{b}^{c}R_{c}^{a}",
+        2,
+    ),
+    :R_Kretschmann => InvariantEntry(
+        :R_Kretschmann, 3, _build_R_Kretschmann,
+        "Scalar times Kretschmann R R_{abcd}R^{abcd}",
+        4,
+    ),
+    :Ric_Riem_sq => InvariantEntry(
+        :Ric_Riem_sq, 3, _build_Ric_Riem_sq,
+        "Ricci-Riemann contraction R_{ab}R^{acde}R^{b}_{cde}",
+        4,
+    ),
+    :Riem_cubed => InvariantEntry(
+        :Riem_cubed, 3, _build_Riem_cubed,
+        "Riemann cycle R_{ab}^{cd}R_{cd}^{ef}R_{ef}^{ab} (Goroff-Sagnotti)",
         4,
     ),
 )
