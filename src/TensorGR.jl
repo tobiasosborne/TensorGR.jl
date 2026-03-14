@@ -172,7 +172,7 @@ export define_scalar_function!, scalar_function_derivative
 export define_curvature_tensors!, einstein_expr, ricci_from_riemann
 export cotton_expr, tensor_norm
 export bianchi_rules
-export define_killing!
+export define_killing!, check_killing
 export CovDProperties, define_covd!, get_covd
 export covd_to_christoffel, change_covd
 export christoffel_to_grad_metric, grad_metric_to_christoffel
