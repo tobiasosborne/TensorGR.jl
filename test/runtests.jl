@@ -204,4 +204,6 @@ using TensorGR
     include("test_xideal_schwarzschild.jl")
     # Feynman diagram type hierarchy and builder API
     include("test_feynman_types.jl")
+    # DDI rule generation (rank-2 tensor contractions)
+    include("test_ddi_rules.jl")
 end

@@ -47,6 +47,7 @@ include("algebra/symmetrize.jl")
 include("algebra/young.jl")
 include("algebra/solve.jl")
 include("algebra/generalized_delta.jl")
+include("algebra/ddi_rules.jl")
 
 # Layer 2.5: Scalar algebra
 include("scalar/algebra.jl")
@@ -229,6 +230,7 @@ export YoungTableau, young_shape, young_symmetrize, young_project
 export all_contractions, contraction_ansatz, filter_independent_contractions
 export solve_tensors
 export generalized_delta, is_zero_by_dimension
+export generate_ddi_rules, gauss_bonnet_ddi, register_ddi_rules!
 
 # Exports: Scalar algebra
 export scalar_expand, scalar_collect, scalar_subst, scalar_cancel
