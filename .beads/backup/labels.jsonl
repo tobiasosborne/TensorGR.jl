@@ -77,6 +77,7 @@
 {"issue_id":"TGR-57l","label":"epic:spinor-infra"}
 {"issue_id":"TGR-5a1","label":"epic:ghp-formalism"}
 {"issue_id":"TGR-5f2","label":"epic:scalar-tensor"}
+{"issue_id":"TGR-5i0","label":"epic:bh-pert2"}
 {"issue_id":"TGR-5lp.1","label":"epic:invar-tinvar"}
 {"issue_id":"TGR-5lp.2","label":"epic:invar-tinvar"}
 {"issue_id":"TGR-5lp.3","label":"epic:invar-tinvar"}
@@ -193,6 +194,7 @@
 {"issue_id":"TGR-dai.7","label":"area:fermions"}
 {"issue_id":"TGR-dai.7","label":"epic:clifford"}
 {"issue_id":"TGR-dai.7","label":"phase:validation"}
+{"issue_id":"TGR-e1l","label":"epic:spinor-infra"}
 {"issue_id":"TGR-ed9.1","label":"epic:invar-database"}
 {"issue_id":"TGR-ed9.2","label":"epic:invar-database"}
 {"issue_id":"TGR-ed9.3","label":"epic:invar-database"}
@@ -210,6 +212,7 @@
 {"issue_id":"TGR-jvn","label":"epic:np-formalism"}
 {"issue_id":"TGR-ksr","label":"epic:np-formalism"}
 {"issue_id":"TGR-lnp","label":"epic:validation"}
+{"issue_id":"TGR-oun","label":"epic:spinor-infra"}
 {"issue_id":"TGR-p8n","label":"epic:spinor-infra"}
 {"issue_id":"TGR-qks","label":"epic:eftofpng"}
 {"issue_id":"TGR-s50","label":"epic:xcps"}

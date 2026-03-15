@@ -142,6 +142,7 @@
 {"created_at":"2026-03-14T23:11:47Z","created_by":"tobiasosborne","depends_on_id":"TGR-wt5","issue_id":"TGR-5a1","type":"blocks"}
 {"created_at":"2026-03-14T23:33:05Z","created_by":"tobiasosborne","depends_on_id":"TGR-ada","issue_id":"TGR-5f2","type":"blocks"}
 {"created_at":"2026-03-14T23:33:01Z","created_by":"tobiasosborne","depends_on_id":"TGR-ble.5","issue_id":"TGR-5f2","type":"blocks"}
+{"created_at":"2026-03-15T11:20:28Z","created_by":"tobiasosborne","depends_on_id":"TGR-aul","issue_id":"TGR-5i0","type":"blocks"}
 {"created_at":"2026-03-14T23:11:35Z","created_by":"tobiasosborne","depends_on_id":"TGR-5lp","issue_id":"TGR-5lp.1","type":"parent-child"}
 {"created_at":"2026-03-14T23:12:05Z","created_by":"tobiasosborne","depends_on_id":"TGR-6bn.7","issue_id":"TGR-5lp.1","type":"blocks"}
 {"created_at":"2026-03-14T23:11:39Z","created_by":"tobiasosborne","depends_on_id":"TGR-5lp","issue_id":"TGR-5lp.2","type":"parent-child"}
