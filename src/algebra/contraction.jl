@@ -288,3 +288,56 @@ function _enforce_tracefree(p::TProduct, reg::TensorRegistry)
     end
     tproduct(p.scalar, new_factors)
 end
+
+# ── Divergence-free enforcement ──────────────────────────────────────────────
+
+"""
+    enforce_divfree(expr; registry=current_registry()) -> TensorExpr
+
+Replace any divergence of a divergence-free tensor by zero.
+A tensor T registered with `divfree_indices` containing `(covd, slot)` vanishes
+when derivative index contracts with the tensor index at `slot` (same name,
+opposite position) and the derivative uses the matching `covd`.
+"""
+function enforce_divfree(expr::TensorExpr; registry::TensorRegistry=current_registry())
+    _enforce_divfree(expr, registry)
+end
+
+function _enforce_divfree(d::TDeriv, reg::TensorRegistry)
+    inner = _enforce_divfree(d.arg, reg)
+    inner isa TScalar && inner.val == 0 && return TScalar(0 // 1)
+    # Check: is inner a tensor with divfree_indices matching this derivative?
+    if inner isa Tensor
+        has_tensor(reg, inner.name) || return TDeriv(d.index, inner, d.covd)
+        props = get_tensor(reg, inner.name)
+        isempty(props.divfree_indices) && return TDeriv(d.index, inner, d.covd)
+        for (covd_name, slot) in props.divfree_indices
+            d.covd == covd_name || continue
+            slot <= length(inner.indices) || continue
+            tidx = inner.indices[slot]
+            if d.index.name == tidx.name &&
+               d.index.position != tidx.position &&
+               d.index.vbundle == tidx.vbundle
+                return TScalar(0 // 1)
+            end
+        end
+    end
+    TDeriv(d.index, inner, d.covd)
+end
+
+_enforce_divfree(t::Tensor, ::TensorRegistry) = t
+_enforce_divfree(s::TScalar, ::TensorRegistry) = s
+
+function _enforce_divfree(s::TSum, reg::TensorRegistry)
+    tsum(TensorExpr[_enforce_divfree(t, reg) for t in s.terms])
+end
+
+function _enforce_divfree(p::TProduct, reg::TensorRegistry)
+    new_factors = TensorExpr[]
+    for f in p.factors
+        result = _enforce_divfree(f, reg)
+        result isa TScalar && result.val == 0 && return TScalar(0 // 1)
+        push!(new_factors, result)
+    end
+    tproduct(p.scalar, new_factors)
+end
