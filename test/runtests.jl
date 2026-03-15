@@ -132,4 +132,6 @@ using TensorGR
     include("test_ground_truth_weyl.jl")
     # Ground truth: contraction counts vs Nutma (2014), arXiv:1308.3493
     include("test_ground_truth_contractions.jl")
+    # Ground truth: quadratic Riemann invariants vs Fulling et al. (1992), CQG 9:1151
+    include("test_quadratic_riemann_invariants.jl")
 end
