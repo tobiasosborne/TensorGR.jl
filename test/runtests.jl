@@ -216,22 +216,18 @@ using TensorGR
     include("test_xideal_frw.jl")
     # Feynman diagram type hierarchy and builder API
     include("test_feynman_types.jl")
-<<<<<<< HEAD
     # Graviton 3-point and 4-point vertices (DeWitt 1967; Sannan 1986)
     include("test_graviton_vertices.jl")
-=======
     # Gauge-fixing action and Faddeev-Popov ghost sector
     include("test_gauge_fixing.jl")
->>>>>>> worktree-agent-a8d3e6a4
     # DDI rule generation (rank-2 tensor contractions)
     include("test_ddi_rules.jl")
-<<<<<<< HEAD
     # Wald entropy: S = A/4 from Noether charge (Iyer & Wald 1994, Eq 4.1)
     include("test_wald_entropy.jl")
     # RInv: contraction permutation representation for scalar Riemann monomials
     include("test_rinv.jl")
-=======
     # Riemann DDI generation (rank-4 tensor contractions, cubic identities)
     include("test_riemann_ddi.jl")
->>>>>>> worktree-agent-a3cc0fcc
+    # DDI simplification pass (simplify_with_ddis convenience function)
+    include("test_ddi_simplify.jl")
 end
