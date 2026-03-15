@@ -82,6 +82,8 @@ using TensorGR
     include("test_all_contractions.jl")
     # Contraction ansatz (most general scalar from tensor products)
     include("test_contraction_ansatz.jl")
+    # Contraction filtering by symmetry
+    include("test_contraction_filtering.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
     # Geodesic equation

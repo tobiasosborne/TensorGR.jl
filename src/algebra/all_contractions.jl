@@ -6,11 +6,16 @@ Given a tensor expression with 2n free indices and a metric, generate all
 
 """
     all_contractions(expr::TensorExpr, metric_name::Symbol;
-                     registry::TensorRegistry=current_registry()) -> Vector{TensorExpr}
+                     registry::TensorRegistry=current_registry(),
+                     filter::Bool=true) -> Vector{TensorExpr}
 
 Generate all distinct full contractions of `expr` using metric `metric_name`.
 For a rank-2n expression with 2n free indices, returns up to (2n-1)!! contractions
 (fewer after symmetry deduplication).
+
+When `filter=true` (default), applies `filter_independent_contractions` to remove
+contractions that are linearly dependent after full canonicalization (e.g., due to
+Riemann symmetries or Bianchi identity).
 
 Odd-rank expressions cannot be fully contracted and throw an error.
 Scalar expressions (no free indices) return `[expr]`.
@@ -21,11 +26,12 @@ Scalar expressions (no free indices) return `[expr]`.
 results = all_contractions(T_ab, :g)  # -> [g^{ab} T_{ab}]
 
 # Rank-4 tensor: up to 3 = 3!! contractions
-results = all_contractions(R_abcd, :g)  # -> 3 results
+results = all_contractions(R_abcd, :g)  # -> 3 results (fewer with symmetries)
 ```
 """
 function all_contractions(expr::TensorExpr, metric_name::Symbol;
-                          registry::TensorRegistry=current_registry())
+                          registry::TensorRegistry=current_registry(),
+                          filter::Bool=true)
     fi = free_indices(expr)
     n = length(fi)
 
@@ -93,7 +99,7 @@ function all_contractions(expr::TensorExpr, metric_name::Symbol;
         push!(results, result)
     end
 
-    results
+    filter ? filter_independent_contractions(results; registry=registry) : results
 end
 
 """
@@ -141,6 +147,70 @@ function contraction_ansatz(tensor_names::Vector{Symbol}, metric_name::Symbol;
     # Assign symbolic coefficients
     coeffs = [Symbol(coeff_prefix, i) for i in eachindex(contractions)]
     make_ansatz(contractions, coeffs)
+end
+
+# ─── Contraction filtering by symmetry ────────────────────────────────────
+
+"""
+    _canonical_structure(expr::TensorExpr) -> (normalized::TensorExpr, coeff::Rational{Int})
+
+Extract the scalar coefficient and normalized tensor structure of a fully-contracted
+expression. Two expressions with the same normalized structure are linearly dependent
+(differ only by a scalar factor).
+
+Returns `(structure, coefficient)` where `structure` has coefficient 1 and
+canonically renamed dummy indices.
+"""
+function _canonical_structure(expr::TensorExpr)
+    scalar, core = _split_scalar(expr)
+    normalized = _normalize_dummies(core)
+    (normalized, scalar)
+end
+
+"""
+    filter_independent_contractions(contractions::Vector{TensorExpr};
+                                    registry::TensorRegistry=current_registry()) -> Vector{TensorExpr}
+
+Filter a list of fully-contracted expressions to keep only linearly independent ones.
+Two contractions are equivalent if they simplify to the same canonical form
+(possibly differing by a scalar factor).
+
+Uses `simplify()` to canonicalize and `_canonical_structure` to extract the structural
+part. Returns one representative from each equivalence class.
+
+# Examples
+```julia
+# Riemann R_{abcd} has 3 pairings but only 2 independent contractions
+raw = all_contractions(R, :g; filter=false)   # 3 contractions
+filtered = filter_independent_contractions(raw)  # <= 3
+```
+"""
+function filter_independent_contractions(contractions::Vector{TensorExpr};
+                                          registry::TensorRegistry=current_registry())
+    isempty(contractions) && return contractions
+
+    # Simplify each contraction and extract canonical structure
+    seen = Dict{TensorExpr, Int}()  # normalized structure => index of representative
+    result = TensorExpr[]
+
+    for c in contractions
+        simplified = simplify(c; registry=registry)
+
+        # Skip zeros
+        simplified == TScalar(0 // 1) && continue
+
+        structure, _ = _canonical_structure(simplified)
+
+        # Check both the structure and its negation (sign equivalence)
+        neg_structure, _ = _canonical_structure(_negate_expr(simplified))
+
+        if !haskey(seen, structure) && !haskey(seen, neg_structure)
+            seen[structure] = length(result) + 1
+            push!(result, c)
+        end
+    end
+
+    result
 end
 
 """
