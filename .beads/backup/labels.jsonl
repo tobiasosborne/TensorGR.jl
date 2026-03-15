@@ -52,6 +52,13 @@
 {"issue_id":"TGR-34t.6","label":"epic:xpand-bianchi"}
 {"issue_id":"TGR-3up","label":"epic:spinor-infra"}
 {"issue_id":"TGR-443.1","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.1","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.2","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.3","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.4","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.5","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.6","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.7","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.2","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.3","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.4","label":"epic:invar-canonical-forms"}
@@ -153,6 +160,14 @@
 {"issue_id":"TGR-bgl","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.1","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.1","label":"research"}
+{"issue_id":"TGR-bgl.10","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.11","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.12","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.13","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.14","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.14","label":"validation"}
+{"issue_id":"TGR-bgl.15","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.15","label":"validation"}
 {"issue_id":"TGR-bgl.2","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.3","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.4","label":"epic:xppn"}
@@ -162,6 +177,7 @@
 {"issue_id":"TGR-bgl.7","label":"validation"}
 {"issue_id":"TGR-bgl.8","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.8","label":"validation"}
+{"issue_id":"TGR-bgl.9","label":"epic:xppn"}
 {"issue_id":"TGR-bj3","label":"epic:bimetric"}
 {"issue_id":"TGR-bj3","label":"validation"}
 {"issue_id":"TGR-ble.1","label":"epic:scalar-tensor"}
