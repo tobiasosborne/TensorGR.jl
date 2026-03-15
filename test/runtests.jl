@@ -120,4 +120,6 @@ using TensorGR
     include("test_symmetrize_covds.jl")
     # Ground truth verification: Weyl tensor identities (Wald 1984)
     include("test_ground_truth_weyl.jl")
+    # Ground truth: contraction counts vs Nutma (2014), arXiv:1308.3493
+    include("test_ground_truth_contractions.jl")
 end
