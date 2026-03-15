@@ -78,6 +78,8 @@ using TensorGR
     include("test_invariants.jl")
     # Curvature syzygies (Gauss-Bonnet, dim-dependent identities)
     include("test_syzygies.jl")
+    # All contractions (metric-based full contraction enumeration)
+    include("test_all_contractions.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
     # Geodesic equation
