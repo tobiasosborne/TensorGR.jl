@@ -128,6 +128,9 @@ include("geodesics/geodesic.jl")
 # Layer 5.5: Solvers (TOV, etc.)
 include("solvers/tov.jl")
 
+# Layer 6: xIdeal (exact solution identification)
+include("xideal/energy_conditions.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -339,6 +342,9 @@ export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integr
 
 # Exports: TOV solver
 export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
+
+# Exports: Energy conditions (xIdeal)
+export EnergyConditionResult, check_energy_conditions
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

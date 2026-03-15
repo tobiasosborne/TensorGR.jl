@@ -144,4 +144,6 @@ using TensorGR
     include("test_ground_truth_contractions.jl")
     # Ground truth: quadratic Riemann invariants vs Fulling et al. (1992), CQG 9:1151
     include("test_quadratic_riemann_invariants.jl")
+    # Energy condition checker (xIdeal)
+    include("test_energy_conditions.jl")
 end
