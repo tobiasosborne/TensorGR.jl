@@ -98,6 +98,8 @@ using TensorGR
     include("test_scalar_harmonics.jl")
     # Clebsch-Gordan coefficients and harmonic products
     include("test_clebsch_gordan.jl")
+    # Vector spherical harmonics
+    include("test_vector_harmonics.jl")
     # Trace-free enforcement
     include("test_tracefree.jl")
     # sort_covds_to_box enhancement
