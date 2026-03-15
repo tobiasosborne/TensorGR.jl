@@ -357,9 +357,10 @@ export EnergyConditionResult, check_energy_conditions
 # Exports: xIdeal (Weyl scalars / Petrov classification)
 export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
 # Exports: Covariant phase space
-export LagrangianDensity, EOMResult, SymplecticPotential
+export LagrangianDensity, EOMResult, SymplecticPotential, SymplecticCurrent
 export eom_extract, extract_eom_and_theta
 export symplectic_potential, theta_eh, add_boundary_ambiguity
+export symplectic_current
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
