@@ -106,4 +106,6 @@ using TensorGR
     include("test_divfree.jl")
     # sort_covds_to_div enhancement
     include("test_sort_covds_to_div.jl")
+    # Ground truth verification: Weyl tensor identities (Wald 1984)
+    include("test_ground_truth_weyl.jl")
 end
