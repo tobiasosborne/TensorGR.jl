@@ -130,11 +130,7 @@ include("worldline/worldline.jl")
 
 # Layer 5.5: Feynman diagram infrastructure
 include("feynman/types.jl")
-<<<<<<< HEAD
 include("feynman/vertices.jl")
-=======
-include("feynman/gauge_fixing.jl")
->>>>>>> worktree-agent-a8d3e6a4
 
 # Layer 5.5: Matter / EOS
 include("matter/eos.jl")
@@ -400,13 +396,7 @@ export TensorVertex, TensorPropagator, FeynmanDiagram, DiagramAmplitude
 export n_point, n_indices, n_loops
 export build_diagram, tree_exchange_diagram
 export vertex_from_perturbation, contract_diagram
-<<<<<<< HEAD
 export graviton_3vertex, graviton_4vertex, graviton_vertex_n
-=======
-export gauge_fixing_condition, gauge_fixing_action
-export fp_operator, ghost_propagator, ghost_graviton_vertex
-export gauge_fixed_kinetic_operator
->>>>>>> worktree-agent-a8d3e6a4
 
 # Exports: Geodesics
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic
