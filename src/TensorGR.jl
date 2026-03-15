@@ -176,7 +176,7 @@ export make_ansatz
 export abstract_trace, make_traceless
 export symmetrize, antisymmetrize, impose_symmetry
 export YoungTableau, young_shape, young_symmetrize, young_project
-export all_contractions, contraction_ansatz
+export all_contractions, contraction_ansatz, filter_independent_contractions
 export solve_tensors
 
 # Exports: Scalar algebra
