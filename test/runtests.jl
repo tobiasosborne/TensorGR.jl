@@ -92,4 +92,6 @@ using TensorGR
     include("test_ds_spin_projectors.jl")
     # Scalar spherical harmonics
     include("test_scalar_harmonics.jl")
+    # Trace-free enforcement
+    include("test_tracefree.jl")
 end

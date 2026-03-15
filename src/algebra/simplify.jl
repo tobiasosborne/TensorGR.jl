@@ -338,12 +338,14 @@ function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
     if parallel
         result = _pmap_over_tsum(expand_products, expr)
         result = _pmap_over_tsum(contract_metrics, result)
+        result = enforce_tracefree(result; registry=reg)
         result = _pmap_over_tsum(contract_curvature, result)
         result = _pmap_over_tsum(canonicalize, result)
         result = _pmap_over_tsum(_simplify_scalars, result)
     else
         result = expand_products(expr)
         result = contract_metrics(result)
+        result = enforce_tracefree(result; registry=reg)
         result = contract_curvature(result)
         result = canonicalize(result)
         result = _simplify_scalars(result)

@@ -138,7 +138,7 @@ export register_manifold!, register_tensor!, register_rule!, get_rules
 export unregister_tensor!, unregister_manifold!, unregister_covd!
 export tex_alias!
 export define_vbundle!
-export set_vanishing!
+export set_vanishing!, set_tracefree!
 export current_registry, with_registry
 
 # Exports: AST primitives
@@ -165,7 +165,7 @@ export FullySymmetric, FullyAntiSymmetric, SymmetrySpec
 export symmetry_generators
 
 # Exports: Algebra
-export tproduct, tsum, contract_metrics, canonicalize, expand_derivatives
+export tproduct, tsum, contract_metrics, enforce_tracefree, canonicalize, expand_derivatives
 export expand_products, collect_terms, ibp, ibp_product, fix_dummy_positions, normalize_field_positions
 export simplify
 export collect_tensors, remove_constants, remove_tensors, index_collect
