@@ -106,4 +106,6 @@ using TensorGR
     include("test_divfree.jl")
     # sort_covds_to_div enhancement
     include("test_sort_covds_to_div.jl")
+    # Ground-truth verification: Martel & Poisson (2005) spherical harmonics
+    include("test_ground_truth_harmonics.jl")
 end
