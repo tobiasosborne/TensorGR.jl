@@ -98,6 +98,8 @@ using TensorGR
     include("test_scalar_harmonics.jl")
     # Clebsch-Gordan coefficients and harmonic products
     include("test_clebsch_gordan.jl")
+    # Ground truth verification: 3j, CG, and Gaunt vs independent Racah formula
+    include("test_ground_truth_3j.jl")
     # Trace-free enforcement
     include("test_tracefree.jl")
     # sort_covds_to_box enhancement
