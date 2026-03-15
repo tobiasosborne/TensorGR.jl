@@ -196,4 +196,6 @@ using TensorGR
     include("test_first_law.jl")
     # Generalized Kronecker delta and DDIs
     include("test_generalized_delta.jl")
+    # CPS Validation: EH Noether charge = Komar integral (Iyer & Wald 1994; Komar 1959)
+    include("test_cps_komar_validation.jl")
 end
