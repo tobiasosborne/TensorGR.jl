@@ -214,6 +214,8 @@ using TensorGR
     include("test_xideal_frw.jl")
     # Feynman diagram type hierarchy and builder API
     include("test_feynman_types.jl")
+    # Gauge-fixing action and Faddeev-Popov ghost sector
+    include("test_gauge_fixing.jl")
     # DDI rule generation (rank-2 tensor contractions)
     include("test_ddi_rules.jl")
     # Wald entropy: S = A/4 from Noether charge (Iyer & Wald 1994, Eq 4.1)
