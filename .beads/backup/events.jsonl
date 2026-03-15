@@ -739,3 +739,5 @@
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T09:44:01Z","event_type":"closed","id":741,"issue_id":"TGR-bqf.3","new_value":"Implemented, ground-truth verified, and merged","old_value":""}
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T09:44:02Z","event_type":"closed","id":742,"issue_id":"TGR-jc7.1","new_value":"Implemented, ground-truth verified, and merged","old_value":""}
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T09:44:02Z","event_type":"closed","id":743,"issue_id":"TGR-8nx.2","new_value":"Implemented, ground-truth verified, and merged","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T09:52:22Z","event_type":"closed","id":744,"issue_id":"TGR-ihp.4","new_value":"Validated against Fulling et al. (1992) CQG 9:1151","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T09:52:22Z","event_type":"closed","id":745,"issue_id":"TGR-ihp","new_value":"all steps complete","old_value":""}
