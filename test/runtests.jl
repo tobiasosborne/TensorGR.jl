@@ -102,4 +102,6 @@ using TensorGR
     include("test_sort_covds_to_box.jl")
     # Divergence-free enforcement
     include("test_divfree.jl")
+    # sort_covds_to_div enhancement
+    include("test_sort_covds_to_div.jl")
 end

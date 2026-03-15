@@ -282,18 +282,124 @@ function _try_grad_squared(p::TProduct, metric::Symbol)
 end
 
 """
-    sort_covds_to_div(expr::TensorExpr) -> TensorExpr
+    sort_covds_to_div(expr::TensorExpr; metric::Symbol=:g) -> TensorExpr
 
-Rewrite derivative expressions to expose divergence patterns.
-Detects ∂_a T^{a...} where a derivative index contracts with an index of
-the argument tensor. Returns the expression unchanged (pattern detection only;
-the contraction is already canonical).
+Detect and expose divergence patterns ∇_a(T^{a...}) in derivative expressions.
+
+For products under a derivative, applies the Leibniz rule to split the
+expression into terms, then identifies which terms are divergences
+(derivative index contracts with an Up index in the argument).
+
+This is the keyword-only backward-compatible form operating on raw
+partial-derivative expressions.
 """
-function sort_covds_to_div(expr::TensorExpr)
-    # Divergence patterns (∂_a T^{a...}) are already represented naturally
-    # in the AST as TDeriv(down(:a), Tensor(:T, [up(:a), ...])).
-    # No transformation needed — the pattern is already exposed.
-    expr
+function sort_covds_to_div(expr::TensorExpr; metric::Symbol=:g)
+    _detect_div_patterns(expr)
+end
+
+"""
+    sort_covds_to_div(expr, covd_name; registry=current_registry()) -> TensorExpr
+
+Sort covariant derivatives and convert expressions to divergence form where
+possible. Identifies patterns where ∇_a acts on an expression with a matching
+contravariant index a, forming a divergence ∇_a(T^{a...}).
+
+Steps:
+1. Sort covariant derivatives via `commute_covds`
+2. Expand Leibniz rule on products under derivatives to expose divergence terms
+3. Identify divergence patterns: `TDeriv(down(:a), ..., :D)` where the argument
+   has `up(:a)`
+
+This is useful for conservation laws (∇_a T^{ab} = 0) and boundary term
+identification.
+"""
+function sort_covds_to_div(expr::TensorExpr, covd_name::Symbol;
+                           registry::TensorRegistry=current_registry())
+    with_registry(registry) do
+        sorted = commute_covds(expr, covd_name; registry=registry)
+        result = _detect_div_patterns(sorted)
+        simplify(result; registry=registry)
+    end
+end
+
+"""
+Walk the expression tree bottom-up, expanding derivatives of products via
+the Leibniz rule to expose divergence patterns ∇_a(T^{a...}).
+
+A divergence is detected when a `TDeriv(down(:a), arg, covd)` node has
+`:a` appearing as an `Up` index in `arg`.
+"""
+function _detect_div_patterns(expr::TensorExpr)
+    walk(expr) do node
+        if node isa TDeriv
+            r = _try_expand_for_div(node)
+            r !== nothing && return r
+        end
+        node
+    end
+end
+
+"""
+For a TDeriv node, check if expanding the Leibniz rule on a product argument
+would expose divergence terms.
+
+If the argument is already a divergence (deriv index contracts with Up index
+in arg), return node unchanged — it's already in divergence form.
+
+If the argument is a product, expand via Leibniz rule and return the sum
+so that individual divergence terms become visible.
+"""
+function _try_expand_for_div(node::TDeriv)
+    idx = node.index
+    idx.position == Down || return nothing  # divergence needs ∇_a (down index)
+
+    arg = node.arg
+
+    # Already a divergence: ∇_a(T^a...) — keep as-is
+    _is_divergence(idx, arg) && return nothing
+
+    # For a product argument, Leibniz-expand to expose divergence terms
+    if arg isa TProduct && length(arg.factors) > 1
+        expanded = expand_derivatives(node)
+        # Only return expanded form if at least one resulting term is a divergence
+        if _has_any_divergence(expanded, idx.name)
+            return expanded
+        end
+    end
+
+    nothing
+end
+
+"""
+Check if `arg` contains an Up index with the same name as `deriv_idx`,
+indicating a divergence pattern ∇_a(...^a...).
+"""
+function _is_divergence(deriv_idx::TIndex, arg::TensorExpr)
+    deriv_idx.position == Down || return false
+    target = deriv_idx.name
+    for idx in indices(arg)
+        if idx.name == target && idx.position == Up
+            return true
+        end
+    end
+    false
+end
+
+"""
+Check if any term in `expr` contains a divergence with respect to `idx_name`.
+Walks the expression looking for TDeriv(down(idx_name), arg) where arg has up(idx_name).
+"""
+function _has_any_divergence(expr::TensorExpr, idx_name::Symbol)
+    found = Ref(false)
+    walk(expr) do node
+        if node isa TDeriv && node.index.position == Down && node.index.name == idx_name
+            if _is_divergence(node.index, node.arg)
+                found[] = true
+            end
+        end
+        node
+    end
+    found[]
 end
 
 """
