@@ -427,6 +427,130 @@ function instanton_density(F::AlgValuedForm; registry=current_registry())
     AlgValuedForm(p + q, F.algebra, inner)
 end
 
+# ── Chern-Simons form ────────────────────────────────────────────────
+
+"""
+    chern_simons_form(A::AlgValuedForm, structure_constants::Symbol;
+                      registry=current_registry()) -> AlgValuedForm
+
+Compute the Chern-Simons 3-form:
+
+    CS = Tr(A ∧ dA + (2/3) A ∧ A ∧ A)
+
+where Tr denotes the trace over the Lie algebra (contraction of algebra indices
+via the Killing form, here taken as δ^{IJ}).
+
+Satisfies the fundamental identity: d(CS) = Tr(F ∧ F), where F = dA + (1/2)[A,A]
+is the field strength (Pontryagin density / instanton density).
+
+`A` must be a 1-form (connection). The result is a degree-3 algebra-valued form
+with fully contracted algebra indices (a trace).
+
+Ground truth: Nakahara (2003) Sec 11.5.2, Eq 11.106b;
+             Eguchi, Gilkey & Hanson (1980) Sec 6.
+"""
+function chern_simons_form(A::AlgValuedForm, structure_constants::Symbol;
+                           registry=current_registry())
+    A.degree == 1 ||
+        throw(ArgumentError("chern_simons_form requires a 1-form, got degree $(A.degree)"))
+
+    # Collect used index names for fresh dummy generation
+    used = Set{Symbol}()
+    for idx in indices(A.expr)
+        push!(used, idx.name)
+    end
+
+    alg_idx = _find_algebra_index(A)
+    vb = alg_idx.vbundle
+
+    # ── Term 1: Tr(A ∧ dA) ──
+    # Build dA with a fresh derivative index
+    deriv_name = fresh_index(used)
+    push!(used, deriv_name)
+    dA = alg_exterior_d(A, down(deriv_name))
+
+    # Build a second copy of A with fresh indices for the trace contraction
+    a2_alg = fresh_index(used); push!(used, a2_alg)
+    a2_form = fresh_index(used); push!(used, a2_form)
+    A2_tensor = Tensor(A.expr isa Tensor ? A.expr.name : :A,
+                       [up(a2_alg, vb), down(a2_form)])
+
+    # Trace: contract A^I with (dA)^I => rename dA's algebra index to match
+    # A2 has algebra index a2_alg; we rename it to match alg_idx for trace
+    A2_traced = rename_dummy(A2_tensor, a2_alg, alg_idx.name)
+    A2_traced = ensure_no_dummy_clash(dA.expr, A2_traced)
+
+    # Wedge coefficient for 1-form ∧ 2-form: (3!)/(1!2!) = 3
+    coeff_wedge_12 = factorial(3) // (factorial(1) * factorial(2))
+    term1 = tproduct(coeff_wedge_12, TensorExpr[A2_traced, dA.expr])
+
+    # ── Term 2: (2/3) Tr(A ∧ A ∧ A) ──
+    # This is (2/3) Tr(A ∧ [A ∧ A]) where the wedge carries structure constants
+    # [A ∧ A]^I = f^I_{JK} A^J ∧ A^K
+    # Then Tr(A ∧ [A∧A]) contracts the remaining algebra index.
+    #
+    # Build two more copies of A for the triple wedge with structure constants
+    a3_alg = fresh_index(used); push!(used, a3_alg)
+    a3_form = fresh_index(used); push!(used, a3_form)
+    A3 = AlgValuedForm(1, A.algebra,
+        Tensor(A.expr isa Tensor ? A.expr.name : :A,
+               [up(a3_alg, vb), down(a3_form)]))
+
+    a4_alg = fresh_index(used); push!(used, a4_alg)
+    a4_form = fresh_index(used); push!(used, a4_form)
+    A4 = AlgValuedForm(1, A.algebra,
+        Tensor(A.expr isa Tensor ? A.expr.name : :A,
+               [up(a4_alg, vb), down(a4_form)]))
+
+    # [A3 ∧ A4]: alg_wedge gives f^I_{JK} A3^J ∧ A4^K (degree-2 form)
+    AA_bracket = alg_wedge(A3, A4, structure_constants; registry=registry)
+
+    # Now form A ∧ [A∧A]: take the outer A (with fresh indices for trace) and
+    # the bracket result. The bracket has an algebra index from alg_wedge;
+    # we trace over it with A's algebra index.
+    a5_alg = fresh_index(used); push!(used, a5_alg)
+    a5_form = fresh_index(used); push!(used, a5_form)
+    A5_tensor = Tensor(A.expr isa Tensor ? A.expr.name : :A,
+                       [up(a5_alg, vb), down(a5_form)])
+
+    # The bracket result's algebra index
+    bracket_alg_idx = _find_algebra_index(AA_bracket)
+
+    # Trace: rename A5's algebra index to match the bracket's for contraction
+    A5_traced = rename_dummy(A5_tensor, a5_alg, bracket_alg_idx.name)
+    A5_traced = ensure_no_dummy_clash(AA_bracket.expr, A5_traced)
+
+    # Wedge coefficient for 1-form ∧ 2-form: 3
+    # Combined coefficient: (2/3) * 3 = 2
+    term2 = tproduct(2 // 1, TensorExpr[A5_traced, AA_bracket.expr])
+
+    # ── Combine: CS = term1 + term2 ──
+    AlgValuedForm(3, A.algebra, term1 + term2)
+end
+
+"""
+    chern_simons_invariant(A::AlgValuedForm, structure_constants::Symbol;
+                           registry=current_registry()) -> AlgValuedForm
+
+Compute the Chern-Simons invariant: the Chern-Simons 3-form CS(A),
+which is a topological invariant when integrated over a closed 3-manifold.
+
+    CS(A) = Tr(A ∧ dA + (2/3) A ∧ A ∧ A)
+
+The integral ∫_M CS(A) over a closed 3-manifold M is a topological invariant
+(independent of the metric), taking integer values for compact groups.
+Under gauge transformations A → g⁻¹Ag + g⁻¹dg, the integral changes by
+an integer (the winding number of g).
+
+This is an alias for `chern_simons_form` documenting the integral interpretation.
+
+Ground truth: Nakahara (2003) Sec 11.5, Eq 11.102;
+             Chern & Simons, Ann. Math. 99, 48 (1974).
+"""
+chern_simons_invariant(A::AlgValuedForm, structure_constants::Symbol;
+                       registry=current_registry()) =
+    chern_simons_form(A, structure_constants; registry=registry)
+
 # ── Helpers ──────────────────────────────────────────────────────────
 
 """Find the first Up-position index that lives in a non-Tangent vbundle,

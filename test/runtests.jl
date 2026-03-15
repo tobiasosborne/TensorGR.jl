@@ -130,6 +130,8 @@ using TensorGR
     include("test_gauge_covd.jl")
     # Field strength, Yang-Mills EOM, instanton density
     include("test_field_strength.jl")
+    # Chern-Simons 3-form (Nakahara Sec 11.5, Eq 11.106b)
+    include("test_chern_simons.jl")
     # Ground-truth verification: Martel & Poisson (2005) spherical harmonics
     include("test_ground_truth_harmonics.jl")
     # symmetrize_covds
