@@ -959,3 +959,9 @@
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:42:24Z","event_type":"closed","id":961,"issue_id":"TGR-s50","new_value":"all steps complete","old_value":""}
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:43:18Z","event_type":"closed","id":962,"issue_id":"TGR-bgl.9","new_value":"Implemented with Wald Sec 4.2, 31 tests","old_value":""}
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:52:02Z","event_type":"closed","id":963,"issue_id":"TGR-6cn","new_value":"VBundle boundary enforcement in xperm, 25 tests","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:52:45Z","event_type":"closed","id":964,"issue_id":"TGR-wgy","new_value":"Implemented, 51 tests, coexistence with spinor bundles verified","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:53:28Z","event_type":"closed","id":965,"issue_id":"TGR-4ic","new_value":"Implemented with DeWitt/Peskin-Schroeder, 50 tests","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:54:26Z","event_type":"closed","id":966,"issue_id":"TGR-ada","new_value":"Implemented with Langlois-Noui (2016), 47 tests","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:55:06Z","event_type":"closed","id":967,"issue_id":"TGR-qks","new_value":"Implemented with DeWitt/Sannan ground truth, 65 tests","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T17:58:55Z","event_type":"closed","id":968,"issue_id":"TGR-443.1.1","new_value":"Implemented with ZM97 ground truth, orbit canonicalization, 33 tests","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-15T18:19:22Z","event_type":"closed","id":969,"issue_id":"TGR-xlu.4","new_value":"Cubic Riemann DDI from Fulling Table 1 verified, 36 tests","old_value":""}
