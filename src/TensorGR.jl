@@ -148,6 +148,7 @@ include("scalar_tensor/horndeski_eom.jl")
 
 # Layer 6.5: Spinor infrastructure
 include("spinors/spinor_bundles.jl")
+include("spinors/spinor_indices.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -381,6 +382,7 @@ export NoetherCharge, noether_charge, noether_charge_eh
 export define_spinor_bundles!
 export spin_up, spin_down, spin_dot_up, spin_dot_down
 export is_dotted, is_spinor_index, conjugate_index
+export fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

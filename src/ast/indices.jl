@@ -93,11 +93,24 @@ end
 
 """
     fresh_index(used::Set{Symbol}) -> Symbol
+    fresh_index(used::Set{Symbol}; vbundle::Symbol) -> Symbol
 
 Generate a fresh index name not in `used`.
 Tries the standard alphabet a-z first, then a1, b1, ... etc.
+
+The `vbundle` keyword selects a vbundle-appropriate alphabet:
+- `:Tangent` (default): a-z, then a1,b1,...
+- `:SL2C` / `:SL2C_dot`: delegated to `fresh_spinor_index` (registered later).
 """
-function fresh_index(used::Set{Symbol})
+function fresh_index(used::Set{Symbol}; vbundle::Symbol=:Tangent)
+    # Spinor dispatch via callback (set by spinors/spinor_indices.jl)
+    if vbundle !== :Tangent
+        hook = _FRESH_SPINOR_HOOK[]
+        if hook !== nothing
+            result = hook(used, vbundle)
+            result !== nothing && return result
+        end
+    end
     for c in 'a':'z'
         s = Symbol(c)
         s in used || return s
@@ -111,6 +124,9 @@ function fresh_index(used::Set{Symbol})
     end
     error("Could not generate fresh index (exhausted 2600+ names)")
 end
+
+# Callback hook for spinor dispatch -- set by spinors/spinor_indices.jl
+const _FRESH_SPINOR_HOOK = Ref{Union{Nothing, Function}}(nothing)
 
 """
     rename_dummy(expr::TensorExpr, old::Symbol, new::Symbol) -> TensorExpr
