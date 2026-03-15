@@ -204,6 +204,8 @@ using TensorGR
     include("test_cps_komar_validation.jl")
     # xIdeal validation: Schwarzschild = Petrov Type D, Segre [(1,1)(11)]
     include("test_xideal_schwarzschild.jl")
+    # xIdeal validation: FRW = Petrov Type O (conformally flat)
+    include("test_xideal_frw.jl")
     # Feynman diagram type hierarchy and builder API
     include("test_feynman_types.jl")
     # DDI rule generation (rank-2 tensor contractions)
