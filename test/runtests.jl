@@ -166,6 +166,8 @@ using TensorGR
     include("test_alpha_params.jl")
     # Validation: f(R) gravity as Horndeski subcase (Kobayashi 2019, Sec 2.3)
     include("test_fr_as_horndeski.jl")
+    # Beyond-Horndeski (GLPV) extensions (Gleyzes et al 2015, Kobayashi 2019)
+    include("test_beyond_horndeski.jl")
     # Segre classification of the Ricci tensor (xIdeal)
     include("test_segre.jl")
     # Covariant phase space: symplectic potential
