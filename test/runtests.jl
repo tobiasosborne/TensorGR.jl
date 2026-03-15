@@ -180,4 +180,6 @@ using TensorGR
     include("test_master_equations.jl")
     # Covariant phase space: Noether charge (potential extraction)
     include("test_noether_charge.jl")
+    # Covariant phase space: First law / Hamiltonian variation / Wald entropy
+    include("test_first_law.jl")
 end

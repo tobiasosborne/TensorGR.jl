@@ -144,6 +144,7 @@ include("phase_space/symplectic.jl")
 include("phase_space/divergence.jl")
 include("phase_space/noether.jl")
 include("phase_space/potential.jl")
+include("phase_space/first_law.jl")
 
 # Layer 6: Scalar-tensor theory
 include("scalar_tensor/horndeski.jl")
@@ -383,6 +384,8 @@ export symplectic_current
 export is_divergence, extract_divergence, split_divergence
 export NoetherCurrent, noether_current, noether_current_eh, verify_noether_conservation
 export NoetherCharge, noether_charge, noether_charge_eh
+export HamiltonianVariation, hamiltonian_variation, hamiltonian_variation_eh
+export WaldEntropyIntegrand, wald_entropy_integrand, wald_entropy_integrand_eh
 
 # Exports: Spinor bundles
 export define_spinor_bundles!
