@@ -152,6 +152,7 @@ include("phase_space/first_law.jl")
 include("scalar_tensor/horndeski.jl")
 include("scalar_tensor/horndeski_eom.jl")
 include("scalar_tensor/alpha_params.jl")
+include("scalar_tensor/beyond_horndeski.jl")
 
 # Layer 6.5: Spinor infrastructure
 include("spinors/spinor_bundles.jl")
@@ -412,6 +413,10 @@ export horndeski_lagrangian
 export horndeski_metric_eom, horndeski_scalar_eom, horndeski_eom
 export FRWBackground, define_frw_background
 export BelliniSawickiAlphas, compute_alphas, compute_alphas_numerical
+# Exports: Beyond-Horndeski (GLPV)
+export BeyondHorndeskiTheory, define_beyond_horndeski!
+export beyond_horndeski_L4, beyond_horndeski_L5, beyond_horndeski_lagrangian
+export alpha_H
 # Exports: xIdeal classification
 export SegreType, segre_classify
 
