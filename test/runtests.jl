@@ -152,6 +152,8 @@ using TensorGR
     include("test_weyl_scalars.jl")
     # Petrov invariants I, J from Weyl tensor
     include("test_petrov_invariants.jl")
+    # Petrov classification (Types I, II, III, D, N, O)
+    include("test_petrov_classify.jl")
     # Covariant phase space: EOM extraction
     include("test_phase_space_eom.jl")
     # Horndeski scalar-tensor theory (Kobayashi 2019, arXiv:1901.04778)
