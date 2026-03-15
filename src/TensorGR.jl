@@ -72,6 +72,9 @@ include("gr/mapping.jl")
 include("gr/product_manifold.jl")
 include("gr/invariants.jl")
 
+# Layer 3.5: Curvature invariant permutation representation
+include("invariants/rinv.jl")
+
 # Layer 4: Perturbation theory
 include("perturbation/partitions.jl")
 include("perturbation/linearize.jl")
@@ -282,6 +285,9 @@ export stress_energy, trace_stress_energy, conservation_equation
 
 # Exports: Curvature invariants
 export InvariantEntry, INVARIANT_CATALOG, curvature_invariant, list_invariants
+
+# Exports: RInv (contraction permutation representation)
+export RInv, to_tensor_expr, from_tensor_expr
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det
