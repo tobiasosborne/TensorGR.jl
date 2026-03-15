@@ -155,6 +155,7 @@ include("scalar_tensor/alpha_params.jl")
 # Layer 6.5: Spinor infrastructure
 include("spinors/spinor_bundles.jl")
 include("spinors/spinor_indices.jl")
+include("spinors/spin_metric.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -395,6 +396,7 @@ export define_spinor_bundles!
 export spin_up, spin_down, spin_dot_up, spin_dot_down
 export is_dotted, is_spinor_index, conjugate_index
 export fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies
+export define_spin_metric!, spin_metric
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

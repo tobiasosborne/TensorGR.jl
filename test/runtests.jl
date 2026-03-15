@@ -174,6 +174,8 @@ using TensorGR
     include("test_spinor_bundles.jl")
     # Spinor dummy pair analysis (fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies)
     include("test_spinor_indices.jl")
+    # Spinor metric epsilon_{AB} (antisymmetric, Penrose-Rindler Sec 2.5)
+    include("test_spin_metric.jl")
     # Covariant phase space: Noether current
     include("test_noether_current.jl")
     # Schwarzschild RW/Zerilli decomposition (Martel & Poisson 2005, Secs IV-V)
