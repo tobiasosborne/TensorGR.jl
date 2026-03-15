@@ -171,6 +171,7 @@ include("scalar_tensor/quadratic_action_st.jl")
 include("spinors/spinor_bundles.jl")
 include("spinors/spinor_indices.jl")
 include("spinors/spin_metric.jl")
+include("spinors/spin_index.jl")
 
 # Layer 6.5: Tetrad/frame infrastructure
 include("tetrads/frame_bundle.jl")
@@ -434,6 +435,8 @@ export is_dotted, is_spinor_index, conjugate_index
 export fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies
 export define_spin_metric!, spin_metric
 export contract_spin_metrics
+export SpinIndex, spinor, spinor_dot, is_undotted, is_dotted_spinor
+export spinor_dummy, spinor_dot_dummy, spinor_pair
 
 # Exports: Frame bundle (tetrads)
 export define_frame_bundle!, frame_up, frame_down, is_frame_index

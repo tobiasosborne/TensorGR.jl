@@ -190,6 +190,8 @@ using TensorGR
     include("test_spin_metric.jl")
     # Spinor display: dotted/primed notation (Penrose-Rindler Vol 1, Sec 2.5)
     include("test_spinor_display.jl")
+    # SpinIndex convenience layer (ergonomic spinor index creation)
+    include("test_spin_index.jl")
     # Frame bundle (Lorentz VBundle for tetrad/frame indices)
     include("test_frame_bundle.jl")
     # See-saw contraction rule for antisymmetric spin metric (Penrose-Rindler Sec 2.5, Eq 2.5.24)
