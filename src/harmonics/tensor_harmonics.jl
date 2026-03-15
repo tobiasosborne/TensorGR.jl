@@ -296,3 +296,36 @@ inner_product(::EvenTensorHarmonicY, ::OddTensorHarmonic)   = TScalar(0)
 inner_product(::OddTensorHarmonic,   ::EvenTensorHarmonicY) = TScalar(0)
 inner_product(::EvenTensorHarmonicZ, ::OddTensorHarmonic)   = TScalar(0)
 inner_product(::OddTensorHarmonic,   ::EvenTensorHarmonicZ) = TScalar(0)
+
+# ── tensor_inner_product convenience (parallel to vector_inner_product) ──
+
+"""
+    tensor_inner_product(T1, T2) -> TScalar
+
+Compute the S^2 inner product integral T1^{ab} T2*_{ab} dOmega for tensor harmonics.
+Returns TScalar with the result.
+
+Ground truth: Martel & Poisson (2005) Sec II.D, Eqs 2.18-2.21:
+  integral Y^{ab}_{lm} Y*_{ab,l'm'} dOmega = 2 delta_{ll'} delta_{mm'}
+  integral Z^{ab}_{lm} Z*_{ab,l'm'} dOmega = 1/2 (l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
+  integral X^{ab}_{lm} X*_{ab,l'm'} dOmega = 1/2 (l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
+  Cross-type inner products vanish identically.
+"""
+function tensor_inner_product end
+
+# Y-Y: MP Eq 2.18
+tensor_inner_product(t1::EvenTensorHarmonicY, t2::EvenTensorHarmonicY) = inner_product(t1, t2)
+
+# Z-Z: MP Eq 2.19
+tensor_inner_product(t1::EvenTensorHarmonicZ, t2::EvenTensorHarmonicZ) = inner_product(t1, t2)
+
+# X-X: MP Eq 2.20
+tensor_inner_product(t1::OddTensorHarmonic, t2::OddTensorHarmonic) = inner_product(t1, t2)
+
+# Cross-type: MP Eq 2.21
+tensor_inner_product(t1::EvenTensorHarmonicY, t2::EvenTensorHarmonicZ) = TScalar(0)
+tensor_inner_product(t1::EvenTensorHarmonicZ, t2::EvenTensorHarmonicY) = TScalar(0)
+tensor_inner_product(t1::EvenTensorHarmonicY, t2::OddTensorHarmonic)   = TScalar(0)
+tensor_inner_product(t1::OddTensorHarmonic,   t2::EvenTensorHarmonicY) = TScalar(0)
+tensor_inner_product(t1::EvenTensorHarmonicZ, t2::OddTensorHarmonic)   = TScalar(0)
+tensor_inner_product(t1::OddTensorHarmonic,   t2::EvenTensorHarmonicZ) = TScalar(0)

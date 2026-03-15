@@ -138,7 +138,7 @@ export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar
 export TIndex, IndexPosition, Up, Down, up, down
 export ScalarHarmonic, conjugate, angular_laplacian, inner_product
 export EvenVectorHarmonic, OddVectorHarmonic, divergence_eigenvalue, curl_eigenvalue, norm_squared
-export vector_inner_product
+export vector_inner_product, tensor_inner_product
 export EvenTensorHarmonicY, EvenTensorHarmonicZ, OddTensorHarmonic
 export LaplacianS2, laplacian_S2, simplify_laplacian
 export wigner3j, clebsch_gordan, harmonic_product
