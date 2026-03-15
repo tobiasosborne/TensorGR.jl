@@ -122,6 +122,8 @@ using TensorGR
     include("test_constraints_validation.jl")
     # Algebra-valued differential forms
     include("test_algebra_forms.jl")
+    # Gauge-covariant exterior derivative
+    include("test_gauge_covd.jl")
     # Ground-truth verification: Martel & Poisson (2005) spherical harmonics
     include("test_ground_truth_harmonics.jl")
     # symmetrize_covds

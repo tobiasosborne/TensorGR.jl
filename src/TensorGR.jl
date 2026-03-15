@@ -305,6 +305,7 @@ export wedge_power
 export connection_form, curvature_form
 export cartan_first_structure, cartan_second_structure
 export AlgValuedForm, alg_wedge, alg_exterior_d, connection_1form, curvature_2form
+export gauge_covd, bianchi_identity
 
 # Exports: Components
 export ChartProperties, define_chart!, get_chart
