@@ -170,4 +170,6 @@ using TensorGR
     include("test_noether_current.jl")
     # Schwarzschild RW/Zerilli decomposition (Martel & Poisson 2005, Secs IV-V)
     include("test_schwarzschild_decompose.jl")
+    # Covariant phase space: Noether charge (potential extraction)
+    include("test_noether_charge.jl")
 end
