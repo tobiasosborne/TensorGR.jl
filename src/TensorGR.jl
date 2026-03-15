@@ -165,6 +165,9 @@ include("spinors/spinor_bundles.jl")
 include("spinors/spinor_indices.jl")
 include("spinors/spin_metric.jl")
 
+# Layer 6.5: Tetrad/frame infrastructure
+include("tetrads/frame_bundle.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -415,6 +418,10 @@ export is_dotted, is_spinor_index, conjugate_index
 export fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies
 export define_spin_metric!, spin_metric
 export contract_spin_metrics
+
+# Exports: Frame bundle (tetrads)
+export define_frame_bundle!, frame_up, frame_down, is_frame_index
+export fresh_frame_index
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
