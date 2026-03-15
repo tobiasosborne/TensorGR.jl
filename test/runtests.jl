@@ -114,6 +114,8 @@ using TensorGR
     include("test_decompose_scalar.jl")
     # Symmetric tensor harmonic decomposition (Martel & Poisson 2005, Sec III.A)
     include("test_decompose_tensor.jl")
+    # Vector field harmonic decomposition (Martel & Poisson 2005, Sec III)
+    include("test_decompose_vector.jl")
     # Ground truth verification: 3j, CG, and Gaunt vs independent Racah formula
     include("test_ground_truth_3j.jl")
     # Trace-free enforcement
