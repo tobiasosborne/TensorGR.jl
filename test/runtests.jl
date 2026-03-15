@@ -106,4 +106,6 @@ using TensorGR
     include("test_divfree.jl")
     # sort_covds_to_div enhancement
     include("test_sort_covds_to_div.jl")
+    # symmetrize_covds
+    include("test_symmetrize_covds.jl")
 end

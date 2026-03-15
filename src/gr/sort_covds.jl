@@ -403,11 +403,22 @@ function _has_any_divergence(expr::TensorExpr, idx_name::Symbol)
 end
 
 """
-    symmetrize_covds(expr::TensorExpr, covd::Symbol;
-                     registry::TensorRegistry=current_registry()) -> TensorExpr
+    symmetrize_covds(expr, covd_name; registry=current_registry()) -> TensorExpr
 
-Rewrite ∇_a ∇_b T as ∇_{(a} ∇_{b)} T + (1/2)[∇_a, ∇_b] T.
-Requires symmetrize to be available.
+Express double covariant derivatives in symmetrized form.
+
+For **scalars** (no free indices on the differentiated object):
+  ∇_a ∇_b φ is already symmetric, returned unchanged.
+
+For **tensors** with indices:
+  ∇_a ∇_b T^c = ∇_{(a} ∇_{b)} T^c + ½[∇_a, ∇_b] T^c
+
+where the symmetrized part is ∇_{(a} ∇_{b)} T^c = ½(∇_a ∇_b T^c + ∇_b ∇_a T^c)
+and the commutator produces Riemann curvature terms:
+  [∇_a, ∇_b] V^c = R^c_{dab} V^d
+
+Only derivative pairs matching `covd_name` are symmetrized; other derivatives
+pass through unchanged.
 """
 function symmetrize_covds(expr::TensorExpr, covd::Symbol;
                           registry::TensorRegistry=current_registry())
@@ -422,10 +433,18 @@ function _symmetrize_covds_walk(expr::TDeriv, covd::Symbol, reg::TensorRegistry)
     if inner isa TDeriv
         outer_idx = expr.index
         inner_idx = inner.index
-        # ∂_a(∂_b(T)) = (1/2)(∂_a ∂_b + ∂_b ∂_a)(T) + (1/2)[∂_a, ∂_b](T)
-        sym_part = (1 // 2) * (TDeriv(outer_idx, TDeriv(inner_idx, inner.arg, expr.covd), expr.covd) +
-                                TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd))
-        comm_part = (1 // 2) * _commutator_term(outer_idx, inner_idx, inner.arg, covd, reg)
+        body = inner.arg
+
+        # Scalar case: no indices on body means derivatives commute -- skip
+        if _is_scalar_body(body)
+            return TDeriv(expr.index, inner, expr.covd)
+        end
+
+        # Tensor case: ∇_a(∇_b(T)) = ½(∇_a∇_b + ∇_b∇_a)(T) + ½[∇_a,∇_b](T)
+        original = TDeriv(outer_idx, TDeriv(inner_idx, body, inner.covd), expr.covd)
+        swapped  = TDeriv(inner_idx, TDeriv(outer_idx, body, expr.covd), inner.covd)
+        sym_part = (1 // 2) * (original + swapped)
+        comm_part = (1 // 2) * _commutator_term(outer_idx, inner_idx, body, covd, reg)
         return sym_part + comm_part
     end
     TDeriv(expr.index, inner, expr.covd)
@@ -439,6 +458,14 @@ function _symmetrize_covds_walk(expr::TProduct, covd::Symbol, reg::TensorRegistr
 end
 _symmetrize_covds_walk(expr::Tensor, ::Symbol, ::TensorRegistry) = expr
 _symmetrize_covds_walk(expr::TScalar, ::Symbol, ::TensorRegistry) = expr
+
+"""Check whether a tensor expression is a scalar (has no free indices on its own)."""
+function _is_scalar_body(expr::TensorExpr)
+    expr isa TScalar && return true
+    expr isa Tensor && return isempty(expr.indices)
+    # For sums/products/derivs, check free indices
+    isempty(free_indices(expr))
+end
 
 """
 Compute [∇_a, ∇_b] T for a tensor T.
