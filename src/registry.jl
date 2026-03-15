@@ -44,6 +44,7 @@ mutable struct TensorProperties
     is_christoffel::Bool
     vanishing::Bool
     tracefree_pairs::Vector{Tuple{Int,Int}}
+    divfree_indices::Vector{Tuple{Symbol,Int}}
     options::Dict{Symbol,Any}
 end
 
@@ -55,6 +56,7 @@ function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int}
                            is_delta::Bool=false,
                            frozen::Bool=false,
                            tracefree_pairs::Vector{Tuple{Int,Int}}=Tuple{Int,Int}[],
+                           divfree_indices::Vector{Tuple{Symbol,Int}}=Tuple{Symbol,Int}[],
                            options::Dict{Symbol,Any}=Dict{Symbol,Any}())
     # Infer struct fields from options for backward compatibility
     _is_metric = is_metric || get(options, :is_metric, false)
@@ -69,7 +71,7 @@ function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int}
                  SymmetrySpec[s for s in symmetries]
     TensorProperties(name, manifold, rank, typed_syms, dependencies, weight,
                      _is_metric, _is_delta, _frozen, _flat, _is_covd, _is_christoffel,
-                     _vanishing, tracefree_pairs, options)
+                     _vanishing, tracefree_pairs, divfree_indices, options)
 end
 
 """
@@ -279,6 +281,20 @@ function set_tracefree!(reg::TensorRegistry, name::Symbol;
     else
         tp.tracefree_pairs = pairs
     end
+    nothing
+end
+
+"""
+    set_divfree!(reg, name; covd=:partial, index=1)
+
+Mark a tensor as divergence-free w.r.t. `covd` on the given `index` slot.
+When `covd` contracts with the tensor index at position `index`, the result is zero.
+"""
+function set_divfree!(reg::TensorRegistry, name::Symbol;
+                      covd::Symbol=:partial, index::Int=1)
+    has_tensor(reg, name) || error("Tensor $name not registered")
+    tp = get_tensor(reg, name)
+    push!(tp.divfree_indices, (covd, index))
     nothing
 end
 
