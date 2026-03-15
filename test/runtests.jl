@@ -208,4 +208,6 @@ using TensorGR
     include("test_feynman_types.jl")
     # DDI rule generation (rank-2 tensor contractions)
     include("test_ddi_rules.jl")
+    # Wald entropy: S = A/4 from Noether charge (Iyer & Wald 1994, Eq 4.1)
+    include("test_wald_entropy.jl")
 end
