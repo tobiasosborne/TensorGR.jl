@@ -1,14 +1,20 @@
 """
-    VBundleProperties(name, manifold, dim, indices)
+    VBundleProperties(name, manifold, dim, indices; conjugate_bundle=nothing)
 
-Properties of a vector bundle: name, base manifold, fiber dimension, and index alphabet.
+Properties of a vector bundle: name, base manifold, fiber dimension, index alphabet,
+and optional conjugate bundle (for spinor indices: SL2C <-> SL2C_dot).
 """
 struct VBundleProperties
     name::Symbol
     manifold::Symbol
     dim::Int
     indices::Vector{Symbol}
+    conjugate_bundle::Union{Nothing,Symbol}
 end
+
+# Backward-compatible 4-arg positional constructor (conjugate_bundle defaults to nothing)
+VBundleProperties(name::Symbol, manifold::Symbol, dim::Int, indices::Vector{Symbol}) =
+    VBundleProperties(name, manifold, dim, indices, nothing)
 
 """
     ManifoldProperties(name, dim, metric, derivative, indices)
@@ -122,16 +128,18 @@ function get_vbundle(reg::TensorRegistry, name::Symbol)
 end
 
 """
-    define_vbundle!(reg, name; manifold, dim, indices)
+    define_vbundle!(reg, name; manifold, dim, indices, conjugate_bundle=nothing)
 
 Register a vector bundle on a manifold with given fiber dimension and index alphabet.
+If `conjugate_bundle` is provided, records the conjugation relationship.
 """
 function define_vbundle!(reg::TensorRegistry, name::Symbol;
                          manifold::Symbol, dim::Int,
-                         indices::Vector{Symbol}=Symbol[])
+                         indices::Vector{Symbol}=Symbol[],
+                         conjugate_bundle::Union{Nothing,Symbol}=nothing)
     has_vbundle(reg, name) && error("VBundle $name already registered")
     has_manifold(reg, manifold) || error("Manifold $manifold not registered")
-    vb = VBundleProperties(name, manifold, dim, indices)
+    vb = VBundleProperties(name, manifold, dim, indices, conjugate_bundle)
     reg.vbundles[name] = vb
     vb
 end

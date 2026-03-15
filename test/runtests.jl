@@ -162,4 +162,6 @@ using TensorGR
     include("test_symplectic_current.jl")
     # Covariant phase space: divergence detection
     include("test_divergence_detect.jl")
+    # Spinor bundles (SL2C / SL2C_dot conjugation metadata)
+    include("test_spinor_bundles.jl")
 end

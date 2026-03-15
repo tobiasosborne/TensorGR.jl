@@ -142,6 +142,9 @@ include("phase_space/divergence.jl")
 # Layer 6: Scalar-tensor theory
 include("scalar_tensor/horndeski.jl")
 
+# Layer 6.5: Spinor infrastructure
+include("spinors/spinor_bundles.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -365,6 +368,11 @@ export eom_extract, extract_eom_and_theta
 export symplectic_potential, theta_eh, add_boundary_ambiguity
 export symplectic_current
 export is_divergence, extract_divergence, split_divergence
+
+# Exports: Spinor bundles
+export define_spinor_bundles!
+export spin_up, spin_down, spin_dot_up, spin_dot_down
+export is_dotted, is_spinor_index, conjugate_index
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
