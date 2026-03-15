@@ -97,6 +97,65 @@ function all_contractions(expr::TensorExpr, metric_name::Symbol;
 end
 
 """
+    contraction_ansatz(tensor_names::Vector{Symbol}, metric_name::Symbol;
+                       registry::TensorRegistry=current_registry(),
+                       coeff_prefix::Symbol=:c) -> TSum
+
+Build the most general scalar formed by fully contracting products of the given tensors.
+Returns a `TSum` where each term is `cᵢ * (fully contracted product)`, with `cᵢ` as
+symbolic `TScalar` coefficients.
+
+Each tensor is looked up in the registry to determine its rank and index structure.
+Fresh index names (`:_c1, :_c2, ...`) are used to avoid collisions with user indices.
+
+# Examples
+```julia
+# Two independent quadratic Ricci invariants: R_{ab}R^{ab} and R²
+contraction_ansatz([:Ric, :Ric], :g)  # -> c1 * R_{ab}R^{ab} + c2 * R²
+```
+"""
+function contraction_ansatz(tensor_names::Vector{Symbol}, metric_name::Symbol;
+                            registry::TensorRegistry=current_registry(),
+                            coeff_prefix::Symbol=:c)
+    # Build tensor expressions with fresh indices (all down)
+    used = Set{Symbol}()
+    tensors = TensorExpr[]
+    for tname in tensor_names
+        tp = get_tensor(registry, tname)
+        total_rank = tp.rank[1] + tp.rank[2]
+        idxs = TIndex[]
+        for _ in 1:total_rank
+            name = _fresh_ansatz_index(used)
+            push!(used, name)
+            push!(idxs, TIndex(name, Down, :Tangent))
+        end
+        push!(tensors, Tensor(tname, idxs))
+    end
+
+    # Form the product
+    product = tproduct(1 // 1, tensors)
+
+    # Generate all fully-contracted scalars
+    contractions = all_contractions(product, metric_name; registry=registry)
+
+    # Assign symbolic coefficients
+    coeffs = [Symbol(coeff_prefix, i) for i in eachindex(contractions)]
+    make_ansatz(contractions, coeffs)
+end
+
+"""
+Generate a fresh index name for ansatz construction, using the `_c` prefix
+to avoid clashing with user-level index names.
+"""
+function _fresh_ansatz_index(used::Set{Symbol})
+    for n in 1:1000
+        s = Symbol(:_c, n)
+        s in used || return s
+    end
+    error("Could not generate fresh ansatz index (exhausted 1000 names)")
+end
+
+"""
 Generate all ways to partition indices 1:2n into n pairs.
 Returns vector of vectors of (i,j) tuples.
 For 2n items, produces (2n-1)!! = 1*3*5*...*(2n-1) pairings.
