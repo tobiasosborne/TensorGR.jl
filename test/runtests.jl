@@ -106,4 +106,6 @@ using TensorGR
     include("test_divfree.jl")
     # sort_covds_to_div enhancement
     include("test_sort_covds_to_div.jl")
+    # Ground truth: contraction counts vs Nutma (2014), arXiv:1308.3493
+    include("test_ground_truth_contractions.jl")
 end
