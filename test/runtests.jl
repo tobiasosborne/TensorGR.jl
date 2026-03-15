@@ -236,4 +236,5 @@ using TensorGR
     include("test_riemann_ddi.jl")
     # DDI simplification pass (simplify_with_ddis convenience function)
     include("test_ddi_simplify.jl")
+    include("test_petrov_ppwave.jl")
 end
