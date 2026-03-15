@@ -128,6 +128,8 @@ using TensorGR
     include("test_algebra_forms.jl")
     # Gauge-covariant exterior derivative
     include("test_gauge_covd.jl")
+    # Field strength, Yang-Mills EOM, instanton density
+    include("test_field_strength.jl")
     # Ground-truth verification: Martel & Poisson (2005) spherical harmonics
     include("test_ground_truth_harmonics.jl")
     # symmetrize_covds

@@ -261,6 +261,172 @@ function bianchi_identity(A::AlgValuedForm, structure_constants::Symbol;
     gauge_covd(A, F, structure_constants; registry=registry)
 end
 
+# ── Physics aliases and Yang-Mills structures ─────────────────────────
+
+"""
+    field_strength(A::AlgValuedForm, structure_constants::Symbol;
+                   registry=current_registry()) -> AlgValuedForm
+
+Alias for `curvature_2form`. Computes the gauge field strength:
+
+    F = dA + (1/2)[A ∧ A]
+
+Standard physics nomenclature for the curvature 2-form of a gauge connection.
+
+Ground truth: Nakahara (2003) Eq 11.7; Peskin & Schroeder (1995) Eq 15.47.
+"""
+field_strength(A::AlgValuedForm, structure_constants::Symbol;
+               registry=current_registry()) =
+    curvature_2form(A, structure_constants; registry=registry)
+
+"""
+    yang_mills_eom(A::AlgValuedForm, structure_constants::Symbol,
+                   epsilon::Symbol, metric::Symbol, dim::Int;
+                   registry=current_registry()) -> AlgValuedForm
+
+Compute the Yang-Mills equation of motion expression: D_A(★F).
+
+For a connection 1-form A on a d-dimensional manifold, computes the
+gauge-covariant exterior derivative of the Hodge dual of the field strength:
+
+    D_A(★F) = d(★F) + [A ∧ ★F]
+
+For a solution, D_A(★F) = ★J where J is the current.
+In 4D, ★F is a 2-form, so D_A(★F) is a 3-form (dual to a 1-form current).
+
+Requires the Levi-Civita tensor (epsilon) and metric for the Hodge dual.
+
+Ground truth: Nakahara (2003) Eq 11.28; Peskin & Schroeder (1995) Eq 15.47.
+"""
+function yang_mills_eom(A::AlgValuedForm, structure_constants::Symbol,
+                        epsilon::Symbol, metric::Symbol, dim::Int;
+                        registry=current_registry())
+    A.degree == 1 ||
+        throw(ArgumentError("yang_mills_eom requires A to be a 1-form, got degree $(A.degree)"))
+
+    # Compute field strength F = dA + (1/2)[A^A]
+    F = curvature_2form(A, structure_constants; registry=registry)
+
+    # Hodge dual of F: ★F is a (dim-2)-form
+    # We need to extract the underlying tensor from F to apply hodge_dual,
+    # then wrap back in AlgValuedForm
+    star_F_degree = dim - F.degree
+
+    # Collect used index names for fresh index generation
+    used = Set{Symbol}()
+    for idx in indices(A.expr)
+        push!(used, idx.name)
+    end
+    for idx in indices(F.expr)
+        push!(used, idx.name)
+    end
+
+    # Build Hodge dual contraction manually for algebra-valued forms:
+    # (★F)^I_{b1...b(d-2)} = (1/2!) eps^{a1 a2}_{b1...b(d-2)} F^I_{a1 a2}
+    # We contract epsilon with the spacetime form indices of F
+
+    # Create dummy indices for contraction with F's form indices
+    up_indices = TIndex[]
+    for _ in 1:F.degree
+        d = fresh_index(used)
+        push!(used, d)
+        push!(up_indices, up(d))
+    end
+
+    # Create result indices for the dual form
+    result_indices = TIndex[]
+    for _ in 1:star_F_degree
+        d = fresh_index(used)
+        push!(used, d)
+        push!(result_indices, down(d))
+    end
+
+    # Build epsilon tensor
+    eps_tensor = Tensor(epsilon, vcat(up_indices, result_indices))
+
+    # Build F with renamed spacetime indices for contraction
+    # F.expr carries algebra + form indices; we need to rename form indices to match dummies
+    alg_idx = _find_algebra_index(F)
+
+    # Fresh algebra index for F copy
+    new_alg = fresh_index(used)
+    push!(used, new_alg)
+
+    # Build F tensor with matching dummy indices
+    F_renamed = Tensor(:F, vcat([TIndex(new_alg, Up, alg_idx.vbundle)],
+                                [down(idx.name) for idx in up_indices]))
+
+    coeff = 1 // factorial(F.degree)
+    star_F_expr = tproduct(coeff, TensorExpr[eps_tensor, F_renamed])
+
+    # Rename algebra index back to match A's algebra index
+    star_F_expr = rename_dummy(star_F_expr, new_alg, alg_idx.name)
+
+    star_F = AlgValuedForm(star_F_degree, A.algebra, star_F_expr)
+
+    # D_A(★F) = d(★F) + [A ∧ ★F]
+    gauge_covd(A, star_F, structure_constants; registry=registry)
+end
+
+"""
+    instanton_density(F::AlgValuedForm; registry=current_registry()) -> AlgValuedForm
+
+Compute the topological (instanton) density: Tr(F ∧ F).
+
+For a 2-form field strength F^I_{ab}, this computes
+    F^I_{ab} F^I_{cd}
+which is a scalar-valued 4-form proportional to the second Chern class / Pontryagin density.
+
+The trace over the algebra index contracts F^I with F^I (using the Killing form,
+here taken as delta^{IJ}).
+
+Ground truth: Nakahara (2003) Eq 11.76; Eguchi, Gilkey & Hanson (1980) Eq 6.2.
+"""
+function instanton_density(F::AlgValuedForm; registry=current_registry())
+    F.degree == 2 ||
+        throw(ArgumentError("instanton_density requires a 2-form (field strength), got degree $(F.degree)"))
+
+    # Collect used index names
+    used = Set{Symbol}()
+    for idx in indices(F.expr)
+        push!(used, idx.name)
+    end
+
+    # Create a copy of F with fresh indices for the wedge product
+    alg_idx = _find_algebra_index(F)
+    vb = alg_idx.vbundle
+
+    # Fresh indices for the second copy of F
+    new_alg = fresh_index(used)
+    push!(used, new_alg)
+    new_form1 = fresh_index(used)
+    push!(used, new_form1)
+    new_form2 = fresh_index(used)
+    push!(used, new_form2)
+
+    F2_tensor = Tensor(:F, [up(new_alg, vb), down(new_form1), down(new_form2)])
+    F2 = AlgValuedForm(2, F.algebra, F2_tensor)
+
+    # Wedge product F ∧ F (degree 2 + 2 = 4)
+    # The wedge coefficient for two 2-forms: (4!)/(2!2!) = 6
+    p, q = F.degree, F2.degree
+    coeff = factorial(p + q) // (factorial(p) * factorial(q))
+
+    # Trace over algebra index: contract F^I with F^I
+    # Rename the algebra index of F2 to match F for contraction
+    F2_traced = rename_dummy(F2.expr, new_alg, alg_idx.name)
+
+    # Ensure no dummy clashes between F and F2 (spacetime indices)
+    F2_traced = ensure_no_dummy_clash(F.expr, F2_traced)
+
+    inner = tproduct(coeff, TensorExpr[F.expr, F2_traced])
+
+    # Result is a 4-form. The algebra indices are fully contracted (trace),
+    # so this is effectively a scalar-valued form, but we keep it as
+    # AlgValuedForm with degree 4 for type consistency.
+    AlgValuedForm(p + q, F.algebra, inner)
+end
+
 # ── Helpers ──────────────────────────────────────────────────────────
 
 """Find the first Up-position index that lives in a non-Tangent vbundle,
