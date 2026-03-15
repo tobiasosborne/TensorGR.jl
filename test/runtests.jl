@@ -182,4 +182,6 @@ using TensorGR
     include("test_noether_charge.jl")
     # Covariant phase space: First law / Hamiltonian variation / Wald entropy
     include("test_first_law.jl")
+    # Generalized Kronecker delta and DDIs
+    include("test_generalized_delta.jl")
 end
