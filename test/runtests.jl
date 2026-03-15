@@ -118,4 +118,6 @@ using TensorGR
     include("test_ground_truth_harmonics.jl")
     # symmetrize_covds
     include("test_symmetrize_covds.jl")
+    # Ground truth verification: Weyl tensor identities (Wald 1984)
+    include("test_ground_truth_weyl.jl")
 end
