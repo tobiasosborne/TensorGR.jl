@@ -127,6 +127,9 @@ include("geodesics/geodesic.jl")
 # Layer 5.5: Solvers (TOV, etc.)
 include("solvers/tov.jl")
 
+# Layer 5.5: Scalar-tensor theory
+include("scalar_tensor/horndeski.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -339,6 +342,13 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: Scalar-tensor theory (Horndeski)
+export ScalarTensorFunction, g_tensor_name, differentiate_G
+export HorndeskiTheory, define_horndeski!
+export kinetic_X
+export horndeski_L2, horndeski_L3, horndeski_L4, horndeski_L5
+export horndeski_lagrangian
 
 # Extension stubs (implemented in ext/)
 function to_symbolics end

@@ -140,4 +140,6 @@ using TensorGR
     include("test_ground_truth_contractions.jl")
     # Ground truth: quadratic Riemann invariants vs Fulling et al. (1992), CQG 9:1151
     include("test_quadratic_riemann_invariants.jl")
+    # Horndeski scalar-tensor theory (Kobayashi 2019, arXiv:1901.04778)
+    include("test_horndeski.jl")
 end
