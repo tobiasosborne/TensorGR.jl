@@ -106,4 +106,6 @@ using TensorGR
     include("test_divfree.jl")
     # sort_covds_to_div enhancement
     include("test_sort_covds_to_div.jl")
+    # Algebra-valued differential forms
+    include("test_algebra_forms.jl")
 end

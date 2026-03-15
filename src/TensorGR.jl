@@ -100,6 +100,7 @@ include("gr/conversions.jl")
 include("exterior/forms.jl")
 include("exterior/operations.jl")
 include("exterior/connection_forms.jl")
+include("exterior/algebra_forms.jl")
 
 # Layer 5: Component calculations
 include("components/basis.jl")
@@ -295,6 +296,7 @@ export codifferential, cartan_lie_d
 export wedge_power
 export connection_form, curvature_form
 export cartan_first_structure, cartan_second_structure
+export AlgValuedForm, alg_wedge, alg_exterior_d, connection_1form, curvature_2form
 
 # Exports: Components
 export ChartProperties, define_chart!, get_chart
