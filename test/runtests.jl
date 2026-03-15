@@ -134,6 +134,8 @@ using TensorGR
     include("test_field_strength.jl")
     # Chern-Simons 3-form (Nakahara Sec 11.5, Eq 11.106b)
     include("test_chern_simons.jl")
+    # Angular integrals for products of tensor spherical harmonics
+    include("test_angular_integrals.jl")
     # Ground-truth verification: Martel & Poisson (2005) spherical harmonics
     include("test_ground_truth_harmonics.jl")
     # symmetrize_covds
