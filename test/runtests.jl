@@ -198,4 +198,6 @@ using TensorGR
     include("test_generalized_delta.jl")
     # CPS Validation: EH Noether charge = Komar integral (Iyer & Wald 1994; Komar 1959)
     include("test_cps_komar_validation.jl")
+    # xIdeal validation: Schwarzschild = Petrov Type D, Segre [(1,1)(11)]
+    include("test_xideal_schwarzschild.jl")
 end
