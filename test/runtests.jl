@@ -90,6 +90,8 @@ using TensorGR
     include("test_geodesics.jl")
     # Equation of state
     include("test_eos.jl")
+    # Perfect fluid stress-energy tensor
+    include("test_perfect_fluid.jl")
     # Submanifold & boundary tests (GHY, Gauss-Codazzi, ibp_with_boundary)
     include("test_submanifold_boundary.jl")
     # TOV solver
@@ -168,6 +170,8 @@ using TensorGR
     include("test_fr_as_horndeski.jl")
     # Beyond-Horndeski (GLPV) extensions (Gleyzes et al 2015, Kobayashi 2019)
     include("test_beyond_horndeski.jl")
+    # DHOST class I Lagrangian (Langlois & Noui 2016, arXiv:1510.06930)
+    include("test_dhost.jl")
     # Quadratic action for scalar-tensor perturbations on FRW (Kobayashi 2019, Sec 5.2)
     include("test_quadratic_action_st.jl")
     # Segre classification of the Ricci tensor (xIdeal)
@@ -186,8 +190,12 @@ using TensorGR
     include("test_spin_metric.jl")
     # Spinor display: dotted/primed notation (Penrose-Rindler Vol 1, Sec 2.5)
     include("test_spinor_display.jl")
+    # Frame bundle (Lorentz VBundle for tetrad/frame indices)
+    include("test_frame_bundle.jl")
     # See-saw contraction rule for antisymmetric spin metric (Penrose-Rindler Sec 2.5, Eq 2.5.24)
     include("test_seesaw_contraction.jl")
+    # Spinor canonicalization: vbundle-aware xperm (TGR-6cn)
+    include("test_spinor_canonicalize.jl")
     # Covariant phase space: Noether current
     include("test_noether_current.jl")
     # Schwarzschild RW/Zerilli decomposition (Martel & Poisson 2005, Secs IV-V)
@@ -204,10 +212,21 @@ using TensorGR
     include("test_cps_komar_validation.jl")
     # xIdeal validation: Schwarzschild = Petrov Type D, Segre [(1,1)(11)]
     include("test_xideal_schwarzschild.jl")
+    # xIdeal validation: FRW = Petrov Type O (conformally flat)
+    include("test_xideal_frw.jl")
     # Feynman diagram type hierarchy and builder API
     include("test_feynman_types.jl")
+<<<<<<< HEAD
     # Graviton 3-point and 4-point vertices (DeWitt 1967; Sannan 1986)
     include("test_graviton_vertices.jl")
+=======
+    # Gauge-fixing action and Faddeev-Popov ghost sector
+    include("test_gauge_fixing.jl")
+>>>>>>> worktree-agent-a8d3e6a4
     # DDI rule generation (rank-2 tensor contractions)
     include("test_ddi_rules.jl")
+    # Wald entropy: S = A/4 from Noether charge (Iyer & Wald 1994, Eq 4.1)
+    include("test_wald_entropy.jl")
+    # RInv: contraction permutation representation for scalar Riemann monomials
+    include("test_rinv.jl")
 end

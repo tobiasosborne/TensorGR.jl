@@ -145,15 +145,18 @@ function _canonicalize_product(p::TProduct)
     n = nslots + 2
 
     # ── Classify free and dummy indices ──────────────────────────────
-    name_slots = Dict{Symbol, Vector{Tuple{Int, IndexPosition}}}()
+    # Group by (name, vbundle) so that indices from different vbundles
+    # (e.g. :Tangent vs :SL2C) are never paired as dummies, even if
+    # they share the same symbolic name.
+    name_slots = Dict{Tuple{Symbol,Symbol}, Vector{Tuple{Int, IndexPosition}}}()
     for (slot, idx) in enumerate(all_indices)
-        push!(get!(Vector{Tuple{Int,IndexPosition}}, name_slots, idx.name), (slot, idx.position))
+        push!(get!(Vector{Tuple{Int,IndexPosition}}, name_slots, (idx.name, idx.vbundle)), (slot, idx.position))
     end
 
     dummy_info = Vector{Tuple{Symbol, Int, Int}}()  # (sym, up_slot, down_slot)
     free_slots_list = Vector{Tuple{Symbol, Int}}()
 
-    for (sym, occurrences) in name_slots
+    for ((sym, _vb), occurrences) in name_slots
         ups   = [(s, p) for (s, p) in occurrences if p == Up]
         downs = [(s, p) for (s, p) in occurrences if p == Down]
 
@@ -175,8 +178,13 @@ function _canonicalize_product(p::TProduct)
     # This avoids xperm's double-coset algorithm moving dummy names
     # between structurally different slots (e.g., derivative vs tensor).
 
-    # Sort all slots by symbol for deterministic name assignment
-    all_slots_sorted = sort(collect(1:nslots), by = i -> all_indices[i].name)
+    # Sort all slots by (vbundle, symbol) for deterministic name
+    # assignment. Grouping by vbundle first ensures that xperm name
+    # integers partition into disjoint ranges per vbundle, so that
+    # canonicalization cannot swap names across vbundle boundaries
+    # (e.g. :Tangent ↔ :SL2C).
+    all_slots_sorted = sort(collect(1:nslots),
+        by = i -> (string(all_indices[i].vbundle), all_indices[i].name))
 
     slot_to_name = Dict{Int, Int}()
     for (name, slot) in enumerate(all_slots_sorted)
@@ -301,7 +309,7 @@ function _factor_sort_key(f::TensorExpr)
     if f isa TScalar
         return (0, "", "")
     elseif f isa Tensor
-        idx_str = join([string(idx.name, idx.position == Up ? "^" : "_") for idx in f.indices])
+        idx_str = join([string(idx.vbundle, ":", idx.name, idx.position == Up ? "^" : "_") for idx in f.indices])
         return (1, string(f.name), idx_str)
     elseif f isa TDeriv
         inner = f
@@ -311,7 +319,7 @@ function _factor_sort_key(f::TensorExpr)
             inner = inner.arg
         end
         name = inner isa Tensor ? string(inner.name) : ""
-        idx_str = join([string(idx.name, idx.position == Up ? "^" : "_") for idx in indices(f)])
+        idx_str = join([string(idx.vbundle, ":", idx.name, idx.position == Up ? "^" : "_") for idx in indices(f)])
         return (2, name * "D$depth", idx_str)
     else
         return (3, "", "")

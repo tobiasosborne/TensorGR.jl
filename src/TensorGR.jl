@@ -72,6 +72,9 @@ include("gr/mapping.jl")
 include("gr/product_manifold.jl")
 include("gr/invariants.jl")
 
+# Layer 3.5: Curvature invariant permutation representation
+include("invariants/rinv.jl")
+
 # Layer 4: Perturbation theory
 include("perturbation/partitions.jl")
 include("perturbation/linearize.jl")
@@ -127,10 +130,15 @@ include("worldline/worldline.jl")
 
 # Layer 5.5: Feynman diagram infrastructure
 include("feynman/types.jl")
+<<<<<<< HEAD
 include("feynman/vertices.jl")
+=======
+include("feynman/gauge_fixing.jl")
+>>>>>>> worktree-agent-a8d3e6a4
 
 # Layer 5.5: Matter / EOS
 include("matter/eos.jl")
+include("matter/perfect_fluid.jl")
 
 # Layer 5.5: Geodesics
 include("geodesics/geodesic.jl")
@@ -158,12 +166,16 @@ include("scalar_tensor/horndeski.jl")
 include("scalar_tensor/horndeski_eom.jl")
 include("scalar_tensor/alpha_params.jl")
 include("scalar_tensor/beyond_horndeski.jl")
+include("scalar_tensor/dhost.jl")
 include("scalar_tensor/quadratic_action_st.jl")
 
 # Layer 6.5: Spinor infrastructure
 include("spinors/spinor_bundles.jl")
 include("spinors/spinor_indices.jl")
 include("spinors/spin_metric.jl")
+
+# Layer 6.5: Tetrad/frame infrastructure
+include("tetrads/frame_bundle.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -273,9 +285,13 @@ export metric_ansatz
 export PerfectFluidProperties, define_perfect_fluid!, perfect_fluid_expr, get_perfect_fluid
 export EquationOfState, BarotropicEOS, PolytropicEOS, TabularEOS
 export PerfectFluid, pressure, sound_speed
+export stress_energy, trace_stress_energy, conservation_equation
 
 # Exports: Curvature invariants
 export InvariantEntry, INVARIANT_CATALOG, curvature_invariant, list_invariants
+
+# Exports: RInv (contraction permutation representation)
+export RInv, to_tensor_expr, from_tensor_expr
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det
@@ -383,7 +399,13 @@ export TensorVertex, TensorPropagator, FeynmanDiagram, DiagramAmplitude
 export n_point, n_indices, n_loops
 export build_diagram, tree_exchange_diagram
 export vertex_from_perturbation, contract_diagram
+<<<<<<< HEAD
 export graviton_3vertex, graviton_4vertex, graviton_vertex_n
+=======
+export gauge_fixing_condition, gauge_fixing_action
+export fp_operator, ghost_propagator, ghost_graviton_vertex
+export gauge_fixed_kinetic_operator
+>>>>>>> worktree-agent-a8d3e6a4
 
 # Exports: Geodesics
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic
@@ -416,6 +438,10 @@ export fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies
 export define_spin_metric!, spin_metric
 export contract_spin_metrics
 
+# Exports: Frame bundle (tetrads)
+export define_frame_bundle!, frame_up, frame_down, is_frame_index
+export fresh_frame_index
+
 # Exports: LaTeX parser
 export parse_tex, @tex_str
 
@@ -432,6 +458,9 @@ export BelliniSawickiAlphas, compute_alphas, compute_alphas_numerical
 export BeyondHorndeskiTheory, define_beyond_horndeski!
 export beyond_horndeski_L4, beyond_horndeski_L5, beyond_horndeski_lagrangian
 export alpha_H
+# Exports: DHOST (Langlois & Noui 2016)
+export DHOSTTheory, define_dhost!
+export dhost_L1, dhost_L2, dhost_L3, dhost_L4, dhost_L5, dhost_lagrangian
 export ScalarTensorQuadraticAction, StabilityConditions
 export quadratic_action_horndeski, tensor_sound_speed, scalar_sound_speed
 export stability_conditions, check_stability, to_quadratic_form
