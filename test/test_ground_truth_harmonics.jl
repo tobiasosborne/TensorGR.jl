@@ -239,13 +239,16 @@
     #   l=0: Y_A = X_A = Y_{AB} = X_{AB} = 0
     #   l=1: Y_{AB} = X_{AB} = 0 (tensor harmonics vanish)
 
-    @testset "Vector/tensor harmonics not yet implemented" begin
-        @test !isdefined(TensorGR, :EvenVectorHarmonic)
-        @test !isdefined(TensorGR, :OddVectorHarmonic)
+    @testset "Vector harmonics implemented, tensor harmonics not yet" begin
+        # Vector harmonics (MP Eqs 11-15) are now implemented
+        @test isdefined(TensorGR, :EvenVectorHarmonic)
+        @test isdefined(TensorGR, :OddVectorHarmonic)
+        @test isdefined(TensorGR, :norm_squared)
+        @test isdefined(TensorGR, :divergence_eigenvalue)
+        @test isdefined(TensorGR, :curl_eigenvalue)
+        @test isdefined(TensorGR, :vector_inner_product)
+        # Tensor harmonics (MP Eqs 16-21) not yet implemented
         @test !isdefined(TensorGR, :EvenTensorHarmonic)
         @test !isdefined(TensorGR, :OddTensorHarmonic)
-        @test !isdefined(TensorGR, :norm_squared)
-        @test !isdefined(TensorGR, :divergence_eigenvalue)
-        @test !isdefined(TensorGR, :curl_eigenvalue)
     end
 end
