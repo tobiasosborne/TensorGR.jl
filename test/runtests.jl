@@ -160,6 +160,8 @@ using TensorGR
     include("test_horndeski.jl")
     # Horndeski field equations: metric + scalar EOMs (Kobayashi 2019, Eqs 2.5-2.7)
     include("test_horndeski_eom.jl")
+    # Bellini-Sawicki alpha parametrization (EFT of dark energy)
+    include("test_alpha_params.jl")
     # Segre classification of the Ricci tensor (xIdeal)
     include("test_segre.jl")
     # Covariant phase space: symplectic potential

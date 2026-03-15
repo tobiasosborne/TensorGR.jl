@@ -150,6 +150,7 @@ include("phase_space/first_law.jl")
 # Layer 6: Scalar-tensor theory
 include("scalar_tensor/horndeski.jl")
 include("scalar_tensor/horndeski_eom.jl")
+include("scalar_tensor/alpha_params.jl")
 
 # Layer 6.5: Spinor infrastructure
 include("spinors/spinor_bundles.jl")
@@ -405,6 +406,8 @@ export kinetic_X
 export horndeski_L2, horndeski_L3, horndeski_L4, horndeski_L5
 export horndeski_lagrangian
 export horndeski_metric_eom, horndeski_scalar_eom, horndeski_eom
+export FRWBackground, define_frw_background
+export BelliniSawickiAlphas, compute_alphas, compute_alphas_numerical
 # Exports: xIdeal classification
 export SegreType, segre_classify
 
