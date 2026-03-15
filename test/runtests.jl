@@ -106,4 +106,6 @@ using TensorGR
     include("test_divfree.jl")
     # sort_covds_to_div enhancement
     include("test_sort_covds_to_div.jl")
+    # Constraints validation: Weyl trace-free and Bianchi identities
+    include("test_constraints_validation.jl")
 end
