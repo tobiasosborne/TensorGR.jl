@@ -94,6 +94,8 @@ using TensorGR
     include("test_ds_spin_projectors.jl")
     # Scalar spherical harmonics
     include("test_scalar_harmonics.jl")
+    # Clebsch-Gordan coefficients and harmonic products
+    include("test_clebsch_gordan.jl")
     # Trace-free enforcement
     include("test_tracefree.jl")
     # sort_covds_to_box enhancement
