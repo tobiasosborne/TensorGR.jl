@@ -127,6 +127,9 @@ include("geodesics/geodesic.jl")
 # Layer 5.5: Solvers (TOV, etc.)
 include("solvers/tov.jl")
 
+# Layer 6: xIdeal classification
+include("xideal/segre.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -339,6 +342,9 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: xIdeal classification
+export SegreType, segre_classify
 
 # Extension stubs (implemented in ext/)
 function to_symbolics end
