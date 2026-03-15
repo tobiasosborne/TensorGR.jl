@@ -186,6 +186,8 @@ using TensorGR
     include("test_spin_metric.jl")
     # Spinor display: dotted/primed notation (Penrose-Rindler Vol 1, Sec 2.5)
     include("test_spinor_display.jl")
+    # See-saw contraction rule for antisymmetric spin metric (Penrose-Rindler Sec 2.5, Eq 2.5.24)
+    include("test_seesaw_contraction.jl")
     # Covariant phase space: Noether current
     include("test_noether_current.jl")
     # Schwarzschild RW/Zerilli decomposition (Martel & Poisson 2005, Secs IV-V)

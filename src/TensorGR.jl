@@ -412,6 +412,7 @@ export spin_up, spin_down, spin_dot_up, spin_dot_down
 export is_dotted, is_spinor_index, conjugate_index
 export fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies
 export define_spin_metric!, spin_metric
+export contract_spin_metrics
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

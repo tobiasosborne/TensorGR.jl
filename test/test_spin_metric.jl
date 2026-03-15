@@ -123,17 +123,21 @@
         end
     end
 
-    @testset "Self-trace: eps^{AB} delta_{BA} (trace through contraction) = 2" begin
+    @testset "Self-trace: eps^{AB} eps_{AB} = -2 (antisymmetric see-saw)" begin
         reg = _spin_metric_registry()
         with_registry(reg) do
-            # epsilon^{AB} epsilon_{AB} = epsilon^{AB} epsilon_{AB}
-            # For a 2-dim antisymmetric metric, eps^{AB}eps_{AB} = dim = 2
+            # epsilon^{AB} epsilon_{AB} = -2 for the antisymmetric spin metric.
+            # Unlike the symmetric spacetime metric (g^{ab}g_{ab} = dim), the
+            # antisymmetric epsilon gives a negative trace:
+            #   eps^{AB}eps_{AB} = -eps^{BA}eps_{AB} = -(delta^B_B) = -2
+            # Verified by components: eps^{01}eps_{01} + eps^{10}eps_{10} = (-1)(1) + (1)(-1) = -2
+            # Reference: Penrose & Rindler Vol 1, Sec 2.5.
             eps_up = Tensor(:eps_spin, [spin_up(:A), spin_up(:B)])
             eps_dn = Tensor(:eps_spin, [spin_down(:A), spin_down(:B)])
             prod = eps_up * eps_dn
 
             result = simplify(prod; registry=reg)
-            @test result == TScalar(2 // 1)
+            @test result == TScalar(-2 // 1)
         end
     end
 
