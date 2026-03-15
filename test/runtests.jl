@@ -96,4 +96,6 @@ using TensorGR
     include("test_scalar_harmonics.jl")
     # Trace-free enforcement
     include("test_tracefree.jl")
+    # sort_covds_to_box enhancement
+    include("test_sort_covds_to_box.jl")
 end
