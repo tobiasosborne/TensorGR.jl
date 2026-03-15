@@ -1,0 +1,11 @@
+# Copyrighted material — do not commit to public repo
+# Obtain from publishers, arXiv, or institutional access (TIB)
+*.pdf
+*.djvu
+*.pdf:Zone.Identifier
+*.djvu:Zone.Identifier
+
+# Keep only public-domain / non-copyrighted files
+!README.md
+!nist_dlmf_34.3.md
+!.gitignore
