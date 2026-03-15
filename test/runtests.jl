@@ -232,4 +232,6 @@ using TensorGR
     include("test_rinv.jl")
     # Riemann DDI generation (rank-4 tensor contractions, cubic identities)
     include("test_riemann_ddi.jl")
+    # DDI simplification pass (simplify_with_ddis convenience function)
+    include("test_ddi_simplify.jl")
 end

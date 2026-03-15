@@ -1,3 +1,7 @@
+# Module-level tracking of which registries have DDI rules registered.
+# Maps registry objectid => Set of (dim, order) pairs already registered.
+const _DDI_REGISTERED = Dict{UInt, Set{Tuple{Int,Int}}}()
+
 #= Dimensionally-dependent identity (DDI) generation for rank-2 and rank-4 tensors.
 
 In d dimensions, the generalized Kronecker delta delta^{a1...a_{d+1}}_{b1...b_{d+1}} = 0.
@@ -120,7 +124,24 @@ function register_ddi_rules!(reg::TensorRegistry; dim::Int=4, order::Int=2,
     for r in rules
         register_rule!(reg, r)
     end
+    # Track that DDI rules for this (dim, order) have been registered
+    key = objectid(reg)
+    if !haskey(_DDI_REGISTERED, key)
+        _DDI_REGISTERED[key] = Set{Tuple{Int,Int}}()
+    end
+    push!(_DDI_REGISTERED[key], (dim, order))
     rules
+end
+
+"""
+    has_ddi_rules(reg::TensorRegistry; dim::Int=4, order::Int=2) -> Bool
+
+Check whether DDI rules for the given dimension and order have already been
+registered in the registry via `register_ddi_rules!`.
+"""
+function has_ddi_rules(reg::TensorRegistry; dim::Int=4, order::Int=2)
+    key = objectid(reg)
+    haskey(_DDI_REGISTERED, key) && (dim, order) in _DDI_REGISTERED[key]
 end
 
 # ── Internal helpers ──────────────────────────────────────────────────
@@ -533,4 +554,78 @@ function _has_curvature_beyond_riem_pair(p::TProduct, pair::Tuple{Int,Int})
         end
     end
     false
+end
+
+# ── Convenience: simplify with DDIs ──────────────────────────────────
+
+"""
+    simplify_with_ddis(expr; dim=4, order=2, registry=current_registry(), kwargs...)
+
+Simplify an expression applying dimensionally-dependent identities (DDIs) for
+the given dimension and polynomial order in curvature.
+
+This is a convenience wrapper that:
+1. Registers DDI rules in the registry if not already present (idempotent)
+2. Calls `simplify(expr; registry=reg, kwargs...)`
+
+DDI rules are rewrite rules derived from the vanishing of the generalized
+Kronecker delta when its rank exceeds the manifold dimension. They relate
+curvature invariants of different types:
+
+- `order=2` (quadratic): Gauss-Bonnet identity `Riem^2 = 4 Ric^2 - R^2` in d>=4;
+  Weyl vanishing in d<=3; Ricci = (R/2)g in d=2
+- `order=3` (cubic): cubic Riemann DDI from Fulling et al. (1992), Table 1
+
+The DDI rules flow through the existing `apply_rules` step in the simplify
+pipeline. Since they are registered as standard `RewriteRule`s, they are
+applied after canonicalization, which ensures terms are in canonical form
+for pattern matching.
+
+# Arguments
+- `expr`: the tensor expression to simplify
+- `dim::Int=4`: manifold dimension
+- `order::Int=2`: highest polynomial order of DDI rules to apply
+- `registry`: the TensorRegistry to use
+- All other keyword arguments are forwarded to `simplify`
+
+# Examples
+```julia
+reg = TensorRegistry()
+@manifold M4 dim=4 metric=g registry=reg
+define_curvature_tensors!(reg, :M4, :g)
+
+# Gauss-Bonnet identity: Riem^2 - 4 Ric^2 + R^2 = 0
+gb = gauss_bonnet_ddi(; metric=:g, registry=reg)
+result = simplify_with_ddis(gb; dim=4, registry=reg)  # => 0
+
+# Kretschner scalar is eliminated in favour of Ricci invariants
+K = Tensor(:Riem, [down(:a), down(:b), down(:c), down(:d)]) *
+    Tensor(:Riem, [up(:a), up(:b), up(:c), up(:d)])
+result = simplify_with_ddis(K; dim=4, registry=reg)  # => 4 Ric^2 - R^2
+```
+
+See also: [`register_ddi_rules!`](@ref), [`generate_ddi_rules`](@ref),
+[`gauss_bonnet_ddi`](@ref), [`generate_riemann_ddi`](@ref)
+"""
+function simplify_with_ddis(expr::TensorExpr;
+                             dim::Int=4, order::Int=2,
+                             registry::TensorRegistry=current_registry(),
+                             kwargs...)
+    # Register DDI rules if not already present (idempotent)
+    for o in 2:order
+        if !has_ddi_rules(registry; dim=dim, order=o)
+            register_ddi_rules!(registry; dim=dim, order=o, metric=_ddi_metric_name(registry))
+        end
+    end
+    # Also register order-specific rules directly for orders 1 and below
+    if order >= 1 && !has_ddi_rules(registry; dim=dim, order=1)
+        register_ddi_rules!(registry; dim=dim, order=1, metric=_ddi_metric_name(registry))
+    end
+
+    simplify(expr; registry=registry, kwargs...)
+end
+
+"""Look up the metric name from the registry for DDI rule registration."""
+function _ddi_metric_name(reg::TensorRegistry)
+    isempty(reg.metric_cache) ? :g : first(values(reg.metric_cache))
 end
