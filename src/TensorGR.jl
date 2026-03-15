@@ -127,6 +127,9 @@ include("geodesics/geodesic.jl")
 # Layer 5.5: Solvers (TOV, etc.)
 include("solvers/tov.jl")
 
+# Layer 5.5: xIdeal (exact solution identification)
+include("xideal/weyl_scalars.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -336,6 +339,9 @@ export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integr
 
 # Exports: TOV solver
 export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
+
+# Exports: xIdeal (Weyl scalars / Petrov classification)
+export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
