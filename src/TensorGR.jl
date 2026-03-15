@@ -130,6 +130,7 @@ include("feynman/types.jl")
 
 # Layer 5.5: Matter / EOS
 include("matter/eos.jl")
+include("matter/perfect_fluid.jl")
 
 # Layer 5.5: Geodesics
 include("geodesics/geodesic.jl")
@@ -272,6 +273,7 @@ export metric_ansatz
 export PerfectFluidProperties, define_perfect_fluid!, perfect_fluid_expr, get_perfect_fluid
 export EquationOfState, BarotropicEOS, PolytropicEOS, TabularEOS
 export PerfectFluid, pressure, sound_speed
+export stress_energy, trace_stress_energy, conservation_equation
 
 # Exports: Curvature invariants
 export InvariantEntry, INVARIANT_CATALOG, curvature_invariant, list_invariants

@@ -90,6 +90,8 @@ using TensorGR
     include("test_geodesics.jl")
     # Equation of state
     include("test_eos.jl")
+    # Perfect fluid stress-energy tensor
+    include("test_perfect_fluid.jl")
     # Submanifold & boundary tests (GHY, Gauss-Codazzi, ibp_with_boundary)
     include("test_submanifold_boundary.jl")
     # TOV solver
