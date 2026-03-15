@@ -236,5 +236,24 @@ using TensorGR
     include("test_riemann_ddi.jl")
     # DDI simplification pass (simplify_with_ddis convenience function)
     include("test_ddi_simplify.jl")
+    # xIdeal validation: pp-wave = Petrov Type N (gravitational wave)
     include("test_petrov_ppwave.jl")
+    # Soldering form (Infeld-van der Waerden symbol) and tensor-spinor conversion
+    include("test_soldering_form.jl")
+    # Tetrad struct and define_tetrad! API
+    include("test_tetrad.jl")
+    # PPN metric ansatz (Will 2018)
+    include("test_ppn_metric.jl")
+    # EFT of dark energy alpha parametrization (Bellini-Sawicki 2014)
+    include("test_eft_de.jl")
+    # DHOST degeneracy conditions (Langlois & Noui 2016)
+    include("test_dhost_degeneracy.jl")
+    # Multi-scalar Horndeski theory
+    include("test_multi_horndeski.jl")
+    # RInv xperm canonicalization
+    include("test_rinv_canonicalize.jl")
+    # DualRInv: dual curvature invariants
+    include("test_dual_rinv.jl")
+    # Mode coupling coefficients (Brizuela et al. 2006)
+    include("test_mode_coupling_coefficients.jl")
 end

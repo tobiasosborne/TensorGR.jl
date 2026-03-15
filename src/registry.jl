@@ -92,6 +92,7 @@ mutable struct TensorRegistry
     vbundles::Dict{Symbol, VBundleProperties}
     foliations::Dict{Symbol, Any}  # Dict{Symbol, FoliationProperties}, Any to avoid forward ref
     mappings::Dict{Symbol, Any}    # Dict{Symbol, MappingProperties}, Any to avoid forward ref
+    tetrads::Dict{Symbol, Any}     # Dict{Symbol, TetradProperties}, Any to avoid forward ref
     tex_aliases::Dict{Tuple{Symbol,Int}, Symbol}  # (tex_name, rank) => tensor_name; rank=-1 for any
     # Caches: metric/delta name per manifold (populated by register_tensor!)
     metric_cache::Dict{Symbol, Symbol}   # manifold => metric tensor name
@@ -103,6 +104,7 @@ TensorRegistry() = TensorRegistry(
     Dict{Symbol,TensorProperties}(),
     Any[],
     Dict{Symbol,VBundleProperties}(),
+    Dict{Symbol,Any}(),
     Dict{Symbol,Any}(),
     Dict{Symbol,Any}(),
     Dict{Tuple{Symbol,Int}, Symbol}(),

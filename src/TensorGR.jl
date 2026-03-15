@@ -74,6 +74,7 @@ include("gr/invariants.jl")
 
 # Layer 3.5: Curvature invariant permutation representation
 include("invariants/rinv.jl")
+include("invariants/dual_rinv.jl")
 
 # Layer 4: Perturbation theory
 include("perturbation/partitions.jl")
@@ -86,6 +87,7 @@ include("perturbation/backgrounds.jl")
 include("perturbation/isaacson.jl")
 include("perturbation/schwarzschild_decompose.jl")
 include("perturbation/master_equations.jl")
+include("perturbation/mode_coupling.jl")
 
 # Layer 4: SVT decomposition
 include("svt/fourier.jl")
@@ -165,7 +167,10 @@ include("scalar_tensor/horndeski.jl")
 include("scalar_tensor/horndeski_eom.jl")
 include("scalar_tensor/alpha_params.jl")
 include("scalar_tensor/beyond_horndeski.jl")
+include("scalar_tensor/eft_de.jl")
 include("scalar_tensor/dhost.jl")
+include("scalar_tensor/dhost_degeneracy.jl")
+include("scalar_tensor/multi_horndeski.jl")
 include("scalar_tensor/quadratic_action_st.jl")
 
 # Layer 6.5: Spinor infrastructure
@@ -173,9 +178,14 @@ include("spinors/spinor_bundles.jl")
 include("spinors/spinor_indices.jl")
 include("spinors/spin_metric.jl")
 include("spinors/spin_index.jl")
+include("spinors/soldering_form.jl")
 
 # Layer 6.5: Tetrad/frame infrastructure
 include("tetrads/frame_bundle.jl")
+include("tetrads/tetrad.jl")
+
+# Layer 6.5: PPN framework
+include("ppn/metric_ansatz.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -294,6 +304,10 @@ export InvariantEntry, INVARIANT_CATALOG, curvature_invariant, list_invariants
 
 # Exports: RInv (contraction permutation representation)
 export RInv, to_tensor_expr, from_tensor_expr
+export canonicalize_rinv, rinv_symmetry_group, are_equivalent
+
+# Exports: DualRInv (dual curvature invariants)
+export DualRInv, left_dual, right_dual, double_dual, pontryagin_rinv
 
 # Exports: Metric engine
 export MetricSignature, lorentzian, euclidean, sign_det
@@ -319,6 +333,8 @@ export metric_variation, var_lagrangian
 export SchwarzschildPerturbation, decompose_schwarzschild
 export regge_wheeler_gauge, zerilli_gauge
 export MasterEquation, regge_wheeler_potential, zerilli_potential, master_equation
+export coupling_selection_rule, mode_coupling_coefficient
+export ModeCouplingTable, compute_coupling_table!, coupling_coefficient, coupling_count
 
 # Exports: SVT / Fourier
 export to_fourier, FourierConvention
@@ -440,10 +456,15 @@ export define_spin_metric!, spin_metric
 export contract_spin_metrics
 export SpinIndex, spinor, spinor_dot, is_undotted, is_dotted_spinor
 export spinor_dummy, spinor_dot_dummy, spinor_pair
+export define_soldering_form!, to_spinor_indices, to_tensor_indices
 
 # Exports: Frame bundle (tetrads)
 export define_frame_bundle!, frame_up, frame_down, is_frame_index
 export fresh_frame_index
+export TetradProperties, define_tetrad!, get_tetrad, has_tetrad
+
+# Exports: PPN framework
+export PPNParameters, ppn_gr, is_gr, ppn_metric_ansatz, define_ppn_potentials!
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
@@ -461,9 +482,21 @@ export BelliniSawickiAlphas, compute_alphas, compute_alphas_numerical
 export BeyondHorndeskiTheory, define_beyond_horndeski!
 export beyond_horndeski_L4, beyond_horndeski_L5, beyond_horndeski_lagrangian
 export alpha_H
+# Exports: EFT of dark energy
+export EFTDarkEnergy, eft_from_horndeski, eft_from_beyond_horndeski
+export eft_from_numerical, eft_stability, eft_observables
+export gw170817_constraint, eft_gr, eft_quintessence, eft_fR, apply_gw170817
 # Exports: DHOST (Langlois & Noui 2016)
 export DHOSTTheory, define_dhost!
 export dhost_L1, dhost_L2, dhost_L3, dhost_L4, dhost_L5, dhost_lagrangian
+export degeneracy_conditions, is_degenerate, dhost_class
+export horndeski_as_dhost, reduce_to_horndeski, dhost_dof_count
+# Exports: Multi-scalar Horndeski
+export MultiScalarTensorFunction, multi_g_tensor_name, differentiate_MG
+export MultiHorndeskiTheory, define_multi_horndeski!
+export kinetic_matrix, kinetic_matrix_full
+export multi_horndeski_L2, multi_horndeski_L3, multi_horndeski_L4
+export to_single_field
 export ScalarTensorQuadraticAction, StabilityConditions
 export quadratic_action_horndeski, tensor_sound_speed, scalar_sound_speed
 export stability_conditions, check_stability, to_quadratic_form

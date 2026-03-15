@@ -198,6 +198,233 @@ function canonicalize(inv::RInv)
     RInv(k, best, true)
 end
 
+# ---- xperm-based canonicalization -------------------------------------------
+
+"""
+    rinv_symmetry_group(degree::Int) -> Vector{Perm}
+
+Generate xperm symmetry group generators for degree-k Riemann monomials.
+The generators act on `4k + 2` points (4k index slots + 2 sign bits).
+
+Each Riemann factor has:
+- Antisymmetry: R_{abcd} = -R_{bacd}  (swap slots 1,2 with sign flip)
+- Antisymmetry: R_{abcd} = -R_{abdc}  (swap slots 3,4 with sign flip)
+- Pair symmetry: R_{abcd} = R_{cdab}   (swap pair (1,2) <-> (3,4))
+
+Plus inter-tensor symmetry: adjacent factor transpositions for identical
+Riemann factors (blocks of 4 slots are swapped, no sign).
+
+Returns `Vector{Perm}` of permutations on `4k+2` points, with sign
+encoded in the last two points per xperm convention.
+"""
+function rinv_symmetry_group(degree::Int)
+    k = degree
+    nslots = 4k
+    n = nslots + 2  # +2 for sign bits
+    gens = Perm[]
+
+    # Per-factor Riemann symmetries
+    for f in 1:k
+        off = 4(f - 1)
+
+        # Antisymmetry in first pair (slots off+1, off+2) -> sign flip
+        p = collect(Int32, 1:n)
+        p[off+1], p[off+2] = p[off+2], p[off+1]
+        p[n-1], p[n] = p[n], p[n-1]  # sign flip
+        push!(gens, Perm(p))
+
+        # Antisymmetry in second pair (slots off+3, off+4) -> sign flip
+        p = collect(Int32, 1:n)
+        p[off+3], p[off+4] = p[off+4], p[off+3]
+        p[n-1], p[n] = p[n], p[n-1]  # sign flip
+        push!(gens, Perm(p))
+
+        # Pair symmetry (swap first pair with second pair) -> no sign flip
+        p = collect(Int32, 1:n)
+        p[off+1], p[off+3] = p[off+3], p[off+1]
+        p[off+2], p[off+4] = p[off+4], p[off+2]
+        push!(gens, Perm(p))
+    end
+
+    # Inter-factor transpositions (adjacent identical Riem blocks)
+    for f in 1:k-1
+        off1 = 4(f - 1)
+        off2 = 4f
+        p = collect(Int32, 1:n)
+        for j in 1:4
+            p[off1+j], p[off2+j] = p[off2+j], p[off1+j]
+        end
+        push!(gens, Perm(p))
+    end
+
+    gens
+end
+
+"""
+    _contraction_to_xperm(sigma::Vector{Int}) -> (Perm, Int32[], Int32[])
+
+Convert a contraction involution `sigma` (length 4k) into xperm inputs:
+the contraction permutation itself on `4k+2` points, empty free list,
+and dummy pair list.
+
+The contraction sigma is used directly as the xperm permutation: perm[i] = sigma(i)
+for index slots, with sign bits appended. Dummy pairs are listed as
+consecutive name pairs (i, sigma(i)) with i < sigma(i), formatted as
+[u1, d1, u2, d2, ...] per xperm convention.
+
+Returns `(perm, free_slots, dummy_pairs)`.
+"""
+function _contraction_to_xperm(sigma::Vector{Int})
+    nslots = length(sigma)
+    n = nslots + 2
+
+    # The contraction permutation IS the xperm permutation
+    perm_data = Vector{Int32}(undef, n)
+    for i in 1:nslots
+        perm_data[i] = Int32(sigma[i])
+    end
+    perm_data[n-1] = Int32(n - 1)  # positive sign
+    perm_data[n] = Int32(n)
+
+    # No free indices
+    free_slots = Int32[]
+
+    # Dummy pairs: extract all (i, sigma(i)) pairs with i < sigma(i)
+    # Format: [u1, d1, u2, d2, ...]
+    dummy_list = Int32[]
+    visited = falses(nslots)
+    for i in 1:nslots
+        visited[i] && continue
+        j = sigma[i]
+        push!(dummy_list, Int32(i), Int32(j))
+        visited[i] = true
+        visited[j] = true
+    end
+
+    (Perm(perm_data), free_slots, dummy_list)
+end
+
+"""
+    _xperm_to_contraction(cperm::Perm, nslots::Int) -> Vector{Int}
+
+Convert an xperm canonical permutation back to a contraction involution.
+
+Since the xperm permutation encodes the contraction directly
+(perm[slot] = partner_slot), the canonical permutation IS the
+canonical contraction (ignoring the sign bits).
+"""
+function _xperm_to_contraction(cperm::Perm, nslots::Int)
+    contraction = Vector{Int}(undef, nslots)
+    for i in 1:nslots
+        contraction[i] = Int(cperm.data[i])
+    end
+    contraction
+end
+
+function _xperm_to_contraction(cperm::Perm, nslots::Int, original::Vector{Int})
+    # Canonical contraction: sigma' = pi . sigma . pi^{-1}
+    # where pi is the canonical permutation from xperm
+    pi = Vector{Int}(undef, nslots)
+    pi_inv = Vector{Int}(undef, nslots)
+    for i in 1:nslots
+        pi[i] = Int(cperm.data[i])
+    end
+    for i in 1:nslots
+        pi_inv[pi[i]] = i
+    end
+    contraction = Vector{Int}(undef, nslots)
+    for i in 1:nslots
+        contraction[i] = pi[original[pi_inv[i]]]
+    end
+    contraction
+end
+
+"""
+    canonicalize_rinv(rinv::RInv, reg::TensorRegistry) -> RInv
+
+Canonicalize an RInv using the xperm Butler-Portugal algorithm.
+
+Uses the full Riemann symmetry group (intra-tensor antisymmetries,
+pair symmetry, inter-tensor factor permutations) and xperm's
+`canonical_perm` with all indices as dummies.
+
+This is more efficient than BFS orbit enumeration for high-degree
+invariants, as xperm uses the Schreier-Sims algorithm with polynomial
+complexity in the number of slots.
+
+The registry argument is accepted for API consistency with the
+TensorExpr canonicalization pipeline, but is not currently used
+(Riemann symmetries are built-in).
+"""
+function canonicalize_rinv(rinv::RInv, reg::TensorRegistry)
+    rinv.canonical && return rinv
+
+    k = rinv.degree
+    nslots = 4k
+    n = nslots + 2
+
+    # Build xperm slot-space generators
+    slot_gens = rinv_symmetry_group(k)
+    isempty(slot_gens) && return RInv(k, rinv.contraction, true)
+
+    # Convert contraction to xperm permutation: identity mapping (name = slot)
+    perm, _free, _dummy = _contraction_to_xperm(rinv.contraction)
+
+    # Since perm is the identity, conjugation is trivial: conj_gens = slot_gens.
+    # The generators already act on the 4k+2 points with sign encoding.
+    conj_gens = slot_gens
+
+    # All-free mode: treat all index slots as free.
+    # The contraction structure is maintained through the name assignment
+    # and recovered after canonicalization via conjugation.
+    # This avoids the dummy-pair mechanism which can incorrectly flag
+    # invariants as zero when combined with antisymmetry generators.
+    freeps = Int32.(1:nslots)
+    dummyps = Int32[]
+
+    # Base: all slot points
+    base = Int32.(1:nslots)
+
+    # Call xperm canonical_perm
+    cperm = xperm_canonical_perm(perm, base, conj_gens, freeps, dummyps, n)
+
+    # Zero check: xperm returns all zeros for vanishing expressions
+    if all(==(Int32(0)), cperm.data)
+        return RInv(k, zeros(Int, nslots), true)
+    end
+
+    # Sign check: sign encoded in last two points
+    # n-1 -> n-1, n -> n means positive
+    # n-1 -> n, n -> n-1 means negative (expression is odd under symmetry)
+    # For scalar invariants (all contracted), a negative sign means the
+    # invariant vanishes (it equals its own negative).
+    if cperm.data[n-1] != Int32(n - 1)
+        # Negative sign -> vanishing invariant
+        return RInv(k, zeros(Int, nslots), true)
+    end
+
+    # cperm gives the canonical slot permutation pi: cperm[slot] = name.
+    # The canonical contraction is sigma' = pi . sigma . pi^{-1}.
+    canon_contraction = _xperm_to_contraction(cperm, nslots, rinv.contraction)
+
+    RInv(k, canon_contraction, true)
+end
+
+"""
+    are_equivalent(r1::RInv, r2::RInv, reg::TensorRegistry) -> Bool
+
+Check if two RInv objects represent the same scalar invariant (up to
+Riemann symmetries and factor reordering).
+
+Both are canonicalized via xperm and compared.
+"""
+function are_equivalent(r1::RInv, r2::RInv, reg::TensorRegistry)
+    r1.degree == r2.degree || return false
+    c1 = canonicalize_rinv(r1, reg)
+    c2 = canonicalize_rinv(r2, reg)
+    c1.contraction == c2.contraction
+end
+
 # ---- Conversion to TensorExpr -----------------------------------------------
 
 """
