@@ -168,6 +168,8 @@ using TensorGR
     include("test_fr_as_horndeski.jl")
     # Beyond-Horndeski (GLPV) extensions (Gleyzes et al 2015, Kobayashi 2019)
     include("test_beyond_horndeski.jl")
+    # Quadratic action for scalar-tensor perturbations on FRW (Kobayashi 2019, Sec 5.2)
+    include("test_quadratic_action_st.jl")
     # Segre classification of the Ricci tensor (xIdeal)
     include("test_segre.jl")
     # Covariant phase space: symplectic potential

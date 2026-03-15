@@ -156,6 +156,7 @@ include("scalar_tensor/horndeski.jl")
 include("scalar_tensor/horndeski_eom.jl")
 include("scalar_tensor/alpha_params.jl")
 include("scalar_tensor/beyond_horndeski.jl")
+include("scalar_tensor/quadratic_action_st.jl")
 
 # Layer 6.5: Spinor infrastructure
 include("spinors/spinor_bundles.jl")
@@ -426,6 +427,9 @@ export BelliniSawickiAlphas, compute_alphas, compute_alphas_numerical
 export BeyondHorndeskiTheory, define_beyond_horndeski!
 export beyond_horndeski_L4, beyond_horndeski_L5, beyond_horndeski_lagrangian
 export alpha_H
+export ScalarTensorQuadraticAction, StabilityConditions
+export quadratic_action_horndeski, tensor_sound_speed, scalar_sound_speed
+export stability_conditions, check_stability, to_quadratic_form
 # Exports: xIdeal classification
 export SegreType, segre_classify
 
