@@ -124,6 +124,9 @@ include("components/symbolic_metric.jl")
 # Layer 5.5: Worldline / PN
 include("worldline/worldline.jl")
 
+# Layer 5.5: Feynman diagram infrastructure
+include("feynman/types.jl")
+
 # Layer 5.5: Matter / EOS
 include("matter/eos.jl")
 
@@ -369,6 +372,12 @@ export @manifold, @define_tensor, @covd
 
 # Exports: Worldline / PN
 export Worldline, define_worldline!, pn_order, truncate_pn
+
+# Exports: Feynman diagrams
+export TensorVertex, TensorPropagator, FeynmanDiagram, DiagramAmplitude
+export n_point, n_indices, n_loops
+export build_diagram, tree_exchange_diagram
+export vertex_from_perturbation, contract_diagram
 
 # Exports: Geodesics
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic

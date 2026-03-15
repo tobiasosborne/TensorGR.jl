@@ -190,4 +190,6 @@ using TensorGR
     include("test_first_law.jl")
     # Generalized Kronecker delta and DDIs
     include("test_generalized_delta.jl")
+    # Feynman diagram type hierarchy and builder API
+    include("test_feynman_types.jl")
 end
