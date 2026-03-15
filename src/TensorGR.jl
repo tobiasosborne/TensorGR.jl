@@ -311,6 +311,7 @@ export cartan_first_structure, cartan_second_structure
 export AlgValuedForm, alg_wedge, alg_exterior_d, connection_1form, curvature_2form
 export gauge_covd, bianchi_identity
 export field_strength, yang_mills_eom, instanton_density
+export chern_simons_form, chern_simons_invariant
 
 # Exports: Components
 export ChartProperties, define_chart!, get_chart
