@@ -191,6 +191,76 @@ function curvature_2form(A::AlgValuedForm, structure_constants::Symbol;
     AlgValuedForm(2, A.algebra, dA.expr + half_expr)
 end
 
+# ── Gauge-covariant derivative ────────────────────────────────────────
+
+"""
+    gauge_covd(A::AlgValuedForm, omega::AlgValuedForm, structure_constants::Symbol;
+               registry=current_registry()) -> AlgValuedForm
+
+Gauge-covariant exterior derivative: D_A ω = dω + [A ∧ ω]
+where [A ∧ ω]^I = f^I_{JK} A^J ∧ ω^K.
+
+`A` must be a 1-form (connection). Result is a (p+1)-form where p = degree(ω).
+
+For a 0-form (no spacetime form indices), the bracket term vanishes and
+D_A ω = dω (the ordinary exterior derivative).
+
+Ground truth: Nakahara (2003) Eq 11.5; Eguchi, Gilkey & Hanson (1980) Eq 2.22.
+"""
+function gauge_covd(A::AlgValuedForm, omega::AlgValuedForm,
+                    structure_constants::Symbol;
+                    registry=current_registry())
+    A.degree == 1 ||
+        throw(ArgumentError("gauge_covd requires A to be a 1-form, got degree $(A.degree)"))
+    A.algebra == omega.algebra ||
+        throw(ArgumentError("A and ω must be in the same algebra: $(A.algebra) vs $(omega.algebra)"))
+
+    # Collect used index names for fresh dummy generation
+    used = Set{Symbol}()
+    for idx in indices(A.expr)
+        push!(used, idx.name)
+    end
+    for idx in indices(omega.expr)
+        push!(used, idx.name)
+    end
+
+    deriv_name = fresh_index(used)
+    push!(used, deriv_name)
+
+    # dω: exterior derivative on form indices
+    d_omega = alg_exterior_d(omega, down(deriv_name))
+
+    # For 0-forms the bracket term vanishes: D_A φ = dφ (Nakahara Eq 11.3)
+    if omega.degree == 0
+        return d_omega
+    end
+
+    # [A ∧ ω]: algebra-valued wedge product with structure constants
+    bracket = alg_wedge(A, omega, structure_constants; registry=registry)
+
+    AlgValuedForm(omega.degree + 1, omega.algebra, d_omega.expr + bracket.expr)
+end
+
+"""
+    bianchi_identity(A::AlgValuedForm, structure_constants::Symbol;
+                     registry=current_registry()) -> AlgValuedForm
+
+Compute the Bianchi identity expression: D_A F = dF + [A ∧ F].
+For the curvature F = dA + ½[A∧A], this should simplify to zero.
+
+Returns the degree-3 algebra-valued form D_A F.
+
+Ground truth: Nakahara (2003) Eq 11.12; standard Yang-Mills Bianchi identity.
+"""
+function bianchi_identity(A::AlgValuedForm, structure_constants::Symbol;
+                          registry=current_registry())
+    A.degree == 1 ||
+        throw(ArgumentError("bianchi_identity requires A to be a 1-form, got degree $(A.degree)"))
+
+    F = curvature_2form(A, structure_constants; registry=registry)
+    gauge_covd(A, F, structure_constants; registry=registry)
+end
+
 # ── Helpers ──────────────────────────────────────────────────────────
 
 """Find the first Up-position index that lives in a non-Tangent vbundle,
