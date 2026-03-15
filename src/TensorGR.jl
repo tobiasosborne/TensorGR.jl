@@ -132,6 +132,7 @@ include("solvers/tov.jl")
 include("xideal/energy_conditions.jl")
 include("xideal/weyl_scalars.jl")
 include("xideal/segre.jl")
+include("xideal/petrov_invariants.jl")
 
 # Layer 6: Covariant phase space
 include("phase_space/eom.jl")
@@ -357,6 +358,7 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 export EnergyConditionResult, check_energy_conditions
 # Exports: xIdeal (Weyl scalars / Petrov classification)
 export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
+export petrov_invariants, is_algebraically_special, weyl_contraction_invariants
 # Exports: Covariant phase space
 export LagrangianDensity, EOMResult, SymplecticPotential, SymplecticCurrent
 export eom_extract, extract_eom_and_theta
