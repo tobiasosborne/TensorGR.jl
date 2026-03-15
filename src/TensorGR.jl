@@ -30,6 +30,7 @@ include("harmonics/vector_harmonics.jl")
 include("harmonics/orthogonality.jl")
 include("harmonics/tensor_harmonics.jl")
 include("harmonics/laplacian.jl")
+include("harmonics/decompose_scalar.jl")
 include("algebra/contraction.jl")
 include("algebra/canonicalize.jl")
 include("algebra/derivatives.jl")
@@ -142,6 +143,7 @@ export vector_inner_product
 export EvenTensorHarmonicY, EvenTensorHarmonicZ, OddTensorHarmonic
 export LaplacianS2, laplacian_S2, simplify_laplacian
 export wigner3j, clebsch_gordan, harmonic_product
+export ScalarMode, HarmonicDecomposition, decompose_scalar, mode_count, get_mode
 
 # Exports: Registry
 export TensorRegistry, TensorProperties, ManifoldProperties, VBundleProperties

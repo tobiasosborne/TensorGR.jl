@@ -108,6 +108,8 @@ using TensorGR
     include("test_tensor_harmonics.jl")
     # Angular Laplacian on S^2
     include("test_laplacian_s2.jl")
+    # Scalar field harmonic decomposition (Martel & Poisson 2005, Eq 2.4)
+    include("test_decompose_scalar.jl")
     # Ground truth verification: 3j, CG, and Gaunt vs independent Racah formula
     include("test_ground_truth_3j.jl")
     # Trace-free enforcement
