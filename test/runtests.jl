@@ -150,4 +150,6 @@ using TensorGR
     include("test_weyl_scalars.jl")
     # Covariant phase space: EOM extraction
     include("test_phase_space_eom.jl")
+    # Horndeski scalar-tensor theory (Kobayashi 2019, arXiv:1901.04778)
+    include("test_horndeski.jl")
 end

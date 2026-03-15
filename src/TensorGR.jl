@@ -135,6 +135,9 @@ include("xideal/weyl_scalars.jl")
 # Layer 6: Covariant phase space
 include("phase_space/eom.jl")
 
+# Layer 6: Scalar-tensor theory
+include("scalar_tensor/horndeski.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -357,6 +360,13 @@ export eom_extract, extract_eom_and_theta
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: Scalar-tensor theory (Horndeski)
+export ScalarTensorFunction, g_tensor_name, differentiate_G
+export HorndeskiTheory, define_horndeski!
+export kinetic_X
+export horndeski_L2, horndeski_L3, horndeski_L4, horndeski_L5
+export horndeski_lagrangian
 
 # Extension stubs (implemented in ext/)
 function to_symbolics end
