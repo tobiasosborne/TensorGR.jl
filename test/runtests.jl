@@ -106,6 +106,8 @@ using TensorGR
     include("test_harmonic_orthogonality.jl")
     # Tensor spherical harmonics (rank-2, even/odd parity)
     include("test_tensor_harmonics.jl")
+    # Angular Laplacian on S^2
+    include("test_laplacian_s2.jl")
     # Ground truth verification: 3j, CG, and Gaunt vs independent Racah formula
     include("test_ground_truth_3j.jl")
     # Trace-free enforcement

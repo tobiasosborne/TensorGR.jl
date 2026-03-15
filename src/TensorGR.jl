@@ -29,6 +29,7 @@ include("harmonics/clebsch_gordan.jl")
 include("harmonics/vector_harmonics.jl")
 include("harmonics/orthogonality.jl")
 include("harmonics/tensor_harmonics.jl")
+include("harmonics/laplacian.jl")
 include("algebra/contraction.jl")
 include("algebra/canonicalize.jl")
 include("algebra/derivatives.jl")
@@ -139,6 +140,7 @@ export ScalarHarmonic, conjugate, angular_laplacian, inner_product
 export EvenVectorHarmonic, OddVectorHarmonic, divergence_eigenvalue, curl_eigenvalue, norm_squared
 export vector_inner_product
 export EvenTensorHarmonicY, EvenTensorHarmonicZ, OddTensorHarmonic
+export LaplacianS2, laplacian_S2, simplify_laplacian
 export wigner3j, clebsch_gordan, harmonic_product
 
 # Exports: Registry
