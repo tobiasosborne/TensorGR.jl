@@ -208,4 +208,6 @@ using TensorGR
     include("test_feynman_types.jl")
     # DDI rule generation (rank-2 tensor contractions)
     include("test_ddi_rules.jl")
+    # Riemann DDI generation (rank-4 tensor contractions, cubic identities)
+    include("test_riemann_ddi.jl")
 end
