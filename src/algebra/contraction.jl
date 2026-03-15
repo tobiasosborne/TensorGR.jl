@@ -123,11 +123,37 @@ function _contract_one(p::TProduct)
     p  # no contraction found
 end
 
+"""
+    _is_antisymmetric_metric(reg, metric_name) -> Bool
+
+Return `true` if the metric tensor has `AntiSymmetric(1,2)` symmetry.
+Antisymmetric metrics (e.g. the spinor epsilon_{AB}) require sign tracking
+during contraction: contracting on the first index slot introduces an extra -1.
+"""
+function _is_antisymmetric_metric(reg, metric_name::Symbol)
+    has_tensor(reg, metric_name) || return false
+    props = get_tensor(reg, metric_name)
+    for s in props.symmetries
+        if s isa AntiSymmetric && s.i == 1 && s.j == 2
+            return true
+        end
+    end
+    false
+end
+
 function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, reg)
     # A metric g has two indices, both up or both down.
     # It contracts with another factor sharing a dummy index.
     midxs = metric.indices
     length(midxs) == 2 || return nothing
+
+    # See-saw sign tracking for antisymmetric metrics (spinor epsilon).
+    # Convention (Penrose-Rindler Vol 1, Sec 2.5): contracting on the SECOND
+    # index slot of the metric is the "standard" contraction (no extra sign).
+    # Contracting on the FIRST slot picks up an extra -1 from antisymmetry.
+    #   eps^{AB} T_{B...} -> T^{A}_{...}     (mi=2, standard, sign=+1)
+    #   eps^{AB} T_{A...} -> -T^{B}_{...}    (mi=1, extra sign=-1)
+    is_antisym = _is_antisymmetric_metric(reg, metric.name)
 
     for (j, fj) in enumerate(p.factors)
         j == metric_idx && continue
@@ -139,36 +165,85 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
                     # Found contraction: metric index midx pairs with fj index tidx
                     other_midx = midxs[3 - mi]
 
+                    # See-saw sign: contraction on slot 1 of an antisymmetric
+                    # metric gives an extra -1 (from swapping to canonical
+                    # second-slot contraction).
+                    seesaw_sign = (is_antisym && mi == 1) ? -1//1 : 1//1
+
                     # Special case: metric × metric → delta
                     fj_props = has_tensor(reg, fj.name) ? get_tensor(reg, fj.name) : nothing
                     is_partner_metric = fj_props !== nothing && fj_props.is_metric
 
                     if is_partner_metric
-                        # g^{ab} g_{bc} → δ^a_c
+                        # g^{ia} g_{aj} -> delta^i_j  (definitional inverse)
+                        #
+                        # For antisymmetric metrics (spinor epsilon), the inverse
+                        # relation eps^{AC} eps_{CB} = delta^A_B holds by
+                        # definition -- no see-saw sign applies to the
+                        # metric-metric contraction itself.
+                        #
+                        # The antisymmetry sign is ONLY relevant when
+                        # raising/lowering indices on non-metric tensors.
+                        # For metric x metric -> delta, we must track whether
+                        # the contraction index is at the "natural" position
+                        # for forming delta. The natural contraction is:
+                        #   g^{i[C]} g_{[C]j} -> delta^i_j
+                        # where [C] marks the contracted slot.
+                        #
+                        # If the contracted index is at slot 2 of g^ and slot 1
+                        # of g_, that's the standard (second,first) pairing:
+                        # eps^{AC} eps_{CB} = delta^A_B.
+                        #
+                        # Other orderings differ by antisymmetry of one or both
+                        # epsilons. The sign from swapping slots is:
+                        #   swap on metric (mi==1): -1
+                        #   swap on partner (ti==2): -1
+                        # Combined: (-1)^(swaps on metric) * (-1)^(swaps on partner)
+                        #
+                        # Standard pairing: mi=2, ti=1 -> no swaps -> sign = +1
+                        partner_antisym = _is_antisymmetric_metric(reg, fj.name)
+                        # Sign from this metric: standard is slot 2
+                        metric_swap = (is_antisym && mi == 1) ? -1//1 : 1//1
+                        # Sign from partner: standard is slot 1
+                        partner_swap = (partner_antisym && ti == 2) ? -1//1 : 1//1
+                        combined_sign = metric_swap * partner_swap
+
                         other_fidx = fj.indices[3 - ti]
                         mprops = get_tensor(reg, metric.name)
                         vb = midx.vbundle
                         delta_name = _find_delta_for_vbundle(reg, vb, mprops.manifold)
                         new_tensor = Tensor(delta_name,
                             [other_midx, TIndex(other_fidx.name, other_fidx.position, other_fidx.vbundle)])
+
+                        new_factors = TensorExpr[]
+                        for (k, fk) in enumerate(p.factors)
+                            if k == metric_idx
+                                continue
+                            elseif k == j
+                                push!(new_factors, new_tensor)
+                            else
+                                push!(new_factors, fk)
+                            end
+                        end
+                        return tproduct(p.scalar * combined_sign, new_factors)
                     else
                         # g^{ab} T_{bc} → T^a_c  (raise/lower index)
                         new_indices = copy(fj.indices)
                         new_indices[ti] = TIndex(other_midx.name, other_midx.position, other_midx.vbundle)
                         new_tensor = Tensor(fj.name, new_indices)
-                    end
 
-                    new_factors = TensorExpr[]
-                    for (k, fk) in enumerate(p.factors)
-                        if k == metric_idx
-                            continue
-                        elseif k == j
-                            push!(new_factors, new_tensor)
-                        else
-                            push!(new_factors, fk)
+                        new_factors = TensorExpr[]
+                        for (k, fk) in enumerate(p.factors)
+                            if k == metric_idx
+                                continue
+                            elseif k == j
+                                push!(new_factors, new_tensor)
+                            else
+                                push!(new_factors, fk)
+                            end
                         end
+                        return tproduct(p.scalar * seesaw_sign, new_factors)
                     end
-                    return tproduct(p.scalar, new_factors)
                 end
             end
         end
@@ -263,6 +338,28 @@ function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)
     end
 
     nothing
+end
+
+# ── Spinor metric contraction (see-saw rule) ─────────────────────────────────
+
+"""
+    contract_spin_metrics(expr::TensorExpr; registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Contract all spin metric (epsilon) tensors in `expr`, applying the see-saw
+sign rule for antisymmetric metrics.
+
+The see-saw identity (Penrose & Rindler Vol 1, Eq 2.5.24):
+- `eps^{AB} psi_B  -> psi^A`   (contract on second slot: no extra sign)
+- `eps^{AB} psi_A  -> -psi^B`  (contract on first slot: extra -1)
+- Consequence: `psi^A chi_A = -psi_A chi^A`
+
+This is a convenience wrapper around `contract_metrics` which already handles
+the see-saw sign for any antisymmetric metric registered in the registry.
+"""
+function contract_spin_metrics(expr::TensorExpr; registry::TensorRegistry=current_registry())
+    with_registry(registry) do
+        contract_metrics(expr)
+    end
 end
 
 # ── Trace-free enforcement ───────────────────────────────────────────────────

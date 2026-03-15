@@ -168,6 +168,8 @@ using TensorGR
     include("test_fr_as_horndeski.jl")
     # Beyond-Horndeski (GLPV) extensions (Gleyzes et al 2015, Kobayashi 2019)
     include("test_beyond_horndeski.jl")
+    # Quadratic action for scalar-tensor perturbations on FRW (Kobayashi 2019, Sec 5.2)
+    include("test_quadratic_action_st.jl")
     # Segre classification of the Ricci tensor (xIdeal)
     include("test_segre.jl")
     # Covariant phase space: symplectic potential
@@ -184,6 +186,8 @@ using TensorGR
     include("test_spin_metric.jl")
     # Spinor display: dotted/primed notation (Penrose-Rindler Vol 1, Sec 2.5)
     include("test_spinor_display.jl")
+    # See-saw contraction rule for antisymmetric spin metric (Penrose-Rindler Sec 2.5, Eq 2.5.24)
+    include("test_seesaw_contraction.jl")
     # Covariant phase space: Noether current
     include("test_noether_current.jl")
     # Schwarzschild RW/Zerilli decomposition (Martel & Poisson 2005, Secs IV-V)
@@ -202,4 +206,8 @@ using TensorGR
     include("test_xideal_schwarzschild.jl")
     # Feynman diagram type hierarchy and builder API
     include("test_feynman_types.jl")
+    # Graviton 3-point and 4-point vertices (DeWitt 1967; Sannan 1986)
+    include("test_graviton_vertices.jl")
+    # DDI rule generation (rank-2 tensor contractions)
+    include("test_ddi_rules.jl")
 end

@@ -47,6 +47,7 @@ include("algebra/symmetrize.jl")
 include("algebra/young.jl")
 include("algebra/solve.jl")
 include("algebra/generalized_delta.jl")
+include("algebra/ddi_rules.jl")
 
 # Layer 2.5: Scalar algebra
 include("scalar/algebra.jl")
@@ -126,6 +127,7 @@ include("worldline/worldline.jl")
 
 # Layer 5.5: Feynman diagram infrastructure
 include("feynman/types.jl")
+include("feynman/vertices.jl")
 
 # Layer 5.5: Matter / EOS
 include("matter/eos.jl")
@@ -156,6 +158,7 @@ include("scalar_tensor/horndeski.jl")
 include("scalar_tensor/horndeski_eom.jl")
 include("scalar_tensor/alpha_params.jl")
 include("scalar_tensor/beyond_horndeski.jl")
+include("scalar_tensor/quadratic_action_st.jl")
 
 # Layer 6.5: Spinor infrastructure
 include("spinors/spinor_bundles.jl")
@@ -228,6 +231,7 @@ export YoungTableau, young_shape, young_symmetrize, young_project
 export all_contractions, contraction_ansatz, filter_independent_contractions
 export solve_tensors
 export generalized_delta, is_zero_by_dimension
+export generate_ddi_rules, gauss_bonnet_ddi, register_ddi_rules!
 
 # Exports: Scalar algebra
 export scalar_expand, scalar_collect, scalar_subst, scalar_cancel
@@ -379,6 +383,7 @@ export TensorVertex, TensorPropagator, FeynmanDiagram, DiagramAmplitude
 export n_point, n_indices, n_loops
 export build_diagram, tree_exchange_diagram
 export vertex_from_perturbation, contract_diagram
+export graviton_3vertex, graviton_4vertex, graviton_vertex_n
 
 # Exports: Geodesics
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic
@@ -409,6 +414,7 @@ export spin_up, spin_down, spin_dot_up, spin_dot_down
 export is_dotted, is_spinor_index, conjugate_index
 export fresh_spinor_index, spinor_dummy_pairs, normalize_spinor_dummies
 export define_spin_metric!, spin_metric
+export contract_spin_metrics
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
@@ -426,6 +432,9 @@ export BelliniSawickiAlphas, compute_alphas, compute_alphas_numerical
 export BeyondHorndeskiTheory, define_beyond_horndeski!
 export beyond_horndeski_L4, beyond_horndeski_L5, beyond_horndeski_lagrangian
 export alpha_H
+export ScalarTensorQuadraticAction, StabilityConditions
+export quadratic_action_horndeski, tensor_sound_speed, scalar_sound_speed
+export stability_conditions, check_stability, to_quadratic_form
 # Exports: xIdeal classification
 export SegreType, segre_classify
 
