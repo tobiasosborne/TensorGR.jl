@@ -130,6 +130,7 @@ include("solvers/tov.jl")
 
 # Layer 6: xIdeal (exact solution identification)
 include("xideal/energy_conditions.jl")
+include("xideal/weyl_scalars.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -345,6 +346,8 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: Energy conditions (xIdeal)
 export EnergyConditionResult, check_energy_conditions
+# Exports: xIdeal (Weyl scalars / Petrov classification)
+export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

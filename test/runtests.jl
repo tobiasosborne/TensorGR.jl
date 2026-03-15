@@ -146,4 +146,6 @@ using TensorGR
     include("test_quadratic_riemann_invariants.jl")
     # Energy condition checker (xIdeal)
     include("test_energy_conditions.jl")
+    # Weyl scalars (Newman-Penrose) and null tetrad
+    include("test_weyl_scalars.jl")
 end
