@@ -158,4 +158,6 @@ using TensorGR
     include("test_symplectic_potential.jl")
     # Covariant phase space: symplectic current (Iyer-Wald 1994, Eq 2.7)
     include("test_symplectic_current.jl")
+    # Covariant phase space: divergence detection
+    include("test_divergence_detect.jl")
 end

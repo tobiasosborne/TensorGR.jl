@@ -136,6 +136,7 @@ include("xideal/segre.jl")
 # Layer 6: Covariant phase space
 include("phase_space/eom.jl")
 include("phase_space/symplectic.jl")
+include("phase_space/divergence.jl")
 
 # Layer 6: Scalar-tensor theory
 include("scalar_tensor/horndeski.jl")
@@ -361,6 +362,7 @@ export LagrangianDensity, EOMResult, SymplecticPotential, SymplecticCurrent
 export eom_extract, extract_eom_and_theta
 export symplectic_potential, theta_eh, add_boundary_ambiguity
 export symplectic_current
+export is_divergence, extract_divergence, split_divergence
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
