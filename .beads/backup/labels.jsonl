@@ -56,6 +56,7 @@
 {"issue_id":"TGR-443.3","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.4","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.5","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-4ic","label":"epic:eftofpng"}
 {"issue_id":"TGR-4p8","label":"epic:bh-pert2"}
 {"issue_id":"TGR-4y5","label":"epic:ghp-formalism"}
 {"issue_id":"TGR-4zb.1","label":"epic:invar-symmanipulator"}
@@ -203,6 +204,7 @@
 {"issue_id":"TGR-dai.7","label":"epic:clifford"}
 {"issue_id":"TGR-dai.7","label":"phase:validation"}
 {"issue_id":"TGR-e1l","label":"epic:spinor-infra"}
+{"issue_id":"TGR-ec6","label":"epic:eftofpng"}
 {"issue_id":"TGR-ed9.1","label":"epic:invar-database"}
 {"issue_id":"TGR-ed9.2","label":"epic:invar-database"}
 {"issue_id":"TGR-ed9.3","label":"epic:invar-database"}
