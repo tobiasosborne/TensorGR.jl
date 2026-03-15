@@ -152,4 +152,6 @@ using TensorGR
     include("test_phase_space_eom.jl")
     # Horndeski scalar-tensor theory (Kobayashi 2019, arXiv:1901.04778)
     include("test_horndeski.jl")
+    # Segre classification of the Ricci tensor (xIdeal)
+    include("test_segre.jl")
 end

@@ -131,6 +131,7 @@ include("solvers/tov.jl")
 # Layer 6: xIdeal (exact solution identification)
 include("xideal/energy_conditions.jl")
 include("xideal/weyl_scalars.jl")
+include("xideal/segre.jl")
 
 # Layer 6: Covariant phase space
 include("phase_space/eom.jl")
@@ -367,6 +368,8 @@ export HorndeskiTheory, define_horndeski!
 export kinetic_X
 export horndeski_L2, horndeski_L3, horndeski_L4, horndeski_L5
 export horndeski_lagrangian
+# Exports: xIdeal classification
+export SegreType, segre_classify
 
 # Extension stubs (implemented in ext/)
 function to_symbolics end
