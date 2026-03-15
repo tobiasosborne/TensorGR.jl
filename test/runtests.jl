@@ -100,6 +100,8 @@ using TensorGR
     include("test_clebsch_gordan.jl")
     # Vector spherical harmonics
     include("test_vector_harmonics.jl")
+    # Ground truth verification: 3j, CG, and Gaunt vs independent Racah formula
+    include("test_ground_truth_3j.jl")
     # Trace-free enforcement
     include("test_tracefree.jl")
     # sort_covds_to_box enhancement
