@@ -170,6 +170,8 @@ using TensorGR
     include("test_fr_as_horndeski.jl")
     # Beyond-Horndeski (GLPV) extensions (Gleyzes et al 2015, Kobayashi 2019)
     include("test_beyond_horndeski.jl")
+    # DHOST class I Lagrangian (Langlois & Noui 2016, arXiv:1510.06930)
+    include("test_dhost.jl")
     # Quadratic action for scalar-tensor perturbations on FRW (Kobayashi 2019, Sec 5.2)
     include("test_quadratic_action_st.jl")
     # Segre classification of the Ricci tensor (xIdeal)
