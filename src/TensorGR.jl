@@ -244,6 +244,7 @@ export all_contractions, contraction_ansatz, filter_independent_contractions
 export solve_tensors
 export generalized_delta, is_zero_by_dimension
 export generate_ddi_rules, gauss_bonnet_ddi, register_ddi_rules!
+export generate_riemann_ddi, riemann_ddi_expr
 
 # Exports: Scalar algebra
 export scalar_expand, scalar_collect, scalar_subst, scalar_cancel
