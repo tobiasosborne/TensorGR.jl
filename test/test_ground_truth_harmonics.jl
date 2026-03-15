@@ -239,16 +239,37 @@
     #   l=0: Y_A = X_A = Y_{AB} = X_{AB} = 0
     #   l=1: Y_{AB} = X_{AB} = 0 (tensor harmonics vanish)
 
-    @testset "Vector harmonics implemented, tensor harmonics not yet" begin
-        # Vector harmonics (MP Eqs 11-15) are now implemented
-        @test isdefined(TensorGR, :EvenVectorHarmonic)
-        @test isdefined(TensorGR, :OddVectorHarmonic)
-        @test isdefined(TensorGR, :norm_squared)
-        @test isdefined(TensorGR, :divergence_eigenvalue)
-        @test isdefined(TensorGR, :curl_eigenvalue)
-        @test isdefined(TensorGR, :vector_inner_product)
-        # Tensor harmonics (MP Eqs 16-21) not yet implemented
-        @test !isdefined(TensorGR, :EvenTensorHarmonic)
-        @test !isdefined(TensorGR, :OddTensorHarmonic)
+    # ── 11. Vector harmonics (now implemented) ──────────────────────────
+    @testset "Vector harmonics norms (MP Eqs 2.13-2.14)" begin
+        for l in 1:5
+            @test norm_squared(EvenVectorHarmonic(l, 0, up(:a))) == l * (l + 1)
+            @test norm_squared(OddVectorHarmonic(l, 0, up(:a))) == l * (l + 1)
+        end
+    end
+
+    # ── 12. Tensor harmonics (now implemented) ────────────────────────
+    @testset "Tensor harmonics norms (MP Eqs 2.18-2.20)" begin
+        # Y^{ab}: norm = 2 (Eq 2.18)
+        for l in 0:5
+            @test norm_squared(EvenTensorHarmonicY(l, 0, up(:a), up(:b))) == 2
+        end
+        # Z^{ab}: norm = 1/2 (l-1)l(l+1)(l+2) (Eq 2.19)
+        for l in 2:5
+            expected = (l - 1) * l * (l + 1) * (l + 2) // 2
+            @test norm_squared(EvenTensorHarmonicZ(l, 0, up(:a), up(:b))) == expected
+        end
+        # X^{ab}: same norm as Z (Eq 2.20)
+        for l in 2:5
+            expected = (l - 1) * l * (l + 1) * (l + 2) // 2
+            @test norm_squared(OddTensorHarmonic(l, 0, up(:a), up(:b))) == expected
+        end
+    end
+
+    @testset "Tensor harmonics trace (MP Eq 2.21)" begin
+        @test TensorGR.trace(EvenTensorHarmonicZ(2, 0, up(:a), up(:b))) == TScalar(0//1)
+        @test TensorGR.trace(OddTensorHarmonic(2, 0, up(:a), up(:b))) == TScalar(0//1)
+        t = TensorGR.trace(EvenTensorHarmonicY(2, 0, up(:a), up(:b)))
+        @test t isa TProduct
+        @test t.scalar == 2//1
     end
 end
