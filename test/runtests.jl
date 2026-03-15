@@ -154,4 +154,6 @@ using TensorGR
     include("test_horndeski.jl")
     # Segre classification of the Ricci tensor (xIdeal)
     include("test_segre.jl")
+    # Covariant phase space: symplectic potential
+    include("test_symplectic_potential.jl")
 end

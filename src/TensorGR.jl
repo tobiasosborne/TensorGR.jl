@@ -135,6 +135,7 @@ include("xideal/segre.jl")
 
 # Layer 6: Covariant phase space
 include("phase_space/eom.jl")
+include("phase_space/symplectic.jl")
 
 # Layer 6: Scalar-tensor theory
 include("scalar_tensor/horndeski.jl")
@@ -356,8 +357,9 @@ export EnergyConditionResult, check_energy_conditions
 # Exports: xIdeal (Weyl scalars / Petrov classification)
 export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
 # Exports: Covariant phase space
-export LagrangianDensity, EOMResult
+export LagrangianDensity, EOMResult, SymplecticPotential
 export eom_extract, extract_eom_and_theta
+export symplectic_potential, theta_eh, add_boundary_ambiguity
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
