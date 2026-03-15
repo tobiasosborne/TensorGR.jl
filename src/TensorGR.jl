@@ -19,6 +19,9 @@ include("escape_hatch.jl")
 # Layer 1.5: Rules engine
 include("rules.jl")
 
+# Layer 1.5: Spherical harmonics
+include("harmonics/scalar_harmonics.jl")
+
 # Layer 2: Algebra + Symmetries
 include("gr/symmetries.jl")
 include("algebra/arithmetic.jl")
@@ -126,6 +129,7 @@ include("parser/latex_parser.jl")
 # Exports: Types
 export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar
 export TIndex, IndexPosition, Up, Down, up, down
+export ScalarHarmonic, conjugate, angular_laplacian, inner_product
 
 # Exports: Registry
 export TensorRegistry, TensorProperties, ManifoldProperties, VBundleProperties

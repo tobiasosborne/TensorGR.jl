@@ -90,4 +90,6 @@ using TensorGR
     include("test_tov.jl")
     # dS-adapted spin projectors (MSS form factors)
     include("test_ds_spin_projectors.jl")
+    # Scalar spherical harmonics
+    include("test_scalar_harmonics.jl")
 end
