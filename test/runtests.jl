@@ -178,6 +178,8 @@ using TensorGR
     include("test_spinor_indices.jl")
     # Spinor metric epsilon_{AB} (antisymmetric, Penrose-Rindler Sec 2.5)
     include("test_spin_metric.jl")
+    # Spinor display: dotted/primed notation (Penrose-Rindler Vol 1, Sec 2.5)
+    include("test_spinor_display.jl")
     # Covariant phase space: Noether current
     include("test_noether_current.jl")
     # Schwarzschild RW/Zerilli decomposition (Martel & Poisson 2005, Secs IV-V)
