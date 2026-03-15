@@ -138,6 +138,7 @@ include("xideal/petrov_invariants.jl")
 include("phase_space/eom.jl")
 include("phase_space/symplectic.jl")
 include("phase_space/divergence.jl")
+include("phase_space/noether.jl")
 
 # Layer 6: Scalar-tensor theory
 include("scalar_tensor/horndeski.jl")
@@ -368,6 +369,7 @@ export eom_extract, extract_eom_and_theta
 export symplectic_potential, theta_eh, add_boundary_ambiguity
 export symplectic_current
 export is_divergence, extract_divergence, split_divergence
+export NoetherCurrent, noether_current, noether_current_eh, verify_noether_conservation
 
 # Exports: Spinor bundles
 export define_spinor_bundles!

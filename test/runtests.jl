@@ -164,4 +164,6 @@ using TensorGR
     include("test_divergence_detect.jl")
     # Spinor bundles (SL2C / SL2C_dot conjugation metadata)
     include("test_spinor_bundles.jl")
+    # Covariant phase space: Noether current
+    include("test_noether_current.jl")
 end
