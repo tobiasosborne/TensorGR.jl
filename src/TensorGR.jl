@@ -133,6 +133,7 @@ include("feynman/types.jl")
 include("feynman/gauge_fixing.jl")
 include("feynman/vertices.jl")
 include("feynman/propagator.jl")
+include("feynman/matter_vertices.jl")
 
 # Layer 5.5: Matter / EOS
 include("matter/eos.jl")
@@ -405,6 +406,7 @@ export fp_operator, ghost_propagator, ghost_graviton_vertex
 export gauge_fixed_kinetic_operator
 export graviton_3vertex, graviton_4vertex, graviton_vertex_n
 export graviton_propagator, propagator_numerator
+export matter_graviton_vertex, scalar_matter_vertex
 
 # Exports: Geodesics
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic

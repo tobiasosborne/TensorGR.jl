@@ -224,6 +224,8 @@ using TensorGR
     include("test_graviton_vertices.jl")
     # Graviton propagator in harmonic (de Donder) gauge
     include("test_graviton_propagator.jl")
+    # Matter-graviton coupling vertices (Goldberger & Rothstein 2006)
+    include("test_matter_vertices.jl")
     # DDI rule generation (rank-2 tensor contractions)
     include("test_ddi_rules.jl")
     # Wald entropy: S = A/4 from Noether charge (Iyer & Wald 1994, Eq 4.1)
