@@ -22,9 +22,10 @@ include("rules.jl")
 # Layer 1.5: Spherical harmonics
 include("harmonics/scalar_harmonics.jl")
 
-# Layer 2: Algebra + Symmetries
+# Layer 2: Algebra + Symmetries (Clebsch-Gordan included after arithmetic)
 include("gr/symmetries.jl")
 include("algebra/arithmetic.jl")
+include("harmonics/clebsch_gordan.jl")
 include("algebra/contraction.jl")
 include("algebra/canonicalize.jl")
 include("algebra/derivatives.jl")
@@ -131,6 +132,7 @@ include("parser/latex_parser.jl")
 export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar
 export TIndex, IndexPosition, Up, Down, up, down
 export ScalarHarmonic, conjugate, angular_laplacian, inner_product
+export wigner3j, clebsch_gordan, harmonic_product
 
 # Exports: Registry
 export TensorRegistry, TensorProperties, ManifoldProperties, VBundleProperties
