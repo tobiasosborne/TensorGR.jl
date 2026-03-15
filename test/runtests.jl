@@ -102,11 +102,11 @@ using TensorGR
     include("test_clebsch_gordan.jl")
     # Vector spherical harmonics
     include("test_vector_harmonics.jl")
-    # Vector harmonic orthogonality (Martel & Poisson 2005, Eqs 2.13-2.15)
+    # Vector harmonic orthogonality (Martel & Poisson 2005, Eqs 3.3-3.5)
     include("test_harmonic_orthogonality.jl")
     # Tensor spherical harmonics (rank-2, even/odd parity)
     include("test_tensor_harmonics.jl")
-    # Tensor harmonic orthogonality (Martel & Poisson 2005, Eqs 2.18-2.21)
+    # Tensor harmonic orthogonality (Martel & Poisson 2005, Eqs 3.8-3.11)
     include("test_tensor_harmonic_orthogonality.jl")
     # Angular Laplacian on S^2
     include("test_laplacian_s2.jl")
