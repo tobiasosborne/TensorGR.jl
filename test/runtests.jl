@@ -200,4 +200,6 @@ using TensorGR
     include("test_cps_komar_validation.jl")
     # xIdeal validation: Schwarzschild = Petrov Type D, Segre [(1,1)(11)]
     include("test_xideal_schwarzschild.jl")
+    # Feynman diagram type hierarchy and builder API
+    include("test_feynman_types.jl")
 end
