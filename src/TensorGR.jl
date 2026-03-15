@@ -127,6 +127,9 @@ include("geodesics/geodesic.jl")
 # Layer 5.5: Solvers (TOV, etc.)
 include("solvers/tov.jl")
 
+# Layer 6: Covariant phase space
+include("phase_space/eom.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -336,6 +339,10 @@ export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integr
 
 # Exports: TOV solver
 export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
+
+# Exports: Covariant phase space
+export LagrangianDensity, EOMResult
+export eom_extract, extract_eom_and_theta
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
