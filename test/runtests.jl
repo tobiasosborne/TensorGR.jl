@@ -148,4 +148,6 @@ using TensorGR
     include("test_energy_conditions.jl")
     # Weyl scalars (Newman-Penrose) and null tetrad
     include("test_weyl_scalars.jl")
+    # Covariant phase space: EOM extraction
+    include("test_phase_space_eom.jl")
 end

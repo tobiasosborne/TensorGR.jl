@@ -132,6 +132,9 @@ include("solvers/tov.jl")
 include("xideal/energy_conditions.jl")
 include("xideal/weyl_scalars.jl")
 
+# Layer 6: Covariant phase space
+include("phase_space/eom.jl")
+
 # Macros
 include("macros/tensor_macro.jl")
 include("macros/definitions.jl")
@@ -348,6 +351,9 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 export EnergyConditionResult, check_energy_conditions
 # Exports: xIdeal (Weyl scalars / Petrov classification)
 export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
+# Exports: Covariant phase space
+export LagrangianDensity, EOMResult
+export eom_extract, extract_eom_and_theta
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
