@@ -237,3 +237,54 @@ function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)
 
     nothing
 end
+
+# ── Trace-free enforcement ───────────────────────────────────────────────────
+
+"""
+    enforce_tracefree(expr; registry=current_registry()) -> TensorExpr
+
+Replace any tensor with a self-contracted trace-free pair by zero.
+A tensor T registered with `tracefree_pairs` containing `(i,j)` vanishes
+when indices at slots `i` and `j` are contracted (same name, opposite position).
+"""
+function enforce_tracefree(expr::TensorExpr; registry::TensorRegistry=current_registry())
+    _enforce_tracefree(expr, registry)
+end
+
+function _enforce_tracefree(t::Tensor, reg::TensorRegistry)
+    has_tensor(reg, t.name) || return t
+    props = get_tensor(reg, t.name)
+    isempty(props.tracefree_pairs) && return t
+    idxs = t.indices
+    for (i, j) in props.tracefree_pairs
+        (i <= length(idxs) && j <= length(idxs)) || continue
+        if idxs[i].name == idxs[j].name &&
+           idxs[i].position != idxs[j].position &&
+           idxs[i].vbundle == idxs[j].vbundle
+            return TScalar(0 // 1)
+        end
+    end
+    t
+end
+
+_enforce_tracefree(s::TScalar, ::TensorRegistry) = s
+
+function _enforce_tracefree(d::TDeriv, reg::TensorRegistry)
+    inner = _enforce_tracefree(d.arg, reg)
+    inner isa TScalar && inner.val == 0 && return TScalar(0 // 1)
+    TDeriv(d.index, inner, d.covd)
+end
+
+function _enforce_tracefree(s::TSum, reg::TensorRegistry)
+    tsum(TensorExpr[_enforce_tracefree(t, reg) for t in s.terms])
+end
+
+function _enforce_tracefree(p::TProduct, reg::TensorRegistry)
+    new_factors = TensorExpr[]
+    for f in p.factors
+        result = _enforce_tracefree(f, reg)
+        result isa TScalar && result.val == 0 && return TScalar(0 // 1)
+        push!(new_factors, result)
+    end
+    tproduct(p.scalar, new_factors)
+end

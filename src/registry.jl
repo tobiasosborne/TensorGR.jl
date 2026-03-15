@@ -43,6 +43,7 @@ mutable struct TensorProperties
     is_covd::Bool
     is_christoffel::Bool
     vanishing::Bool
+    tracefree_pairs::Vector{Tuple{Int,Int}}
     options::Dict{Symbol,Any}
 end
 
@@ -53,6 +54,7 @@ function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int}
                            is_metric::Bool=false,
                            is_delta::Bool=false,
                            frozen::Bool=false,
+                           tracefree_pairs::Vector{Tuple{Int,Int}}=Tuple{Int,Int}[],
                            options::Dict{Symbol,Any}=Dict{Symbol,Any}())
     # Infer struct fields from options for backward compatibility
     _is_metric = is_metric || get(options, :is_metric, false)
@@ -67,7 +69,7 @@ function TensorProperties(; name::Symbol, manifold::Symbol, rank::Tuple{Int,Int}
                  SymmetrySpec[s for s in symmetries]
     TensorProperties(name, manifold, rank, typed_syms, dependencies, weight,
                      _is_metric, _is_delta, _frozen, _flat, _is_covd, _is_christoffel,
-                     _vanishing, options)
+                     _vanishing, tracefree_pairs, options)
 end
 
 """
@@ -247,6 +249,36 @@ function set_vanishing!(reg::TensorRegistry, name::Symbol)
         expr -> expr isa Tensor && expr.name == name,
         _ -> TScalar(0 // 1)
     ))
+    nothing
+end
+
+"""
+    set_tracefree!(reg, name; pairs=nothing)
+
+Mark index pairs of a tensor as trace-free (contraction gives zero).
+If `pairs` is `nothing`, auto-detects all (i,j) pairs where index `i` is Up
+and index `j` is Down on the same vbundle (using the tensor's rank).
+Otherwise, sets the given vector of `(i,j)` pairs explicitly.
+"""
+function set_tracefree!(reg::TensorRegistry, name::Symbol;
+                        pairs::Union{Nothing, Vector{Tuple{Int,Int}}}=nothing)
+    has_tensor(reg, name) || error("Tensor $name not registered")
+    tp = get_tensor(reg, name)
+    if pairs === nothing
+        # Auto-detect: for a rank-(p,q) tensor with total slots p+q,
+        # the first p slots are contravariant (Up) and the next q are covariant (Down).
+        # Pair each Up slot with each Down slot (same vbundle assumed).
+        p, q = tp.rank
+        auto = Tuple{Int,Int}[]
+        for i in 1:p
+            for j in (p+1):(p+q)
+                push!(auto, (i, j))
+            end
+        end
+        tp.tracefree_pairs = auto
+    else
+        tp.tracefree_pairs = pairs
+    end
     nothing
 end
 
