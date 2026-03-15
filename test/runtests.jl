@@ -114,4 +114,6 @@ using TensorGR
     include("test_algebra_forms.jl")
     # Ground-truth verification: Martel & Poisson (2005) spherical harmonics
     include("test_ground_truth_harmonics.jl")
+    # symmetrize_covds
+    include("test_symmetrize_covds.jl")
 end
