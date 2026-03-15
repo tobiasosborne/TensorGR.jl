@@ -127,6 +127,7 @@ include("worldline/worldline.jl")
 
 # Layer 5.5: Feynman diagram infrastructure
 include("feynman/types.jl")
+include("feynman/vertices.jl")
 
 # Layer 5.5: Matter / EOS
 include("matter/eos.jl")
@@ -382,6 +383,7 @@ export TensorVertex, TensorPropagator, FeynmanDiagram, DiagramAmplitude
 export n_point, n_indices, n_loops
 export build_diagram, tree_exchange_diagram
 export vertex_from_perturbation, contract_diagram
+export graviton_3vertex, graviton_4vertex, graviton_vertex_n
 
 # Exports: Geodesics
 export GeodesicEquation, GeodesicSolution, setup_geodesic, geodesic_rhs!, integrate_geodesic

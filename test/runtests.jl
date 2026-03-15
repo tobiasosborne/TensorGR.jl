@@ -206,6 +206,8 @@ using TensorGR
     include("test_xideal_schwarzschild.jl")
     # Feynman diagram type hierarchy and builder API
     include("test_feynman_types.jl")
+    # Graviton 3-point and 4-point vertices (DeWitt 1967; Sannan 1986)
+    include("test_graviton_vertices.jl")
     # DDI rule generation (rank-2 tensor contractions)
     include("test_ddi_rules.jl")
 end
