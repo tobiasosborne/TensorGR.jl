@@ -8,7 +8,7 @@
                     indices=[:I,:J,:K,:L,:M,:N])
 
     @testset "Construction: gauge_covd returns AlgValuedForm of degree p+1" begin
-        # Ref: Nakahara (2003) Eq 11.5 -- D_A omega is a (p+1)-form
+        # Ref: Nakahara (2003) Eq 10.47 -- D_A omega is a (p+1)-form
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             omega = AlgValuedForm(1, :su2, Tensor(:omega, [up(:J, :su2), down(:b)]))
@@ -28,7 +28,7 @@
     end
 
     @testset "D_A on 0-form: just exterior derivative" begin
-        # Ref: Nakahara (2003) Eq 11.3 -- D_A phi = d phi for algebra-valued 0-form
+        # Ref: Nakahara (2003) Sec 10.3 -- D_A phi = d phi for algebra-valued 0-form
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             phi = AlgValuedForm(0, :su2, Tensor(:phi, [up(:J, :su2)]))
@@ -43,7 +43,7 @@
     end
 
     @testset "D_A on 1-form: dw + [A^w]" begin
-        # Ref: Nakahara (2003) Eq 11.5 -- D_A omega = d omega + [A ^ omega]
+        # Ref: Nakahara (2003) Eq 10.47 -- D_A omega = d omega + [A ^ omega]
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             omega = AlgValuedForm(1, :su2, Tensor(:omega, [up(:J, :su2), down(:b)]))
@@ -57,7 +57,7 @@
     end
 
     @testset "Curvature 2-form: F = dA + 1/2[A^A]" begin
-        # Ref: Nakahara (2003) Eq 11.7 -- F is a 2-form
+        # Ref: Nakahara (2003) Eq 10.38a -- F is a 2-form
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             F = curvature_2form(A, :f; registry=reg)
@@ -69,7 +69,7 @@
     end
 
     @testset "D_A F structure (Bianchi): degree-3 form" begin
-        # Ref: Nakahara (2003) Eq 11.12 -- D_A F is a 3-form
+        # Ref: Nakahara (2003) Eq 10.45 -- D_A F is a 3-form
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
 
@@ -86,14 +86,14 @@
     end
 
     @testset "Algebra consistency: A and omega must be in same algebra" begin
-        # Ref: Nakahara (2003) Ch 11 -- forms must be valued in the same algebra
+        # Ref: Nakahara (2003) Ch 10 -- forms must be valued in the same algebra
         A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
         omega_su3 = AlgValuedForm(1, :su3, Tensor(:omega, [up(:J, :su3), down(:b)]))
         @test_throws ArgumentError gauge_covd(A, omega_su3, :f)
     end
 
     @testset "D_A on 2-form: degree increases to 3" begin
-        # Ref: Eguchi, Gilkey & Hanson (1980) Eq 2.22 -- D_A on p-form gives (p+1)-form
+        # Ref: Eguchi, Gilkey & Hanson (1980) Sec 5, Eq 5.9 -- D_A on p-form gives (p+1)-form
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             B2 = AlgValuedForm(2, :su2, Tensor(:B, [up(:J, :su2), down(:b), down(:c)]))
@@ -119,7 +119,7 @@
     end
 
     @testset "Bianchi identity has algebra index" begin
-        # Ref: Nakahara (2003) Eq 11.12 -- D_A F carries algebra index
+        # Ref: Nakahara (2003) Eq 10.45 -- D_A F carries algebra index
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             DAF = bianchi_identity(A, :f; registry=reg)

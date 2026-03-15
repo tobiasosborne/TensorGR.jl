@@ -1,5 +1,5 @@
 @testset "LaplacianS2" begin
-    @testset "Scalar harmonic eigenvalues (Martel & Poisson 2005, Eq 2.1)" begin
+    @testset "Scalar harmonic eigenvalues (Martel & Poisson 2005, MP Sec III (unnumbered, eigenvalue equation))" begin
         # Delta_Omega Y_{lm} = -l(l+1) Y_{lm}
 
         # l=0: eigenvalue = 0 -> result is TScalar(0)
@@ -20,7 +20,7 @@
         @test res2.scalar == -6//1
         @test res2.factors[1] == Y21
 
-        # l=3: eigenvalue = -12 (ground truth: Martel & Poisson Eq 2.1)
+        # l=3: eigenvalue = -12 (ground truth: Martel & Poisson MP Sec III (unnumbered, eigenvalue equation))
         Y31 = ScalarHarmonic(3, 1)
         res3 = laplacian_S2(Y31)
         @test res3 isa TProduct

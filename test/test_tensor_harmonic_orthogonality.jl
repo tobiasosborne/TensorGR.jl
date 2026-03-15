@@ -1,13 +1,13 @@
 # Tests for tensor harmonic orthogonality and normalization.
 #
 # Ground truth: Martel & Poisson, Phys. Rev. D 71, 104003 (2005),
-#               arXiv:gr-qc/0502028, Section II.D, Eqs 2.18-2.21.
+#               arXiv:gr-qc/0502028, Section III, Eqs 3.8-3.11.
 
 @testset "Tensor harmonic orthogonality" begin
 
-    # ── Y-Y orthogonality (MP Eq 2.18) ────────────────────────────────────
+    # ── Y-Y orthogonality (MP Eq 3.8) ────────────────────────────────────
     # integral Y^{ab}_{lm} Y*_{ab,l'm'} dOmega = 2 delta_{ll'} delta_{mm'}
-    @testset "Y-Y: MP Eq 2.18" begin
+    @testset "Y-Y: MP Eq 3.8" begin
         # l=2, m=1: norm = 2
         @test inner_product(EvenTensorHarmonicY(2, 1, up(:a), up(:b)),
                             EvenTensorHarmonicY(2, 1, up(:a), up(:b))) == TScalar(2)
@@ -25,9 +25,9 @@
                             EvenTensorHarmonicY(5, -3, up(:a), up(:b))) == TScalar(2)
     end
 
-    # ── Z-Z orthogonality (MP Eq 2.19) ────────────────────────────────────
+    # ── Z-Z orthogonality (MP Eq 3.9) ────────────────────────────────────
     # integral Z^{ab}_{lm} Z*_{ab,l'm'} dOmega = 1/2 (l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
-    @testset "Z-Z: MP Eq 2.19" begin
+    @testset "Z-Z: MP Eq 3.9" begin
         # l=3, m=0: 1/2 * 2 * 3 * 4 * 5 = 60
         @test inner_product(EvenTensorHarmonicZ(3, 0, up(:a), up(:b)),
                             EvenTensorHarmonicZ(3, 0, up(:a), up(:b))) == TScalar(60)
@@ -45,9 +45,9 @@
                             EvenTensorHarmonicZ(3, 0, up(:a), up(:b))) == TScalar(0)
     end
 
-    # ── X-X orthogonality (MP Eq 2.20) ────────────────────────────────────
+    # ── X-X orthogonality (MP Eq 3.10) ────────────────────────────────────
     # integral X^{ab}_{lm} X*_{ab,l'm'} dOmega = 1/2 (l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
-    @testset "X-X: MP Eq 2.20" begin
+    @testset "X-X: MP Eq 3.10" begin
         # l=3, m=0: same norm as Z-Z = 60
         @test inner_product(OddTensorHarmonic(3, 0, up(:a), up(:b)),
                             OddTensorHarmonic(3, 0, up(:a), up(:b))) == TScalar(60)
@@ -65,9 +65,9 @@
                             OddTensorHarmonic(3, -2, up(:a), up(:b))) == TScalar(0)
     end
 
-    # ── Cross-type orthogonality (MP Eq 2.21) ─────────────────────────────
+    # ── Cross-type orthogonality (MP Eq 3.11) ─────────────────────────────
     # All cross-type inner products vanish identically
-    @testset "Cross-type: MP Eq 2.21" begin
+    @testset "Cross-type: MP Eq 3.11" begin
         Y = EvenTensorHarmonicY(2, 1, up(:a), up(:b))
         Z = EvenTensorHarmonicZ(2, 1, up(:a), up(:b))
         X = OddTensorHarmonic(2, 1, up(:a), up(:b))
@@ -132,8 +132,8 @@
     end
 
     # ── Exhaustive check l=2..5, all m, all 9 type combinations ──────────
-    # (MP Eqs 2.18-2.21)
-    @testset "Exhaustive l=2..5: MP Eqs 2.18-2.21" begin
+    # (MP Eqs 3.8-3.11)
+    @testset "Exhaustive l=2..5: MP Eqs 3.8-3.11" begin
         for l1 in 2:5, l2 in 2:5
             for m1 in -l1:l1, m2 in -l2:l2
                 Y1 = EvenTensorHarmonicY(l1, m1, up(:a), up(:b))
@@ -145,18 +145,18 @@
 
                 same = (l1 == l2 && m1 == m2)
 
-                # Eq 2.18: Y-Y norm = 2
+                # Eq 3.8: Y-Y norm = 2
                 @test inner_product(Y1, Y2) == (same ? TScalar(2) : TScalar(0))
 
-                # Eq 2.19: Z-Z norm = 1/2 (l-1)l(l+1)(l+2)
+                # Eq 3.9: Z-Z norm = 1/2 (l-1)l(l+1)(l+2)
                 zz_norm = (l1 - 1) * l1 * (l1 + 1) * (l1 + 2) // 2
                 @test inner_product(Z1, Z2) == (same ? TScalar(zz_norm) : TScalar(0))
 
-                # Eq 2.20: X-X norm = same as Z-Z
+                # Eq 3.10: X-X norm = same as Z-Z
                 xx_norm = (l1 - 1) * l1 * (l1 + 1) * (l1 + 2) // 2
                 @test inner_product(X1, X2) == (same ? TScalar(xx_norm) : TScalar(0))
 
-                # Eq 2.21: all cross-type vanish
+                # Eq 3.11: all cross-type vanish
                 @test inner_product(Y1, Z2) == TScalar(0)
                 @test inner_product(Z1, Y2) == TScalar(0)
                 @test inner_product(Y1, X2) == TScalar(0)

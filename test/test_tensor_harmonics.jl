@@ -44,8 +44,8 @@
         @test indices(Y) == [up(:a), up(:b)]
     end
 
-    # MP Eq 2.14: trace = 2 Y_{lm}
-    @testset "Trace (MP Eq 2.14)" begin
+    # MP Eq 3.6 (trace from definition): trace = 2 Y_{lm}
+    @testset "Trace (MP Eq 3.6 (trace from definition))" begin
         t = TensorGR.trace(EvenTensorHarmonicY(3, 1, up(:a), up(:b)))
         @test t isa TProduct
         @test t.scalar == 2//1
@@ -53,8 +53,8 @@
         @test t.factors[1] == ScalarHarmonic(3, 1)
     end
 
-    # MP Eq 2.18: ||Y^{ab}_{lm}||^2 = 2
-    @testset "Norm squared (MP Eq 2.18)" begin
+    # MP Eq 3.8: ||Y^{ab}_{lm}||^2 = 2
+    @testset "Norm squared (MP Eq 3.8)" begin
         for l in 0:5
             @test norm_squared(EvenTensorHarmonicY(l, 0, up(:a), up(:b))) == 2
         end
@@ -185,15 +185,15 @@ end
         @test indices(Z) == [up(:a), up(:b)]
     end
 
-    # MP Eq 2.21: trace-free
-    @testset "Trace = 0 (MP Eq 2.21)" begin
+    # MP Eq 3.11: trace-free
+    @testset "Trace = 0 (MP Eq 3.11)" begin
         @test TensorGR.trace(EvenTensorHarmonicZ(2, 0, up(:a), up(:b))) == TScalar(0//1)
         @test TensorGR.trace(EvenTensorHarmonicZ(3, 1, up(:a), up(:b))) == TScalar(0//1)
         @test TensorGR.trace(EvenTensorHarmonicZ(5, -3, up(:a), up(:b))) == TScalar(0//1)
     end
 
-    # MP Eq 2.19: ||Z||^2 = 1/2 (l-1)l(l+1)(l+2)
-    @testset "Norm squared (MP Eq 2.19)" begin
+    # MP Eq 3.9: ||Z||^2 = 1/2 (l-1)l(l+1)(l+2)
+    @testset "Norm squared (MP Eq 3.9)" begin
         @test norm_squared(EvenTensorHarmonicZ(2, 0, up(:a), up(:b))) == 1 * 2 * 3 * 4 // 2  # 12
         @test norm_squared(EvenTensorHarmonicZ(3, 0, up(:a), up(:b))) == 2 * 3 * 4 * 5 // 2  # 60
         @test norm_squared(EvenTensorHarmonicZ(4, 0, up(:a), up(:b))) == 3 * 4 * 5 * 6 // 2  # 180
@@ -293,14 +293,14 @@ end
         @test indices(X) == [up(:a), up(:b)]
     end
 
-    # MP Eq 2.21: trace-free
-    @testset "Trace = 0 (MP Eq 2.21)" begin
+    # MP Eq 3.11: trace-free
+    @testset "Trace = 0 (MP Eq 3.11)" begin
         @test TensorGR.trace(OddTensorHarmonic(2, 0, up(:a), up(:b))) == TScalar(0//1)
         @test TensorGR.trace(OddTensorHarmonic(3, 1, up(:a), up(:b))) == TScalar(0//1)
     end
 
-    # MP Eq 2.20: ||X||^2 = 1/2 (l-1)l(l+1)(l+2)
-    @testset "Norm squared (MP Eq 2.20)" begin
+    # MP Eq 3.10: ||X||^2 = 1/2 (l-1)l(l+1)(l+2)
+    @testset "Norm squared (MP Eq 3.10)" begin
         @test norm_squared(OddTensorHarmonic(2, 0, up(:a), up(:b))) == 12  # 1*2*3*4/2
         @test norm_squared(OddTensorHarmonic(3, 0, up(:a), up(:b))) == 60  # 2*3*4*5/2
         @test norm_squared(OddTensorHarmonic(4, 0, up(:a), up(:b))) == 180 # 3*4*5*6/2
@@ -371,7 +371,7 @@ end
     end
 end
 
-@testset "Tensor harmonic orthogonality (MP Eqs 2.18-2.20)" begin
+@testset "Tensor harmonic orthogonality (MP Eqs 3.8-3.10)" begin
     # Same-type inner product: delta_{ll'} delta_{mm'} * norm
     @testset "Same-type inner product" begin
         for l in 2:4, m in -l:l
@@ -397,8 +397,8 @@ end
             OddTensorHarmonic(2, 1, up(:a), up(:b))) == TScalar(0)
     end
 
-    # Cross-type: zero (MP Eq 2.20)
-    @testset "Cross-type orthogonality (MP Eq 2.20)" begin
+    # Cross-type: zero (MP Eq 3.10)
+    @testset "Cross-type orthogonality (MP Eq 3.10)" begin
         Y = EvenTensorHarmonicY(2, 0, up(:a), up(:b))
         Z = EvenTensorHarmonicZ(2, 0, up(:a), up(:b))
         X = OddTensorHarmonic(2, 0, up(:a), up(:b))

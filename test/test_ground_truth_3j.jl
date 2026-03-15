@@ -154,7 +154,7 @@
         @test wigner3j(-1, 1, 0, 0, 0, 0) == 0.0
     end
 
-    # ── 7. Symmetry properties [DLMF 34.3.7-34.3.9] ────────────────────────
+    # ── 7. Symmetry properties [DLMF 34.3.8-34.3.10] ────────────────────────
     @testset "3j symmetry: even permutation" begin
         # (j1 j2 j3; m1 m2 m3) = (j2 j3 j1; m2 m3 m1) = (j3 j1 j2; m3 m1 m2)
         for (j1, j2, j3, m1, m2, m3) in [
@@ -194,7 +194,7 @@
         end
     end
 
-    # ── 8. Orthogonality [DLMF 34.3.11-34.3.12] ────────────────────────────
+    # ── 8. Orthogonality [DLMF 34.3.16-34.3.17] ────────────────────────────
     @testset "3j orthogonality" begin
         # Sum over m1,m2 of (j1 j2 j3; m1 m2 m3)*(j1 j2 j3'; m1 m2 m3')
         # = delta_{j3,j3'} delta_{m3,m3'} / (2j3+1)
