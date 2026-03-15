@@ -98,4 +98,6 @@ using TensorGR
     include("test_tracefree.jl")
     # sort_covds_to_box enhancement
     include("test_sort_covds_to_box.jl")
+    # sort_covds_to_div enhancement
+    include("test_sort_covds_to_div.jl")
 end
