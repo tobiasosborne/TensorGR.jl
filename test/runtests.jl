@@ -176,6 +176,8 @@ using TensorGR
     include("test_noether_current.jl")
     # Schwarzschild RW/Zerilli decomposition (Martel & Poisson 2005, Secs IV-V)
     include("test_schwarzschild_decompose.jl")
+    # Regge-Wheeler and Zerilli master equations (Martel & Poisson 2005, Eqs 4.25-4.26, 5.14-5.15)
+    include("test_master_equations.jl")
     # Covariant phase space: Noether charge (potential extraction)
     include("test_noether_charge.jl")
 end

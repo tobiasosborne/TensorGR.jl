@@ -79,6 +79,7 @@ include("perturbation/variation.jl")
 include("perturbation/backgrounds.jl")
 include("perturbation/isaacson.jl")
 include("perturbation/schwarzschild_decompose.jl")
+include("perturbation/master_equations.jl")
 
 # Layer 4: SVT decomposition
 include("svt/fourier.jl")
@@ -284,6 +285,7 @@ export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
 export SchwarzschildPerturbation, decompose_schwarzschild
 export regge_wheeler_gauge, zerilli_gauge
+export MasterEquation, regge_wheeler_potential, zerilli_potential, master_equation
 
 # Exports: SVT / Fourier
 export to_fourier, FourierConvention
