@@ -216,7 +216,7 @@ using TensorGR: all_contractions, contraction_ansatz, free_indices
 
     # --------------------------------------------------------------------------
     # 7. Gauss-Bonnet syzygy reduces basis by 1
-    #    Fulling et al. Sec 5 / Lanczos-Lovelock: In d=4,
+    #    Fulling et al. Sec 3 (pp. 1157-1158) / Lanczos-Lovelock: In d=4,
     #      R_{abcd}R^{abcd} - 4R_{ab}R^{ab} + R^2 = E_4 (topological).
     #    After applying the Gauss-Bonnet rule, the Kretschmann scalar is
     #    expressible in terms of Ric^2 and R^2, eliminating one invariant.

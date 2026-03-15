@@ -18,7 +18,7 @@
         name=:F, manifold=:M4, rank=(1,2),
         symmetries=[AntiSymmetric(2,3)]))
 
-    @testset "field_strength is alias for curvature_2form (Nakahara Eq 11.7)" begin
+    @testset "field_strength is alias for curvature_2form (Nakahara Eq 10.38a)" begin
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
 
@@ -30,7 +30,7 @@
         end
     end
 
-    @testset "field_strength returns degree-2 form (Nakahara Eq 11.7)" begin
+    @testset "field_strength returns degree-2 form (Nakahara Eq 10.38a)" begin
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             F = field_strength(A, :f; registry=reg)
@@ -46,7 +46,7 @@
         @test_throws ArgumentError field_strength(B, :f)
     end
 
-    @testset "bianchi_identity returns degree-3 form (Nakahara Eq 11.12)" begin
+    @testset "bianchi_identity returns degree-3 form (Nakahara Eq 10.45)" begin
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             DAF = bianchi_identity(A, :f; registry=reg)
@@ -63,7 +63,7 @@
         end
     end
 
-    @testset "yang_mills_eom returns correct degree (Nakahara Eq 11.28)" begin
+    @testset "yang_mills_eom returns correct degree (Nakahara Eq 10.109)" begin
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
 
@@ -118,7 +118,7 @@
         end
     end
 
-    @testset "instanton_density: F^F is degree 4 (Nakahara Eq 11.76)" begin
+    @testset "instanton_density: F^F is degree 4 (Nakahara Sec 10.5.5)" begin
         with_registry(reg) do
             A = connection_1form(:A, :su2, up(:I, :su2), down(:a))
             F = field_strength(A, :f; registry=reg)

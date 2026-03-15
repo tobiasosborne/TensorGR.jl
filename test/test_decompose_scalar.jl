@@ -1,5 +1,5 @@
 @testset "Scalar harmonic decomposition" begin
-    # Ground truth: Martel & Poisson (2005) Sec II.B, Eq 2.4
+    # Ground truth: Martel & Poisson (2005) Sec III (standard harmonic decomposition)
     # f(t,r,theta,phi) = sum_{l,m} f_{lm}(t,r) Y_{lm}(theta,phi)
 
     @testset "decompose_scalar: lmax=0 -> 1 mode" begin

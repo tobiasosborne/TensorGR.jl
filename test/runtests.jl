@@ -110,7 +110,7 @@ using TensorGR
     include("test_tensor_harmonic_orthogonality.jl")
     # Angular Laplacian on S^2
     include("test_laplacian_s2.jl")
-    # Scalar field harmonic decomposition (Martel & Poisson 2005, Eq 2.4)
+    # Scalar field harmonic decomposition (Martel & Poisson 2005, Sec III)
     include("test_decompose_scalar.jl")
     # Symmetric tensor harmonic decomposition (Martel & Poisson 2005, Sec III.A)
     include("test_decompose_tensor.jl")

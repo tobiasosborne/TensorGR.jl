@@ -398,12 +398,12 @@ end
 
 # ---------------------------------------------------------------------------
 # 12. Metric x metric contractions
-#     Nutma Sec 5.1.4, Eq (60): two metrics have 3 index configurations
+#     Nutma (cf. Sec 5.1.4): two metrics have 3 index configurations
 #     (before contraction). As a rank-4 expression with (4-1)!! = 3 raw
 #     pairings, some coincide due to metric symmetry g_{ab} = g_{ba}.
 # ---------------------------------------------------------------------------
 
-@testset "Nutma Sec 5.1.4: metric x metric contractions" begin
+@testset "Nutma (cf. Sec 5.1.4): metric x metric contractions" begin
     reg = TensorRegistry()
     register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :partial,
         [:a,:b,:c,:d,:e,:f,:g1,:h]))
@@ -419,7 +419,7 @@ end
 
 # ---------------------------------------------------------------------------
 # 13. Weyl tensor contractions
-#     Nutma Sec 5.1.2 (implicit): The Weyl tensor is traceless, so all
+#     Nutma Sec 5.1.1 (after Eq 38) (implicit): The Weyl tensor is traceless, so all
 #     single traces vanish (W^a_{bac} = 0). However, all_contractions does
 #     not apply multi-term symmetries (tracelessness is a trace constraint,
 #     not a mono-term permutation symmetry). This is consistent with Nutma
@@ -430,7 +430,7 @@ end
 #     (g^{ab}g^{cd}W_{abcd} = 0 from antisymmetry), reducing 3 raw -> <= 2.
 # ---------------------------------------------------------------------------
 
-@testset "Nutma Sec 5.1.2: Weyl contractions (mono-term symmetry only)" begin
+@testset "Nutma Sec 5.1.1 (after Eq 38): Weyl contractions (mono-term symmetry only)" begin
     reg = TensorRegistry()
     register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :partial,
         [:a,:b,:c,:d,:e,:f,:g1,:h]))

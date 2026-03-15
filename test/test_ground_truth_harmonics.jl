@@ -1,20 +1,20 @@
 # Ground-truth verification of spherical harmonics against
 # Martel & Poisson, Phys. Rev. D 71, 104003 (2005), arXiv:gr-qc/0502028.
 #
-# Reference equations (ar5iv numbering):
+# Reference equations (MP Sec III numbering):
 #   Unnumbered (Sec III): [Omega^{AB} D_A D_B + l(l+1)] Y^{lm} = 0
 #     => Delta_{S2} Y_{lm} = -l(l+1) Y_{lm}
-#   Eq 11: Y_A^{lm} := D_A Y^{lm}  (even-parity vector harmonic)
-#   Eq 12: X_A^{lm} := -epsilon_A^B D_B Y^{lm}  (odd-parity vector harmonic)
-#   Eq 13: integral Y_bar^A_{lm} Y_A^{l'm'} dOmega = l(l+1) delta_{ll'} delta_{mm'}
-#   Eq 14: integral X_bar^A_{lm} X_A^{l'm'} dOmega = l(l+1) delta_{ll'} delta_{mm'}
-#   Eq 15: integral Y_bar^A_{lm} X_A^{l'm'} dOmega = 0
-#   Eq 16: Y_{AB}^{lm} := [D_A D_B + (1/2)l(l+1) Omega_{AB}] Y^{lm}
-#   Eq 17: X_{AB}^{lm} := -(1/2)(epsilon_A^C D_B + epsilon_B^C D_A) D_C Y^{lm}
-#   Eq 18: integral Y_bar^{AB}_{lm} Y_{AB}^{l'm'} dOmega = (1/2)(l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
-#   Eq 19: integral X_bar^{AB}_{lm} X_{AB}^{l'm'} dOmega = (1/2)(l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
-#   Eq 20: integral Y_bar^{AB}_{lm} X_{AB}^{l'm'} dOmega = 0
-#   Eq 21: Omega^{AB} Y_{AB}^{lm} = 0 = Omega^{AB} X_{AB}^{lm}  (tracelessness)
+#   Eq 3.1: Y_A^{lm} := D_A Y^{lm}  (even-parity vector harmonic)
+#   Eq 3.2: X_A^{lm} := -epsilon_A^B D_B Y^{lm}  (odd-parity vector harmonic)
+#   Eq 3.3: integral Y_bar^A_{lm} Y_A^{l'm'} dOmega = l(l+1) delta_{ll'} delta_{mm'}
+#   Eq 3.4: integral X_bar^A_{lm} X_A^{l'm'} dOmega = l(l+1) delta_{ll'} delta_{mm'}
+#   Eq 3.5: integral Y_bar^A_{lm} X_A^{l'm'} dOmega = 0
+#   Eq 3.6: Y_{AB}^{lm} := [D_A D_B + (1/2)l(l+1) Omega_{AB}] Y^{lm}
+#   Eq 3.7: X_{AB}^{lm} := -(1/2)(epsilon_A^C D_B + epsilon_B^C D_A) D_C Y^{lm}
+#   Eq 3.8: integral Y_bar^{AB}_{lm} Y_{AB}^{l'm'} dOmega = (1/2)(l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
+#   Eq 3.9: integral X_bar^{AB}_{lm} X_{AB}^{l'm'} dOmega = (1/2)(l-1)l(l+1)(l+2) delta_{ll'} delta_{mm'}
+#   Eq 3.10: integral Y_bar^{AB}_{lm} X_{AB}^{l'm'} dOmega = 0
+#   Eq 3.11: Omega^{AB} Y_{AB}^{lm} = 0 = Omega^{AB} X_{AB}^{lm}  (tracelessness)
 #
 # Standard identity (Condon-Shortley phase convention):
 #   Y*_{lm} = (-1)^m Y_{l,-m}
@@ -214,33 +214,33 @@
     end
 
     # ── 11. Vector/tensor harmonics coverage gap ────────────────────────
-    # These are defined in Martel & Poisson (2005) Eqs 11-21 but NOT YET
+    # These are defined in Martel & Poisson (2005) Sec III, Eqs 3.1-3.11 but NOT YET
     # implemented in TensorGR.jl. Documenting what would need to be verified:
     #
-    # Eq 11: EvenVectorHarmonic Y^a_{lm} = D^a Y_{lm}
-    #   - norm_squared = l(l+1) for l >= 1  [Eq 13]
+    # Eq 3.1: EvenVectorHarmonic Y^a_{lm} = D^a Y_{lm}
+    #   - norm_squared = l(l+1) for l >= 1  [Eq 3.3]
     #   - divergence D_a Y^a = Delta Y = -l(l+1) Y  (follows from definition)
     #
-    # Eq 12: OddVectorHarmonic X^a_{lm} = -epsilon^a_b D^b Y_{lm}
-    #   - norm_squared = l(l+1) for l >= 1  [Eq 14]
+    # Eq 3.2: OddVectorHarmonic X^a_{lm} = -epsilon^a_b D^b Y_{lm}
+    #   - norm_squared = l(l+1) for l >= 1  [Eq 3.4]
     #   - divergence-free: D_a X^a = 0 (antisymmetry of epsilon)
-    #   - cross-orthogonal to even: <Y^a, X_a> = 0  [Eq 15]
+    #   - cross-orthogonal to even: <Y^a, X_a> = 0  [Eq 3.5]
     #
-    # Eq 16: EvenTensorHarmonic Y_{AB}^{lm} = [D_A D_B + (1/2)l(l+1) Omega_{AB}] Y^{lm}
-    #   - norm_squared = (1/2)(l-1)l(l+1)(l+2) for l >= 2  [Eq 18]
-    #   - traceless: Omega^{AB} Y_{AB} = 0  [Eq 21]
+    # Eq 3.6: EvenTensorHarmonic Y_{AB}^{lm} = [D_A D_B + (1/2)l(l+1) Omega_{AB}] Y^{lm}
+    #   - norm_squared = (1/2)(l-1)l(l+1)(l+2) for l >= 2  [Eq 3.8]
+    #   - traceless: Omega^{AB} Y_{AB} = 0  [Eq 3.11]
     #
-    # Eq 17: OddTensorHarmonic X_{AB}^{lm} = -(1/2)(eps_A^C D_B + eps_B^C D_A) D_C Y^{lm}
-    #   - norm_squared = (1/2)(l-1)l(l+1)(l+2) for l >= 2  [Eq 19]
-    #   - traceless: Omega^{AB} X_{AB} = 0  [Eq 21]
-    #   - cross-orthogonal: <Y_{AB}, X^{AB}> = 0  [Eq 20]
+    # Eq 3.7: OddTensorHarmonic X_{AB}^{lm} = -(1/2)(eps_A^C D_B + eps_B^C D_A) D_C Y^{lm}
+    #   - norm_squared = (1/2)(l-1)l(l+1)(l+2) for l >= 2  [Eq 3.9]
+    #   - traceless: Omega^{AB} X_{AB} = 0  [Eq 3.11]
+    #   - cross-orthogonal: <Y_{AB}, X^{AB}> = 0  [Eq 3.10]
     #
     # Low multipoles (MP Sec VIII):
     #   l=0: Y_A = X_A = Y_{AB} = X_{AB} = 0
     #   l=1: Y_{AB} = X_{AB} = 0 (tensor harmonics vanish)
 
     # ── 11. Vector harmonics (now implemented) ──────────────────────────
-    @testset "Vector harmonics norms (MP Eqs 2.13-2.14)" begin
+    @testset "Vector harmonics norms (MP Eqs 3.3-3.4)" begin
         for l in 1:5
             @test norm_squared(EvenVectorHarmonic(l, 0, up(:a))) == l * (l + 1)
             @test norm_squared(OddVectorHarmonic(l, 0, up(:a))) == l * (l + 1)
@@ -248,24 +248,24 @@
     end
 
     # ── 12. Tensor harmonics (now implemented) ────────────────────────
-    @testset "Tensor harmonics norms (MP Eqs 2.18-2.20)" begin
-        # Y^{ab}: norm = 2 (Eq 2.18)
+    @testset "Tensor harmonics norms (MP Eqs 3.8-3.10)" begin
+        # Y^{ab}: norm = 2 (Eq 3.8)
         for l in 0:5
             @test norm_squared(EvenTensorHarmonicY(l, 0, up(:a), up(:b))) == 2
         end
-        # Z^{ab}: norm = 1/2 (l-1)l(l+1)(l+2) (Eq 2.19)
+        # Z^{ab}: norm = 1/2 (l-1)l(l+1)(l+2) (Eq 3.9)
         for l in 2:5
             expected = (l - 1) * l * (l + 1) * (l + 2) // 2
             @test norm_squared(EvenTensorHarmonicZ(l, 0, up(:a), up(:b))) == expected
         end
-        # X^{ab}: same norm as Z (Eq 2.20)
+        # X^{ab}: same norm as Z (Eq 3.10)
         for l in 2:5
             expected = (l - 1) * l * (l + 1) * (l + 2) // 2
             @test norm_squared(OddTensorHarmonic(l, 0, up(:a), up(:b))) == expected
         end
     end
 
-    @testset "Tensor harmonics trace (MP Eq 2.21)" begin
+    @testset "Tensor harmonics trace (MP Eq 3.11)" begin
         @test TensorGR.trace(EvenTensorHarmonicZ(2, 0, up(:a), up(:b))) == TScalar(0//1)
         @test TensorGR.trace(OddTensorHarmonic(2, 0, up(:a), up(:b))) == TScalar(0//1)
         t = TensorGR.trace(EvenTensorHarmonicY(2, 0, up(:a), up(:b)))
