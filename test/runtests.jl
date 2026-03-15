@@ -154,6 +154,8 @@ using TensorGR
     include("test_phase_space_eom.jl")
     # Horndeski scalar-tensor theory (Kobayashi 2019, arXiv:1901.04778)
     include("test_horndeski.jl")
+    # Horndeski field equations: metric + scalar EOMs (Kobayashi 2019, Eqs 2.5-2.7)
+    include("test_horndeski_eom.jl")
     # Segre classification of the Ricci tensor (xIdeal)
     include("test_segre.jl")
     # Covariant phase space: symplectic potential
