@@ -134,6 +134,7 @@ include("xideal/weyl_scalars.jl")
 
 # Layer 6: Covariant phase space
 include("phase_space/eom.jl")
+include("phase_space/divergence.jl")
 
 # Macros
 include("macros/tensor_macro.jl")
@@ -354,6 +355,7 @@ export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
 # Exports: Covariant phase space
 export LagrangianDensity, EOMResult
 export eom_extract, extract_eom_and_theta
+export is_divergence, extract_divergence, split_divergence
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

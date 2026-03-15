@@ -150,4 +150,6 @@ using TensorGR
     include("test_weyl_scalars.jl")
     # Covariant phase space: EOM extraction
     include("test_phase_space_eom.jl")
+    # Covariant phase space: divergence detection
+    include("test_divergence_detect.jl")
 end
