@@ -164,6 +164,8 @@ using TensorGR
     include("test_horndeski_eom.jl")
     # Bellini-Sawicki alpha parametrization (EFT of dark energy)
     include("test_alpha_params.jl")
+    # Validation: f(R) gravity as Horndeski subcase (Kobayashi 2019, Sec 2.3)
+    include("test_fr_as_horndeski.jl")
     # Segre classification of the Ricci tensor (xIdeal)
     include("test_segre.jl")
     # Covariant phase space: symplectic potential
