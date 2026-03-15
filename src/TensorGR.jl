@@ -26,6 +26,7 @@ include("harmonics/scalar_harmonics.jl")
 include("gr/symmetries.jl")
 include("algebra/arithmetic.jl")
 include("harmonics/clebsch_gordan.jl")
+include("harmonics/vector_harmonics.jl")
 include("algebra/contraction.jl")
 include("algebra/canonicalize.jl")
 include("algebra/derivatives.jl")
@@ -132,6 +133,7 @@ include("parser/latex_parser.jl")
 export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar
 export TIndex, IndexPosition, Up, Down, up, down
 export ScalarHarmonic, conjugate, angular_laplacian, inner_product
+export EvenVectorHarmonic, OddVectorHarmonic, divergence_eigenvalue, curl_eigenvalue, norm_squared
 export wigner3j, clebsch_gordan, harmonic_product
 
 # Exports: Registry
