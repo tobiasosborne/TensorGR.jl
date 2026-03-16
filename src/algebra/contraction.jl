@@ -20,9 +20,8 @@ function contract_metrics(t::Tensor)
     if has_tensor(reg, t.name)
         props = get_tensor(reg, t.name)
         if props.is_delta && length(t.indices) == 2
-            # Self-traced delta: δ^a_a → dim
-            if t.indices[1].name == t.indices[2].name &&
-               t.indices[1].position != t.indices[2].position
+            # Self-traced delta: δ^a_a or δ^a^a (same-position dummy) → dim
+            if t.indices[1].name == t.indices[2].name
                 mp = get_manifold(reg, props.manifold)
                 return TScalar(mp.dim // 1)
             end
@@ -36,8 +35,8 @@ function contract_metrics(t::Tensor)
         end
         if props.is_metric && length(t.indices) == 2
             if t.indices[1].name == t.indices[2].name &&
-               t.indices[1].position != t.indices[2].position &&
                t.indices[1].vbundle == t.indices[2].vbundle
+                # Self-traced metric: g^a_a or g^a^a (same-position dummy) → dim
                 mp = get_manifold(reg, props.manifold)
                 return TScalar(mp.dim // 1)
             end

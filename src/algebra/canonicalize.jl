@@ -195,12 +195,6 @@ function _canonicalize_product(p::TProduct)
     perm_data[n]     = Int32(n)
 
     # ── Symmetry generators ──────────────────────────────────────────
-    # xperm uses left-action: cperm = g ∘ perm. Slot generators must be
-    # conjugated so that left-action produces the physical slot swap:
-    #   (perm ∘ gen_slot ∘ perm⁻¹) ∘ perm = perm ∘ gen_slot
-    perm = Perm(perm_data)
-    perm_inv_data = perm_inverse(perm)
-
     all_gens = Perm[]
     for (oi, obj) in enumerate(imploded)
         has_tensor(reg, obj.tensor_name) || continue
@@ -220,12 +214,7 @@ function _canonicalize_product(p::TProduct)
             if lg.data[nslots_t + 1] != nslots_t + 1
                 pg[n - 1], pg[n] = pg[n], pg[n - 1]
             end
-            # Conjugate: g_conj = perm ∘ gen_slot ∘ perm⁻¹
-            conj = Vector{Int32}(undef, n)
-            for i in 1:n
-                conj[i] = perm.data[Int(pg[Int(perm_inv_data.data[i])])]
-            end
-            push!(all_gens, Perm(conj))
+            push!(all_gens, Perm(pg))
         end
 
         # Commuting partial derivatives: ∂_a ∂_b = ∂_b ∂_a
@@ -235,12 +224,7 @@ function _canonicalize_product(p::TProduct)
                 pg = collect(Int32, 1:n)
                 pg[deriv_offset + k] = Int32(deriv_offset + k + 1)
                 pg[deriv_offset + k + 1] = Int32(deriv_offset + k)
-                # Conjugate derivative swap too
-                conj = Vector{Int32}(undef, n)
-                for i in 1:n
-                    conj[i] = perm.data[Int(pg[Int(perm_inv_data.data[i])])]
-                end
-                push!(all_gens, Perm(conj))
+                push!(all_gens, Perm(pg))
             end
         end
     end
@@ -249,6 +233,7 @@ function _canonicalize_product(p::TProduct)
 
     # ── Call xperm.c ─────────────────────────────────────────────────
     base = Int32.(1:nslots)
+    perm = Perm(perm_data)
 
     cperm = xperm_canonical_perm(perm, base, all_gens, freeps, dummyps, n)
 
@@ -259,8 +244,8 @@ function _canonicalize_product(p::TProduct)
     sign = cperm.data[n - 1] == Int32(n - 1) ? 1 : -1
 
     # ── Reconstruct indices from canonical permutation ───────────────
-    # With conjugated generators, cperm = perm ∘ π (physical slot perm).
-    # cperm[slot] = name at slot in canonical config.
+    cperm_inv = perm_inverse(cperm)
+
     name_to_sym = Dict{Int, Symbol}()
     for (slot, name) in slot_to_name
         name_to_sym[name] = all_indices[slot].name
@@ -268,7 +253,7 @@ function _canonicalize_product(p::TProduct)
 
     new_all_indices = Vector{TIndex}(undef, nslots)
     for slot in 1:nslots
-        cname = Int(cperm.data[slot])
+        cname = Int(cperm_inv.data[slot])
         sym = name_to_sym[cname]
         new_all_indices[slot] = TIndex(sym, all_indices[slot].position, all_indices[slot].vbundle)
     end

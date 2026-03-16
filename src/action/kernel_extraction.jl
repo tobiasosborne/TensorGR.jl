@@ -260,6 +260,34 @@ function _extract_bilinear_direct(term::TensorExpr, field::Symbol, k_name::Symbo
     (coeff = coeff, left = fu1.field_indices, right = fu2.field_indices)
 end
 
+# ─── Pre-processing: deconflict field halves ────────────────────────
+
+"""
+Rename dummies in the second field-containing factor of a product
+so that they don't collide with the first. This handles the common case
+of `simplify(δR) * simplify(δR)` where both copies share dummy names.
+"""
+function _deconflict_field_halves(expr::TProduct, field::Symbol)
+    fi = [i for (i, f) in enumerate(expr.factors)
+          if _count_fields_in(f, field) > 0]
+    length(fi) != 2 && return expr
+
+    a = expr.factors[fi[1]]
+    b = expr.factors[fi[2]]
+    b_new = ensure_no_dummy_clash(a, b)
+    b_new === b && return expr  # no change needed
+
+    new_factors = copy(expr.factors)
+    new_factors[fi[2]] = b_new
+    tproduct(expr.scalar, new_factors)
+end
+
+function _deconflict_field_halves(expr::TSum, field::Symbol)
+    tsum(TensorExpr[_deconflict_field_halves(t, field) for t in expr.terms])
+end
+
+_deconflict_field_halves(expr::TensorExpr, ::Symbol) = expr
+
 # ─── Main entry point ────────────────────────────────────────────────
 
 """
@@ -299,10 +327,19 @@ K_R2 = extract_kernel_direct(d1R * d1R, :h; registry=reg)
 function extract_kernel_direct(expr::TensorExpr, field::Symbol;
                                k_name::Symbol=:k,
                                registry = current_registry())
+    # Repair same-position dummy pairs so _analyze_indices can detect them.
+    fixed = fix_dummy_positions(expr)
+
+    # Deconflict dummies between the two field-containing halves.
+    # When the input is e.g. simplify(δR) * simplify(δR), both copies share
+    # the same dummy names. Renaming one copy prevents 3+ index occurrences
+    # after expansion and bilinear extraction.
+    fixed = _deconflict_field_halves(fixed, field)
+
     # Distribute ∂(TSum) and expand products in a single pass.
     # Do NOT iterate: further rounds change derivative assignments
     # (n_L, n_R) and corrupt the phase calculation.
-    expanded = expand_products(_distribute_derivs_sums(expr))
+    expanded = expand_products(_distribute_derivs_sums(fixed))
     raw_terms = expanded isa TSum ? expanded.terms : TensorExpr[expanded]
 
     bilinears = @NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}[]
@@ -357,8 +394,9 @@ function spin_project(K::KineticKernel, spin::Symbol;
         # Collect ALL index names used by the projector side (free + dummy)
         proj_all_names = Set{Symbol}(idx.name for idx in indices(combined))
 
-        # Rename any coefficient dummies that clash with projector names
-        coeff_fixed = bt.coeff
+        # Repair same-position dummy pairs from all-free canonicalization
+        # before _analyze_indices, which only detects (Up, Down) pairs.
+        coeff_fixed = fix_dummy_positions(bt.coeff)
         _, _, coeff_pairs = _analyze_indices(coeff_fixed)
         coeff_all_names = Set{Symbol}(idx.name for idx in indices(coeff_fixed))
         all_names = union(proj_all_names, coeff_all_names)
@@ -382,6 +420,7 @@ function spin_project(K::KineticKernel, spin::Symbol;
             expr = expand_products(expr)
             expr = contract_momenta(expr; k_name, k_sq)
             next = simplify(expr; registry = registry, maxiter = 40)
+            next = fix_dummy_positions(next)
             next == expr && break
             expr = next
         end
