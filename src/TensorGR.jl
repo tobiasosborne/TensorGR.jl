@@ -341,6 +341,7 @@ export to_fourier, FourierConvention
 export transverse_projector, tt_projector
 export theta_projector, omega_projector
 export spin2_projector, spin1_projector, spin0s_projector, spin0w_projector
+export vector_spin1_projector, vector_spin0_projector
 export transfer_sw, transfer_ws
 export SVTFields, svt_substitute
 
@@ -465,6 +466,7 @@ export TetradProperties, define_tetrad!, get_tetrad, has_tetrad
 
 # Exports: PPN framework
 export PPNParameters, ppn_gr, is_gr, ppn_metric_ansatz, define_ppn_potentials!
+export is_fully_conservative, is_preferred_frame_free, is_preferred_location_free, is_semi_conservative
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str

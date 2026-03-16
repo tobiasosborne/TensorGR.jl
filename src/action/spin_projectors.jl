@@ -163,3 +163,23 @@ function _omega_kwargs(kwargs)
     end
     pairs
 end
+
+# ── Vector field spin projectors (PSALTer arXiv:2406.09500, Sec 3.1) ────────
+
+"""
+    vector_spin1_projector(μ, ν; metric=:g, k_name=:k, k_sq=:k²)
+
+Transverse (spin-1) projector for vector fields: P^(1)_{μν} = θ_{μν} = η_{μν} - k_μ k_ν / k²
+"""
+function vector_spin1_projector(μ::TIndex, ν::TIndex; metric::Symbol=:g, k_name::Symbol=:k, k_sq::Symbol=:k²)
+    theta_projector(μ, ν; metric=metric, k_name=k_name, k_sq=k_sq)
+end
+
+"""
+    vector_spin0_projector(μ, ν; k_name=:k, k_sq=:k²)
+
+Longitudinal (spin-0) projector for vector fields: P^(0)_{μν} = ω_{μν} = k_μ k_ν / k²
+"""
+function vector_spin0_projector(μ::TIndex, ν::TIndex; k_name::Symbol=:k, k_sq::Symbol=:k²)
+    omega_projector(μ, ν; k_name=k_name, k_sq=k_sq)
+end

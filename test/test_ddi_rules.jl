@@ -281,4 +281,65 @@
         @test !has_riem1
         @test !has_riem2
     end
+
+    # ── Lanczos-Lovelock validation identity in d=4 ──────────────────────
+    @testset "Lanczos-Lovelock identity" begin
+
+        # Test 1: Generalized Kronecker delta vanishing
+        # 5 antisymmetric indices in 4 dimensions must vanish
+        @testset "generalized Kronecker delta vanishing" begin
+            @test is_zero_by_dimension(5, 4) == true
+            @test is_zero_by_dimension(4, 4) == false
+            @test is_zero_by_dimension(3, 4) == false
+        end
+
+        # Test 2: Gauss-Bonnet from DDI simplifies to zero
+        @testset "Gauss-Bonnet from DDI" begin
+            reg = ddi_registry(; dim=4)
+            with_registry(reg) do
+                gb = gauss_bonnet_ddi(; metric=:g, registry=reg)
+                # Register the Gauss-Bonnet rewrite rules so the identity reduces to zero
+                for r in gauss_bonnet_rule(; metric=:g)
+                    register_rule!(reg, r)
+                end
+                result = simplify(gb; registry=reg)
+                @test result == TScalar(0 // 1)
+            end
+        end
+
+        # Test 3: Cross-check euler_density vs gauss_bonnet_ddi
+        # Both should produce the same Gauss-Bonnet combination R_{abcd}R^{abcd} - 4R_{ab}R^{ab} + R^2
+        @testset "cross-check against euler_density" begin
+            reg = ddi_registry(; dim=4)
+            with_registry(reg) do
+                gb = gauss_bonnet_ddi(; metric=:g, registry=reg)
+                ed = euler_density(:g; dim=4, registry=reg)
+
+                # Both are the same combination; their difference should simplify to zero
+                diff_expr = gb - ed
+                result = simplify(diff_expr; registry=reg)
+                @test result == TScalar(0 // 1)
+            end
+        end
+
+        # Test 4: simplify_with_ddis reduces Gauss-Bonnet density to zero
+        @testset "DDI simplification" begin
+            reg = ddi_registry(; dim=4)
+            with_registry(reg) do
+                gb = gauss_bonnet_ddi(; metric=:g, registry=reg)
+                result = simplify_with_ddis(gb; dim=4, registry=reg)
+                @test result == TScalar(0 // 1)
+            end
+        end
+
+        # Test 5: Explicit 5-index generalized delta vanishes in d=4
+        @testset "explicit 5-index generalized delta vanishes" begin
+            reg = ddi_registry(; dim=4)
+            with_registry(reg) do
+                result = generalized_delta([:a, :b, :c, :d, :e], [:f, :g, :h, :i, :j]; registry=reg)
+                @test result == TScalar(0 // 1)
+            end
+        end
+
+    end
 end

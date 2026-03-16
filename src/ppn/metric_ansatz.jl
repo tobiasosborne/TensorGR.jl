@@ -92,6 +92,77 @@ function Base.show(io::IO, p::PPNParameters)
           ", zeta3=", p.zeta3, ", zeta4=", p.zeta4, ")")
 end
 
+"""
+    is_fully_conservative(p::PPNParameters) -> Bool
+
+Check whether the PPN parameters satisfy all conservation laws
+(all ζ parameters vanish). Ground truth: Will (2018), Sec 4.3.
+"""
+function is_fully_conservative(p::PPNParameters)
+    p.zeta1 == 0 && p.zeta2 == 0 && p.zeta3 == 0 && p.zeta4 == 0
+end
+
+"""
+    is_preferred_frame_free(p::PPNParameters) -> Bool
+
+Check whether the theory has no preferred-frame effects
+(all α parameters vanish). Ground truth: Will (2018), Sec 4.3.
+"""
+function is_preferred_frame_free(p::PPNParameters)
+    p.alpha1 == 0 && p.alpha2 == 0 && p.alpha3 == 0
+end
+
+"""
+    is_preferred_location_free(p::PPNParameters) -> Bool
+
+Check whether the theory has no preferred-location (Whitehead) effects (ξ = 0).
+"""
+is_preferred_location_free(p::PPNParameters) = p.xi == 0
+
+"""
+    is_semi_conservative(p::PPNParameters) -> Bool
+
+Check whether the theory is semi-conservative: fully conservative plus no
+preferred-frame effects. Ground truth: Will (2018), Table 4.2.
+"""
+is_semi_conservative(p::PPNParameters) = is_fully_conservative(p) && is_preferred_frame_free(p)
+
+"""
+    PPNParameters(theory::Symbol; kwargs...) -> PPNParameters
+
+Named constructor for common gravitational theories.
+
+# Supported theories
+- `:GR` — General Relativity (γ=1, β=1, all others 0)
+- `:BransDicke` — Brans-Dicke theory (requires `omega` kwarg)
+  γ = (1+ω)/(2+ω), β = 1, all others 0
+- `:Nordtvedt` — Nordtvedt's "general" scalar-tensor:
+  γ = (1+ω)/(2+ω), β given by kwarg `beta`, all others 0
+- `:Rosen` — Rosen's bimetric (γ=1, β=1, α₁=-2, α₂=-2)
+
+Ground truth: Will (2018), Table 4.1.
+"""
+function PPNParameters(theory::Symbol; kwargs...)
+    if theory == :GR
+        return ppn_gr()
+    elseif theory == :BransDicke
+        haskey(kwargs, :omega) || error("Brans-Dicke requires omega keyword argument")
+        omega = kwargs[:omega]
+        gamma = (1 + omega) / (2 + omega)
+        return PPNParameters(gamma, 1, 0, 0, 0, 0, 0, 0, 0, 0)
+    elseif theory == :Nordtvedt
+        haskey(kwargs, :omega) || error("Nordtvedt requires omega keyword argument")
+        omega = kwargs[:omega]
+        gamma = (1 + omega) / (2 + omega)
+        beta = get(kwargs, :beta, 1)
+        return PPNParameters(gamma, beta, 0, 0, 0, 0, 0, 0, 0, 0)
+    elseif theory == :Rosen
+        return PPNParameters(1, 1, 0, -2, -2, 0, 0, 0, 0, 0)
+    else
+        error("Unknown theory: $theory. Supported: :GR, :BransDicke, :Nordtvedt, :Rosen")
+    end
+end
+
 # ─────────────────────────────────────────────────────────────
 # PPN potentials
 # ─────────────────────────────────────────────────────────────

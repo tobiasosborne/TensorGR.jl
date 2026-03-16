@@ -256,4 +256,6 @@ using TensorGR
     include("test_dual_rinv.jl")
     # Mode coupling coefficients (Brizuela et al. 2006)
     include("test_mode_coupling_coefficients.jl")
+    # Vector field spin projectors (PSALTer arXiv:2406.09500)
+    include("test_vector_spin_projectors.jl")
 end

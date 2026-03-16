@@ -370,4 +370,63 @@
         @test occursin("PPNParameters", s)
     end
 
+    # ── Conservation and frame tests (TGR-bgl.3) ──
+    @testset "is_fully_conservative" begin
+        @test is_fully_conservative(ppn_gr())
+        @test is_fully_conservative(PPNParameters(2, 1, 0, 0, 0, 0, 0, 0, 0, 0))
+        @test !is_fully_conservative(PPNParameters(1, 1, 0, 0, 0, 0, 1, 0, 0, 0))
+        @test !is_fully_conservative(PPNParameters(1, 1, 0, 0, 0, 0, 0, 1, 0, 0))
+        @test !is_fully_conservative(PPNParameters(1, 1, 0, 0, 0, 0, 0, 0, 1, 0))
+        @test !is_fully_conservative(PPNParameters(1, 1, 0, 0, 0, 0, 0, 0, 0, 1))
+    end
+
+    @testset "is_preferred_frame_free" begin
+        @test is_preferred_frame_free(ppn_gr())
+        @test is_preferred_frame_free(PPNParameters(1, 2, 0, 0, 0, 0, 0, 0, 0, 0))
+        @test !is_preferred_frame_free(PPNParameters(1, 1, 0, 1, 0, 0, 0, 0, 0, 0))
+        @test !is_preferred_frame_free(PPNParameters(1, 1, 0, 0, 1, 0, 0, 0, 0, 0))
+        @test !is_preferred_frame_free(PPNParameters(1, 1, 0, 0, 0, 1, 0, 0, 0, 0))
+    end
+
+    @testset "is_preferred_location_free" begin
+        @test is_preferred_location_free(ppn_gr())
+        @test !is_preferred_location_free(PPNParameters(1, 1, 1, 0, 0, 0, 0, 0, 0, 0))
+    end
+
+    @testset "is_semi_conservative" begin
+        @test is_semi_conservative(ppn_gr())
+        @test !is_semi_conservative(PPNParameters(1, 1, 0, 1, 0, 0, 0, 0, 0, 0))
+        @test !is_semi_conservative(PPNParameters(1, 1, 0, 0, 0, 0, 1, 0, 0, 0))
+    end
+
+    # ── Named constructors (TGR-bgl.3) ──
+    @testset "named constructors" begin
+        p_gr = PPNParameters(:GR)
+        @test is_gr(p_gr)
+
+        p_bd = PPNParameters(:BransDicke; omega=1000000)
+        @test p_bd.beta == 1
+        @test p_bd.gamma ≈ 1.0 atol=1e-5
+        @test is_fully_conservative(p_bd)
+
+        p_bd3 = PPNParameters(:BransDicke; omega=3//1)
+        @test p_bd3.gamma == 4 // 5
+        @test p_bd3.beta == 1
+        @test !is_gr(p_bd3)
+
+        @test_throws ErrorException PPNParameters(:BransDicke)
+
+        p_nord = PPNParameters(:Nordtvedt; omega=3//1, beta=2//1)
+        @test p_nord.gamma == 4 // 5
+        @test p_nord.beta == 2 // 1
+
+        p_rosen = PPNParameters(:Rosen)
+        @test p_rosen.gamma == 1
+        @test p_rosen.alpha1 == -2
+        @test !is_preferred_frame_free(p_rosen)
+        @test is_fully_conservative(p_rosen)
+
+        @test_throws ErrorException PPNParameters(:Unknown)
+    end
+
 end
