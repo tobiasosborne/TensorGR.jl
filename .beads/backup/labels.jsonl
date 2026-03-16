@@ -3,6 +3,7 @@
 {"issue_id":"TGR-139","label":"epic:spinor-infra"}
 {"issue_id":"TGR-15p","label":"epic:np-formalism"}
 {"issue_id":"TGR-1gv","label":"epic:np-formalism"}
+{"issue_id":"TGR-1rf","label":"epic:spinor-infra"}
 {"issue_id":"TGR-1t9","label":"epic:xideal"}
 {"issue_id":"TGR-1t9.1","label":"epic:xideal"}
 {"issue_id":"TGR-1t9.1","label":"research"}
@@ -17,6 +18,7 @@
 {"issue_id":"TGR-1t9.8","label":"validation"}
 {"issue_id":"TGR-1t9.9","label":"epic:xideal"}
 {"issue_id":"TGR-1t9.9","label":"validation"}
+{"issue_id":"TGR-22h","label":"epic:bh-pert2"}
 {"issue_id":"TGR-28t","label":"epic:spinor-infra"}
 {"issue_id":"TGR-2gv","label":"epic:bh-pert2"}
 {"issue_id":"TGR-2gv","label":"validation"}
@@ -37,6 +39,8 @@
 {"issue_id":"TGR-2vm","label":"epic:scalar-tensor"}
 {"issue_id":"TGR-2vm","label":"validation"}
 {"issue_id":"TGR-2wf","label":"epic:scalar-tensor"}
+{"issue_id":"TGR-2y0","label":"epic:bh-pert2"}
+{"issue_id":"TGR-2y0","label":"validation"}
 {"issue_id":"TGR-2yl","label":"epic:bh-pert2"}
 {"issue_id":"TGR-2yp","label":"epic:spinor-infra"}
 {"issue_id":"TGR-31k","label":"epic:bh-pert2"}
@@ -48,10 +52,18 @@
 {"issue_id":"TGR-34t.6","label":"epic:xpand-bianchi"}
 {"issue_id":"TGR-3up","label":"epic:spinor-infra"}
 {"issue_id":"TGR-443.1","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.1","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.2","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.3","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.4","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.5","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.6","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-443.1.7","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.2","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.3","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.4","label":"epic:invar-canonical-forms"}
 {"issue_id":"TGR-443.5","label":"epic:invar-canonical-forms"}
+{"issue_id":"TGR-4ic","label":"epic:eftofpng"}
 {"issue_id":"TGR-4p8","label":"epic:bh-pert2"}
 {"issue_id":"TGR-4y5","label":"epic:ghp-formalism"}
 {"issue_id":"TGR-4zb.1","label":"epic:invar-symmanipulator"}
@@ -77,6 +89,7 @@
 {"issue_id":"TGR-57l","label":"epic:spinor-infra"}
 {"issue_id":"TGR-5a1","label":"epic:ghp-formalism"}
 {"issue_id":"TGR-5f2","label":"epic:scalar-tensor"}
+{"issue_id":"TGR-5i0","label":"epic:bh-pert2"}
 {"issue_id":"TGR-5lp.1","label":"epic:invar-tinvar"}
 {"issue_id":"TGR-5lp.2","label":"epic:invar-tinvar"}
 {"issue_id":"TGR-5lp.3","label":"epic:invar-tinvar"}
@@ -111,11 +124,14 @@
 {"issue_id":"TGR-6bn.5","label":"epic:invar-simplify-levels"}
 {"issue_id":"TGR-6bn.6","label":"epic:invar-simplify-levels"}
 {"issue_id":"TGR-6bn.7","label":"epic:invar-simplify-levels"}
+{"issue_id":"TGR-6cn","label":"epic:spinor-infra"}
 {"issue_id":"TGR-6lj","label":"epic:constraints"}
 {"issue_id":"TGR-6s5","label":"epic:bimetric"}
 {"issue_id":"TGR-6tr","label":"epic:validation"}
+{"issue_id":"TGR-794","label":"epic:spinor-infra"}
 {"issue_id":"TGR-7im","label":"epic:spinor-infra"}
 {"issue_id":"TGR-7me","label":"epic:spinor-infra"}
+{"issue_id":"TGR-7n2","label":"epic:spinor-infra"}
 {"issue_id":"TGR-8nx","label":"area:exterior"}
 {"issue_id":"TGR-8nx","label":"epic:avf"}
 {"issue_id":"TGR-8nx.1","label":"area:exterior"}
@@ -144,6 +160,14 @@
 {"issue_id":"TGR-bgl","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.1","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.1","label":"research"}
+{"issue_id":"TGR-bgl.10","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.11","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.12","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.13","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.14","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.14","label":"validation"}
+{"issue_id":"TGR-bgl.15","label":"epic:xppn"}
+{"issue_id":"TGR-bgl.15","label":"validation"}
 {"issue_id":"TGR-bgl.2","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.3","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.4","label":"epic:xppn"}
@@ -153,6 +177,7 @@
 {"issue_id":"TGR-bgl.7","label":"validation"}
 {"issue_id":"TGR-bgl.8","label":"epic:xppn"}
 {"issue_id":"TGR-bgl.8","label":"validation"}
+{"issue_id":"TGR-bgl.9","label":"epic:xppn"}
 {"issue_id":"TGR-bj3","label":"epic:bimetric"}
 {"issue_id":"TGR-bj3","label":"validation"}
 {"issue_id":"TGR-ble.1","label":"epic:scalar-tensor"}
@@ -172,6 +197,7 @@
 {"issue_id":"TGR-bqf.2","label":"epic:harmonics-vector"}
 {"issue_id":"TGR-bqf.3","label":"epic:harmonics-vector"}
 {"issue_id":"TGR-bqf.4","label":"epic:harmonics-vector"}
+{"issue_id":"TGR-bw9","label":"epic:bh-pert2"}
 {"issue_id":"TGR-cp7","label":"epic:bimetric"}
 {"issue_id":"TGR-d29","label":"epic:spinor-infra"}
 {"issue_id":"TGR-d42","label":"epic:eftofpng"}
@@ -193,6 +219,8 @@
 {"issue_id":"TGR-dai.7","label":"area:fermions"}
 {"issue_id":"TGR-dai.7","label":"epic:clifford"}
 {"issue_id":"TGR-dai.7","label":"phase:validation"}
+{"issue_id":"TGR-e1l","label":"epic:spinor-infra"}
+{"issue_id":"TGR-ec6","label":"epic:eftofpng"}
 {"issue_id":"TGR-ed9.1","label":"epic:invar-database"}
 {"issue_id":"TGR-ed9.2","label":"epic:invar-database"}
 {"issue_id":"TGR-ed9.3","label":"epic:invar-database"}
@@ -210,6 +238,8 @@
 {"issue_id":"TGR-jvn","label":"epic:np-formalism"}
 {"issue_id":"TGR-ksr","label":"epic:np-formalism"}
 {"issue_id":"TGR-lnp","label":"epic:validation"}
+{"issue_id":"TGR-oun","label":"epic:spinor-infra"}
+{"issue_id":"TGR-ozc","label":"epic:spinor-infra"}
 {"issue_id":"TGR-p8n","label":"epic:spinor-infra"}
 {"issue_id":"TGR-qks","label":"epic:eftofpng"}
 {"issue_id":"TGR-s50","label":"epic:xcps"}
@@ -252,6 +282,7 @@
 {"issue_id":"TGR-swh.9","label":"epic:xmag"}
 {"issue_id":"TGR-swh.9","label":"phase:validation"}
 {"issue_id":"TGR-tcj","label":"epic:scalar-tensor"}
+{"issue_id":"TGR-u19","label":"epic:bh-pert2"}
 {"issue_id":"TGR-u3s.1","label":"epic:invar-validation"}
 {"issue_id":"TGR-u3s.2","label":"epic:invar-validation"}
 {"issue_id":"TGR-u3s.3","label":"epic:invar-validation"}
@@ -286,6 +317,7 @@
 {"issue_id":"TGR-vdm.9","label":"phase:validation"}
 {"issue_id":"TGR-vzx","label":"epic:eftofpng"}
 {"issue_id":"TGR-w0z","label":"epic:validation"}
+{"issue_id":"TGR-wbm","label":"epic:bh-pert2"}
 {"issue_id":"TGR-wd6","label":"epic:constraints"}
 {"issue_id":"TGR-wd6","label":"validation"}
 {"issue_id":"TGR-wq0","label":"area:bimetric"}
@@ -305,7 +337,9 @@
 {"issue_id":"TGR-wq0.6","label":"epic:bimex"}
 {"issue_id":"TGR-wq0.6","label":"phase:validation"}
 {"issue_id":"TGR-wt5","label":"epic:ghp-formalism"}
+{"issue_id":"TGR-x8a","label":"epic:spinor-infra"}
 {"issue_id":"TGR-x9t","label":"epic:spinor-infra"}
+{"issue_id":"TGR-xb3","label":"epic:bh-pert2"}
 {"issue_id":"TGR-xex","label":"epic:eftofpng"}
 {"issue_id":"TGR-yft","label":"epic:np-formalism"}
 {"issue_id":"TGR-z5d","label":"epic:np-formalism"}
