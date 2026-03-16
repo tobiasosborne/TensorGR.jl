@@ -1,137 +1,175 @@
-# Session Handoff — 2026-03-15 (Session 2)
+# Session Handoff — 2026-03-16 (Session 3)
 
 ## Summary
 
-Continuation session closing **22 more issues** (126 → 148). All pushed to master.
-Test count: 360,500 → 361,065 (+565 new tests, zero regressions, zero failures).
-Total issues in database: 353 (2 new bug issues). 49 ready to work.
+Session 3: restored beads (351 issues), closed 4 issues (+1 auto-closed epic), filed 1 P1 bug. **The P1 bug (TGR-0tm) is the top priority for the next session.**
 
-## What was built this session
+- Test count: 361,065 → 362,051 (+986 new tests, zero regressions, zero failures)
+- 14 `@test_broken` (unchanged, all known: 9 DHOST, 5 RInv)
+- 152 closed issues total (148 → 152)
+- 1 new P1 bug: **TGR-0tm** — bench_12 canonicalize regression
 
-### Feynman Diagram Extensions
-- `graviton_propagator(reg)` — harmonic (de Donder) gauge propagator D^{abcd}(k)
-- `propagator_numerator` — P^{abcd} = ½(η^{ac}η^{bd} + η^{ad}η^{bc} - η^{ab}η^{cd})
-- `matter_graviton_vertex(n, reg)` — n-graviton coupling for point particles (n=1,2)
-- `scalar_matter_vertex(n, reg)` — n-graviton coupling for minimally-coupled scalar
-- Files: `src/feynman/{propagator,matter_vertices}.jl`
+## What was done this session
 
-### Spinor Extensions
-- `SpinIndex` convenience wrapper — ergonomic `spinor(:A)`, `spinor_dot(:A)` constructors
-- `spinor_dummy`, `spinor_dot_dummy`, `spinor_pair` — matched pair generation
-- `define_soldering_form!` — Infeld-van der Waerden symbol σ^a_{AA'}
-- `to_spinor_indices` / `to_tensor_indices` — bidirectional conversion
-- Completeness rule: σ^a_{AA'} σ_a^{BB'} → δ^B_A δ^{B'}_A'
-- Metric reconstruction: σ^a σ^b ε^{AB} ε^{A'B'} → g^{ab}
-- Files: `src/spinors/{spin_index,soldering_form}.jl`
+### Issues closed
+1. **TGR-xlu.6** — Lanczos-Lovelock identity validation (5 tests in test_ddi_rules.jl)
+2. **TGR-4zw.2** — Vector field spin projectors: `vector_spin1_projector`, `vector_spin0_projector` (8 tests in test_vector_spin_projectors.jl)
+3. **TGR-bgl.3** — PPN conservation/frame checks: `is_fully_conservative`, `is_preferred_frame_free`, `is_preferred_location_free`, `is_semi_conservative`, named constructors `PPNParameters(:GR/:BransDicke/:Nordtvedt/:Rosen)` (added to test_ppn_metric.jl)
+4. **TGR-xlu** (epic) — auto-closed when TGR-xlu.6 completed
 
-### Tetrad System
-- `TetradProperties` struct + `define_tetrad!(reg, :e; manifold, metric)`
-- Registry extended with `tetrads::Dict{Symbol, Any}` field
-- Completeness rules: e^I_a E^a_J → δ^I_J, E^a_I e^I_b → δ^a_b
-- Metricity rules: e^I_a e^J_b η_{IJ} → g_{ab} (both explicit and post-contraction)
-- Files: `src/tetrads/tetrad.jl`, `src/registry.jl` (modified)
+### Beads restored
+The Dolt database was missing on session start. Restored from the git-committed `.beads/backup/` files (extracted from commit `d8c413c`) via `bd backup restore`. 351 issues recovered.
 
-### PPN Framework
-- `PPNParameters` struct — 10 standard PPN parameters (γ, β, ξ, α₁₋₃, ζ₁₋₄)
-- `ppn_gr()` — GR values, `is_gr()` — check
-- `define_ppn_potentials!(reg)` — U, U_{ij}, Φ_W, Φ₁₋₄, A, V_i, W_i
-- `ppn_metric_ansatz(params, reg; order)` — Will (2018) Eqs 4.1–4.3
-- Files: `src/ppn/metric_ansatz.jl`
+---
 
-### Scalar-Tensor Extensions
-- `EFTDarkEnergy` — Bellini-Sawicki α parametrization (α_M, α_K, α_B, α_T, α_H)
-- `eft_from_horndeski`, `eft_from_beyond_horndeski` — compute from theory
-- `eft_stability`, `eft_observables`, `gw170817_constraint` — physics checks
-- `degeneracy_conditions(DHOSTTheory)` — 3 algebraic conditions C₁,C₂,C₃
-- `is_degenerate`, `dhost_class`, `horndeski_as_dhost`, `reduce_to_horndeski`
-- `MultiHorndeskiTheory` — N scalar fields with field-space metric G_{IJ}
-- `kinetic_matrix`, `multi_horndeski_L2/L3/L4`, `to_single_field`
-- Files: `src/scalar_tensor/{eft_de,dhost_degeneracy,multi_horndeski}.jl`
+## CRITICAL: TGR-0tm — bench_12 Canonicalize Regression
 
-### DDI Pipeline
-- `simplify_with_ddis(expr; dim=4)` — convenience: registers + simplifies
-- `has_ddi_rules(reg; dim, order)` — idempotent registration check
-- Files: `src/algebra/ddi_rules.jl` (extended)
+### What is broken
 
-### Curvature Invariants
-- `canonicalize_rinv(rinv, reg)` — xperm Butler-Portugal for RInv
-- `rinv_symmetry_group(degree)` — Riemann symmetry generators on 4k+2 points
-- `are_equivalent(r1, r2, reg)` — canonical comparison
-- `DualRInv` type — invariants with Levi-Civita (left/right/double dual)
-- `left_dual`, `right_dual`, `double_dual`, `pontryagin_rinv`
-- Files: `src/invariants/{rinv.jl (extended), dual_rinv.jl}`
+The 6-derivative gravity benchmark (bench_12) has a term-count regression. All 6 cubic curvature invariants on de Sitter produce roughly **2x the expected simplified term counts**:
 
-### Mode Coupling
-- `mode_coupling_coefficient(l,m,l1,m1,l2,m2; types)` — angular integral coefficients
-- `coupling_selection_rule(l,l1,l2)` — triangle + parity check
-- `ModeCouplingTable`, `compute_coupling_table!` — precomputed tables
-- Files: `src/perturbation/mode_coupling.jl`
+| Invariant | Expected | Actual | Ratio |
+|-----------|----------|--------|-------|
+| R³ | 324 | 685 | 2.11 |
+| R·Ric² | 1042 | 2384 | 2.29 |
+| Ric³ | 1144 | 2398 | 2.10 |
+| R·Riem² | 1344 | 2568 | 1.91 |
+| Ric·Riem² | 1202 | 2463 | 2.05 |
+| Riem³ | 1488 | 2416 | 1.62 |
 
-### xIdeal Validation
-- pp-wave (Brinkmann coords, H=x²-y²) = Petrov Type N
-- Only Ψ₄ ≠ 0, I = J = 0, Kretschmann = 0 (VSI spacetime)
-- **xIdeal epic auto-closed** (all validation issues complete)
-- Files: `test/test_petrov_ppwave.jl`
+The **unit tests all pass** (362,051). This is a canonicalization quality regression, not a correctness bug — the simplifier produces valid but insufficiently simplified expressions.
 
-### Research Designs Completed (8)
-| Design | Issue | Key reference |
-|--------|-------|---------------|
-| Bianchi cosmology | TGR-34t.1 | Ellis & MacCallum (1969) |
-| Multi-field PSALTer | TGR-4zw.1 | Lin et al (2019) |
-| Bimetric gravity | TGR-wq0.1 | Hassan & Rosen (2012) |
-| Metric-affine gravity | TGR-swh.1 | Hehl et al (1995) |
-| Hamiltonian analysis | TGR-vdm.1 | Henneaux & Teitelboim (1992) |
-| Index-free notation | TGR-xmm.1 | Wald (1984), Nutma (2014) |
-| Clifford algebra | TGR-dai.1 | Peskin & Schroeder (1995) |
+### Root cause: commit history
 
-## Known Issues (bug issues created)
+The ground truth was correct at commit **`058f035`** ("Fix deep simplifier bugs"). Four subsequent commits modified `src/algebra/canonicalize.jl`:
 
-- **TGR-55f**: DHOST degeneracy symbolic evaluation — `degeneracy_conditions()` returns symbolic expressions that don't reduce to zero for Horndeski-as-DHOST. Needs CAS integration or numeric path. 9 `@test_broken`.
-- **TGR-4aw**: RInv canonicalization conjugation — `_xperm_to_contraction` conjugation formula has edge cases where canonical contraction doesn't match expected form. 5 `@test_broken`.
+#### Commit 1: `1faf32f` — "Fix invalid dummy index pairs in canonicalization"
+**This is the primary regression commit.** It changed two things:
+1. **Added generator conjugation**: Before passing generators to xperm, it conjugates them via `perm ∘ gen_slot ∘ perm⁻¹`
+2. **Switched reconstruction**: Changed from `cperm_inv.data[slot]` to `cperm.data[slot]`
 
-## Cumulative state (Sessions 1+2)
+The stated motivation was fixing "corrupt Up/Down dummy pairing in multi-tensor products" that blocked Barnes-Rivers spin projection (TGR-zq2k). The commit also **relaxed term-count tests from `==` to `>=`** in test_6deriv_spectrum.jl, masking the regression.
 
-- **148 issues closed** (69 → 148)
-- **361,065 tests** pass, zero failures
-- **49 issues ready** to work
-- **203 open**, 154 blocked
+R³ went from **324 → 505 terms** at this commit.
 
-## What's ready next
+#### Commit 2: `59e4e81` — "Add fix_dummy_positions"
+Added `fix_dummy_positions()` utility that repairs same-position dummy pairs by flipping one occurrence. This is an independent post-processing function — it does NOT modify the canonicalize pipeline itself. **This commit is fine.**
 
-### Newly unblocked by this session:
-- TGR-d42: Tensor contraction engine for Feynman diagrams (vzx + 9vn done)
-- TGR-1rf: @spinor_manifold macro (ozc done)
-- TGR-7me: Weyl spinor Ψ_{ABCD} (ozc done)
-- TGR-2d4.2: Tetrad tensor registration (96h done)
-- TGR-0o2: Spin coefficients as Ricci rotation coefficients (96h done)
-- TGR-jt5: Cartan structure equations in tetrad basis (96h done)
-- TGR-443.1.4: Syzygy detection via DDIs (443.1.2 done)
-- TGR-443.1.5: Bidirectional RInv ↔ TensorExpr (443.1.2 done)
-- TGR-68g: Second-order source terms (4p8 done)
-- TGR-2vm: DHOST reduces to Horndeski (2wf done)
-- TGR-bgl.4: PPN potential equations (bgl.2 done, needs bgl.13)
+#### Commit 3: `25e9fa3` — "normalize_field_positions"
+Added `normalize_field_positions()` for lowering field indices. Independent utility. **This commit is fine.**
 
-### High-impact ready issues:
+#### Commit 4: `355d298` — "Extend xperm canonicalization for spinor index symmetries"
+Changed the name-assignment sort key from `by = i -> all_indices[i].name` to `by = i -> (string(all_indices[i].vbundle), all_indices[i].name)`. This groups names by VBundle, preventing cross-vbundle name swaps. Also made dummy classification vbundle-aware. **The vbundle changes are correct and necessary for spinors**, but the sort-key change alters the `perm_data` values, which interacts with the conjugation from commit 1. R³ went from **505 → 685 terms** (further degradation).
+
+### The xperm convention question
+
+The core mathematical question is: **what does `canonical_perm` in xperm.c expect?**
+
+Per `docs/xperm_algorithm.md` (Section 2):
+- `PERM` input: slot→slot permutation (xAct convention)
+- `GS` generators: slot-to-slot permutations
+- Inside, `canonical_perm` converts to Renato's notation: `PERM1 = PERM⁻¹` (slot→name)
+- Output `CPERM = PERM2⁻¹` converted back to xAct convention
+
+**However**, the Julia code constructs `perm_data[slot] = slot_to_name[slot]`, which is a **slot→name** mapping (Renato notation), NOT a slot→slot map (xAct convention). This means the code is passing the WRONG type of permutation to `canonical_perm`, which expects slot→slot.
+
+The baseline code (058f035) passed this slot→name map with unconjugated slot-space generators and used `cperm_inv` for reconstruction. This **happened to work** and produced strong canonicalization (324 terms for R³).
+
+Commit 1faf32f added conjugation `perm ∘ gen ∘ perm⁻¹` to "fix" the convention mismatch, and switched to `cperm` for reconstruction. The mathematical intent was to transform slot-space generators into name-space generators to compensate for passing a slot→name map. But this produces **weaker canonicalization** (505→685 terms) because the conjugated generators and direct cperm usage lead to xperm exploring a different (smaller effective) orbit in its internal coset_rep algorithm.
+
+### What needs to happen
+
+**The next agent must properly understand the xperm algorithm and fix the canonicalization.** There are essentially three approaches:
+
+1. **Revert conjugation + verify spin projection still works.** The baseline code at 058f035 produced correct bench_12 results. Commit 59e4e81 added `fix_dummy_positions` as a post-processing utility that can handle the same-position dummy pairs that motivated the conjugation in the first place. So: revert the conjugation (use unconjugated generators + `cperm_inv`), keep the vbundle-aware sort from 355d298, and test whether all 362k+ tests AND bench_12 all pass together. If spin projection dummy pairs are still broken, `fix_dummy_positions` should handle them.
+
+2. **Fix the convention properly.** Instead of passing a slot→name map to `canonical_perm` (which expects slot→slot), construct a proper slot→slot permutation. This means the "name assignment" step needs rethinking. The `perm_data` should encode a proper slot permutation that, when xperm internally inverts it, produces the desired slot→name mapping.
+
+3. **Use `canonical_perm_ext` directly.** Skip the `canonical_perm` wrapper and call `canonical_perm_ext` with Renato's notation directly: pass the slot→name map as PERM (which is what the ext function expects), pass slot-space generators (unchanged), and pass name-based free/dummy lists. This avoids the double-inversion confusion.
+
+### How to test the fix
+
+```bash
+# Quick smoke test (R³ should give 324):
+julia --project -e '
+using TensorGR
+reg = TensorRegistry()
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_curvature_tensors!(reg, :M4, :g)
+    maximally_symmetric_background!(reg, :M4; metric=:g, cosmological_constant=:Λ)
+    @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
+    mp = define_metric_perturbation!(reg, :g, :h; curved=true)
+    R1 = Tensor(:RicScalar, TIndex[])
+    expr = R1 * R1 * R1
+    raw = expand_perturbation(expr, mp, 2)
+    s = simplify(raw; registry=reg, maxiter=100)
+    n = s isa TSum ? length(s.terms) : 1
+    println("R^3 terms: $n (expected: 324)")
+end'
+
+# Full test suite (must pass 362k+, 0 failures):
+julia --project -e 'using Pkg; Pkg.test()'
+
+# Full bench_12 (all 6 invariants must match pinned counts):
+julia -t4 --project=benchmarks benchmarks/bench_12_6deriv_dS.jl
+```
+
+### Key files
+
+| File | Role |
+|------|------|
+| `src/algebra/canonicalize.jl` | **THE file to fix** — `_canonicalize_product` function |
+| `docs/xperm_algorithm.md` | Complete analysis of xperm.c conventions (603 lines, READ THIS FIRST) |
+| `deps/xperm.c` | The C implementation (2400 lines) |
+| `src/xperm/wrapper.jl` | Julia FFI wrapper for xperm |
+| `src/xperm/permutations.jl` | Perm type definition |
+| `benchmarks/bench_12_6deriv_dS.jl` | Ground truth term counts (lines 23-28) |
+| `test/test_6deriv_spectrum.jl` | Spectrum tests (may have relaxed `>=` that should be `==`) |
+| `benchmarks/ground_truth.jl` | Shared ground truth constants |
+
+### Commit archaeology commands
+
+```bash
+# Baseline (working) canonicalize.jl:
+git show 058f035:src/algebra/canonicalize.jl
+
+# The regression commit:
+git show 1faf32f:src/algebra/canonicalize.jl
+git diff 058f035..1faf32f -- src/algebra/canonicalize.jl
+
+# All 4 commits in order:
+git log --oneline 058f035..HEAD -- src/algebra/canonicalize.jl
+
+# Parent of regression (last known good):
+git show 0806808:src/algebra/canonicalize.jl
+```
+
+---
+
+## Other session state
+
+### Beads
+- 352 total issues, 152 closed, 48 ready
+- Backup synced to git and pushed
+- `bd ready` shows current work queue
+- `bd show TGR-0tm` for the regression bug details
+
+### What else is ready (after fixing TGR-0tm)
+- TGR-443.1.5: RInv bidirectional conversion
 - TGR-lej: Abstract tetrad indices in AST
 - TGR-bgl.13: PPN-to-component bridge
-- TGR-bgl.10: PPN gauge conditions
-- TGR-bgl.11: PPN Poisson solver
-- TGR-u19: BH-pert2 radial source assembly
-- TGR-xlu.6: Lanczos-Lovelock validation
-- TGR-4zw.2: Vector field spin projectors
+- TGR-4zw.3: Antisymmetric rank-2 field spin projectors (unblocked by 4zw.2)
+- TGR-bgl.4: PPN velocity-order expansion (unblocked by bgl.3)
+- 43 more ready issues (run `bd ready -n 48`)
 
-## Key patterns for next agent
+### Key patterns for next agent
 
-1. **Worktree isolation**: Implementation uses `isolation: worktree`. Merge conflicts are always in `test/runtests.jl` and `src/TensorGR.jl` (include/export lines) — resolve by keeping HEAD + adding unique lines from other side.
-
-2. **Registry change**: `TensorRegistry` now has a `tetrads` field (added this session). Constructor takes one more `Dict{Symbol,Any}()` argument.
-
-3. **Beads daemon**: Auto-pushes via `bd: backup` commits.
-
-4. **Ground truth**: Every test MUST cite actual equation numbers from local PDFs in `reference/ground_truth/`. Previous agents hallucinated equation numbers.
-
-5. **Test pattern**: New features go in `src/<subsystem>/file.jl`, tests in `test/test_file.jl`, include in `src/TensorGR.jl`, test include at end of `test/runtests.jl`.
-
-6. **Registry pattern**: New tensor types register via `register_tensor!`, new VBundles via `define_vbundle!`, metrics via `metric_cache`/`delta_cache`, tetrads via `tetrads` dict.
-
-7. **Subagent auditing**: Always verify subagent work — common bugs: wrong field names on structs (e.g. `rule.lhs` vs `rule.pattern`), missing exports, tuple destructuring issues, wrong xperm API calling conventions.
+1. **FIX TGR-0tm FIRST.** Everything else is secondary.
+2. **Read `docs/xperm_algorithm.md` completely** before touching canonicalize.jl.
+3. **Test with bench_12 R³ term count** as the primary regression test (must be 324).
+4. **Test with full test suite** to ensure no other regressions.
+5. **Beads**: `bd ready`, `bd show <id>`, `bd update <id> --claim`, `bd close <id>`
+6. **Worktree isolation**: Implementation uses `isolation: worktree`. Merge conflicts in runtests.jl and TensorGR.jl.
+7. **Ground truth**: Every test MUST cite actual equation numbers from references.
+8. **Test pattern**: src/<subsystem>/file.jl + test/test_file.jl + include in TensorGR.jl + runtests.jl.
