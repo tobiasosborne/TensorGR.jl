@@ -360,6 +360,167 @@ function extract_kernel_direct(expr::TensorExpr, field::Symbol;
 end
 
 """
+    δricci_flat(mp, a, b; registry=current_registry()) -> TensorExpr
+
+Linearized Ricci tensor on a flat background in the canonical manifestly-symmetric form:
+
+  δR_{ab} = (1/2)*g^{cd}*(∂_a∂_c h_{bd} + ∂_b∂_c h_{ad} - ∂_c∂_d h_{ab} - ∂_a∂_b h_{cd})
+
+This form has derivatives acting directly on h (no nested ∂(g*∂h) structures),
+making it compatible with `extract_kernel_direct` for spin projections.
+
+Use instead of `δricci(mp, a, b, 1)` when computing kernels on flat backgrounds.
+"""
+function δricci_flat(mp, a::TIndex, b::TIndex;
+                     registry::TensorRegistry=current_registry())
+    @assert a.position == Down "First index must be Down"
+    @assert b.position == Down "Second index must be Down"
+
+    field = mp.perturbation
+    metric = mp.metric
+    vb = a.vbundle
+
+    used = Set{Symbol}([a.name, b.name])
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used); push!(used, d)
+
+    g_inv = Tensor(metric, [up(c, vb), up(d, vb)])
+    h(i1, i2) = Tensor(field, [i1, i2])
+
+    # (1/2)*g^{cd}*(∂_a∂_c h_{bd} + ∂_b∂_c h_{ad} - ∂_c∂_d h_{ab} - ∂_a∂_b h_{cd})
+    t1 = g_inv * TDeriv(a, TDeriv(down(c, vb), h(b, down(d, vb)), :partial), :partial)
+    t2 = g_inv * TDeriv(b, TDeriv(down(c, vb), h(a, down(d, vb)), :partial), :partial)
+    t3 = TProduct(-1 // 1, TensorExpr[g_inv,
+         TDeriv(down(c, vb), TDeriv(down(d, vb), h(a, b), :partial), :partial)])
+    t4 = TProduct(-1 // 1, TensorExpr[g_inv,
+         TDeriv(a, TDeriv(b, h(down(c, vb), down(d, vb)), :partial), :partial)])
+
+    tproduct(1 // 2, TensorExpr[tsum(TensorExpr[t1, t2, t3, t4])])
+end
+
+"""
+    δricci_scalar_flat(mp; registry=current_registry()) -> TensorExpr
+
+Linearized Ricci scalar on flat background: δR = ∂^a∂^b h_{ab} - □h.
+"""
+function δricci_scalar_flat(mp; registry::TensorRegistry=current_registry())
+    field = mp.perturbation
+    metric = mp.metric
+    vb = :Tangent
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used); push!(used, d)
+
+    g1 = Tensor(metric, [up(a, vb), up(b, vb)])
+    g2 = Tensor(metric, [up(c, vb), up(d, vb)])
+    h(i1, i2) = Tensor(field, [i1, i2])
+
+    # ∂^a∂^b h_{ab} - □h = g^{ab}g^{cd}*∂_a∂_c h_{bd} - g^{cd}*∂_c∂_d(g^{ab}*h_{ab})
+    # Simpler: δR = g^{ab}*δR_{ab}  using the flat form
+    # = g^{ab}*(1/2)*g^{cd}*(∂_a∂_c h_{bd} + ∂_b∂_c h_{ad} - ∂_c∂_d h_{ab} - ∂_a∂_b h_{cd})
+    # = g^{ab}*g^{cd}*(∂_a∂_c h_{bd} - (1/2)*∂_c∂_d h_{ab} - (1/2)*∂_a∂_b h_{cd})
+    t1 = g1 * g2 * TDeriv(down(a, vb), TDeriv(down(c, vb), h(down(b, vb), down(d, vb)), :partial), :partial)
+    t2 = TProduct(-1 // 2, TensorExpr[g1, g2,
+         TDeriv(down(c, vb), TDeriv(down(d, vb), h(down(a, vb), down(b, vb)), :partial), :partial)])
+    t3 = TProduct(-1 // 2, TensorExpr[g1, g2,
+         TDeriv(down(a, vb), TDeriv(down(b, vb), h(down(c, vb), down(d, vb)), :partial), :partial)])
+
+    tsum(TensorExpr[t1, t2, t3])
+end
+
+"""Merge equivalent kernel bilinear terms via dummy normalization.
+
+Converts each (coeff, left, right) to a synthetic TensorExpr
+`coeff * _KL[left] * _KR[right]`, normalizes dummies across the
+combined expression, and merges terms with identical tensor structure.
+"""
+function _merge_kernel_terms(
+        terms::Vector{@NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}},
+        field::Symbol, reg::TensorRegistry)
+    isempty(terms) && return terms
+
+    kl_name = Symbol("_KL_", field)
+    kr_name = Symbol("_KR_", field)
+
+    # Register synthetic tensors with the SAME symmetry as the field tensor.
+    # This allows canonicalization to recognize e.g. _KR[a,b] = _KR[b,a]
+    # when the field h is symmetric.
+    if has_tensor(reg, field)
+        field_props = get_tensor(reg, field)
+        for sname in (kl_name, kr_name)
+            if !has_tensor(reg, sname)
+                register_tensor!(reg, TensorProperties(
+                    name=sname, manifold=field_props.manifold,
+                    rank=field_props.rank, symmetries=field_props.symmetries))
+            end
+        end
+    end
+
+    # Convert each bilinear term to: coeff * _KL[left] * _KR[right]
+    expr_terms = TensorExpr[]
+    for bt in terms
+        kl = Tensor(kl_name, bt.left)
+        kr = Tensor(kr_name, bt.right)
+        push!(expr_terms, tproduct(1 // 1, TensorExpr[bt.coeff, kl, kr]))
+    end
+
+    # Merge via _collect_terms_impl (normalizes dummies, merges identical cores)
+    combined = tsum(expr_terms)
+    merged = _collect_terms_impl(combined, true)  # canonicalize with registered symmetries for _KL/_KR
+
+    # Convert back to bilinear format
+    result = @NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}[]
+    merged_terms = merged isa TSum ? merged.terms : TensorExpr[merged]
+
+    for term in merged_terms
+        sc, factors = term isa TProduct ? (term.scalar, collect(term.factors)) :
+                      (1 // 1, TensorExpr[term])
+        kl_idx = findfirst(f -> f isa Tensor && f.name == kl_name, factors)
+        kr_idx = findfirst(f -> f isa Tensor && f.name == kr_name, factors)
+        (kl_idx === nothing || kr_idx === nothing) && continue
+
+        left = collect(factors[kl_idx].indices)
+        right = collect(factors[kr_idx].indices)
+        coeff_factors = TensorExpr[factors[i] for i in eachindex(factors)
+                                   if i != kl_idx && i != kr_idx]
+        coeff = isempty(coeff_factors) ? TScalar(sc) : tproduct(sc, coeff_factors)
+
+        # Re-deconflict: _normalize_dummies may have assigned the same
+        # canonical name to dummies in left and right. Rename right's dummies
+        # that clash with left to fresh names.
+        left_names = Set(idx.name for idx in left)
+        rename_map = Dict{Symbol,Symbol}()
+        all_names = Set{Symbol}()
+        for idx in left; push!(all_names, idx.name); end
+        for idx in right; push!(all_names, idx.name); end
+        for idx in indices(coeff); push!(all_names, idx.name); end
+
+        for (ri, ridx) in enumerate(right)
+            if ridx.name in left_names
+                fn = fresh_index(all_names)
+                push!(all_names, fn)
+                rename_map[ridx.name] = fn
+            end
+        end
+        if !isempty(rename_map)
+            for (ri, ridx) in enumerate(right)
+                if haskey(rename_map, ridx.name)
+                    right[ri] = TIndex(rename_map[ridx.name], ridx.position, ridx.vbundle)
+                end
+            end
+            coeff = rename_dummies(coeff, rename_map)
+        end
+
+        push!(result, (coeff = coeff, left = left, right = right))
+    end
+
+    result
+end
+
+"""
     _contract_kernel_metrics(bilinears, reg) -> bilinears
 
 Contract metric tensors in kernel coefficients with h index lists.

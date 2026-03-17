@@ -2,77 +2,98 @@
 
 ## Date: 2026-03-17
 
-## Checkpoint: 11f8ff8
+## Summary of All Changes
 
-Committed: canonical_perm_ext + inner sum collection + _apply_position_fixes.
+### Committed:
+1. `11f8ff8` — canonical_perm_ext + inner sum collection + _apply_position_fixes
+2. `f51146f` — flatten_metric_derivs + distribute_derivs improvements
+3. `5c49566` — kernel extraction bug identification
+4. `612a60a` — kernel metric contraction in coefficients
 
-## Results After Checkpoint
+### Uncommitted (current working tree):
+5. `δricci_flat` / `δricci_scalar_flat` — flat-space linearized Ricci in canonical form
+6. `_merge_kernel_terms` (disabled) — kernel term merging attempt (L/R boundary issues)
+7. Various exports
 
-### spin1 Investigation
-- `flatten_metric_derivs` implemented: applies Leibniz + ∂g=0 to ∂(g*∂h) → g*∂²h
-- Handles TDeriv wrapping TSum (distributes derivative first)
-- Handles scalar extraction (∂(c*X) → c*∂X)
-- Produces 3 flattened terms from the 2-term perturbation d1R_ab
+## Root Causes Found
 
-### But spin1 remains 0.75
-The flattened d1R_ab has different algebraic structure from the manual construction:
+### 1. canonical_perm non-idempotency — FIXED ✅
+`canonical_perm`'s PERM^{-1} conversion scrambles dummy pairings.
+Fix: `xperm_canonical_perm_ext` wrapper passes names directly to C function.
 
-Flattened (from perturbation, gives spin1=0.75):
+### 2. All-free canonicalization → same-position pairs — FIXED ✅
+Proper Up/Down pairs now classified as dummies with metricQ=1.
+
+### 3. Trapped inner sums — FIXED ✅
+`collect_inner_sums` + `_merge_identical_terms` in simplify pipeline.
+
+### 4. Kernel g-factors in coefficients — FIXED ✅
+`_contract_kernel_metrics` contracts metrics with h indices post-extraction.
+`contract_metrics` + `contract_momenta` on remaining coefficient factors.
+
+### 5. Perturbation δR_{ab} non-manifest symmetry — ROOT CAUSE OF spin1 ✅
+The Christoffel-based formula ∂_c(δΓ^c_{ab}) - ∂_b(δΓ^c_{ac}) is NOT manifestly
+symmetric. After inner sum merging, the coefficient ratios become asymmetric,
+causing the kernel extraction to produce non-canceling spin1 contributions.
+
+Fix: `δricci_flat` constructs the canonical 4-term form directly:
+  δR_{ab} = (1/2)*g^{cd}*(∂_a∂_c h_{bd} + ∂_b∂_c h_{ad} - ∂_c∂_d h_{ab} - ∂_a∂_b h_{cd})
+
+With this form: spin1=0 ✓, spin2=2.5 ✓
+
+### 6. δricci_scalar_flat coefficients — REMAINING BUG
+spin0s=0.5 (should be -1.0), spin0w=-1.5 (should be 0.0).
+The `δricci_scalar_flat` formula likely has wrong coefficients.
+The correct flat-space formula is: δR = ∂^a∂^b h_{ab} - □h
+Current implementation uses a 3-term g^{ab}g^{cd} form that may have errors.
+
+## Test Results
+
+| Test | Result | Status |
+|------|--------|--------|
+| spin2 (with δricci_flat) | 2.5 = FP | ✅ |
+| spin1 (with δricci_flat) | 0.0 = FP | ✅ |
+| spin0s (with δricci_flat) | 0.5 ≠ -1.0 | ❌ needs δricci_scalar_flat fix |
+| spin0w (with δricci_flat) | -1.5 ≠ 0.0 | ❌ needs δricci_scalar_flat fix |
+| spin2 (with δricci from perturbation) | 2.5 = FP | ✅ |
+| spin1 (with δricci from perturbation) | 0.75 ≠ 0.0 | ⚠️ non-manifest symmetry |
+| R³ terms | 229 (was 362) | ✅ improved |
+| Idempotency | Stable | ✅ |
+
+## Next Steps for Continuation
+
+### Immediate: Fix δricci_scalar_flat
+The scalar formula should be: δR = g^{ab}*δR_{ab} where δR_{ab} is the flat form.
+Instead of constructing separately, TRACE the δricci_flat result:
+```julia
+d1R = simplify(Tensor(:g, [up(:a), up(:b)]) * δricci_flat(mp, down(:a), down(:b)), registry=reg)
 ```
-1. g^{cd} * ∂_c∂_a(h_{b,d})      — ∂_a∂^d h_{bd} term (coefficient 1)
-2. (-1/2) * g^{cd} * ∂_c∂_d(h_ab) — -□h_{ab}/2 term
-3. -(1/2) * g^{cd} * ∂_b∂_c(h_ad) — -∂_b∂^d h_{ad}/2 term
-```
+This avoids coefficient errors from a separate formula.
 
-Manual (gives spin1=0):
-```
-1. (-1/2) * g^{b,c} * ∂_c∂_a(h_{d,d}) — -∂_a∂_b h/2 (trace term)
-2. g^{cd} * ∂_c∂_b(h_{a,d})            — ∂_b∂^d h_{ad} term (coefficient 1)
-3. (-1/2) * g^{cd} * ∂_c∂_d(h_{a,b})   — -□h_{ab}/2 term
-```
+### Then: Integration
+- Test all 3 kernels (FP, R², Ric²) with δricci_flat
+- Run targeted test suite (kernel extraction tests)
+- Verify bench_12 with increased maxiter
 
-Both are algebraically equivalent (same tensor δR_{ab}) but have different coefficient
-partitioning between the ∂_a∂^c h_{bc} and ∂_b∂^c h_{ac} terms. The kernel extraction
-is sensitive to this partitioning.
+### Architecture notes
+- `flatten_metric_derivs` EXISTS but doesn't help for the spin1 issue because
+  inner sum merging corrupts coefficient ratios before flattening can fix them
+- The `_merge_kernel_terms` function was attempted but corrupts L/R index
+  boundaries during _normalize_dummies. Reverted.
+- The proper approach (matching xAct's `IndexCoefficient` + `CollectTensors`)
+  would need L/R-aware dummy normalization. This is a significant infrastructure
+  addition, not attempted yet.
 
-### Root Cause of spin1 residual
-The perturbation engine produces δR_{ab} in a specific algebraic form that DIFFERS from
-the canonical textbook form. Both are correct expressions for the same tensor, but the
-kernel extraction assumes a specific structure (each h factor with clearly separated
-derivative count) that matches the canonical form but not the perturbation form.
+## Key Insight from xAct Research
+xAct does NOT have built-in kernel extraction or spin projections.
+Users extract kernels manually via `IndexCoefficient` + `CollectTensors`.
+The key enabler is `UseMetricOnVBundle->All` in `ToCanonical`, which allows
+the Butler-Portugal algorithm to merge equivalent terms via metric-aware
+dummy relabeling. TensorGR now has this via `canonical_perm_ext`.
 
-### Fix Options (not yet implemented)
-1. **Fix perturbation engine**: Make δricci produce the canonical 4-term form directly
-2. **Fix kernel extraction**: Handle arbitrary algebraically-equivalent forms of δR_{ab}
-3. **Add symmetrization**: Symmetrize d1R_ab in (a,b) before extraction
-4. **Manual override**: Allow users to provide δR in canonical form (workaround, not fix)
-
-## Full Summary of Changes
-
-### Committed (11f8ff8):
-- `xperm_canonical_perm_ext` wrapper
-- Proper dummy canonicalization
-- `collect_inner_sums` + `_merge_identical_terms`
-- `_apply_position_fixes` for TProduct/TSum
-
-### Uncommitted (working tree):
-- `flatten_metric_derivs` function (Leibniz + ∂g=0)
-- `distribute_derivs_over_sums` improvements (expand_products inside, scalar recursion)
-- Export of `flatten_metric_derivs`
-
-### Test Results
-
-| Test | Before All Changes | After Committed | With flatten | Status |
-|------|-------------------|-----------------|--------------|--------|
-| Idempotency | Period-2 | Stable | Stable | ✅ |
-| spin2 | Wrong | 2.5 ✓ | 2.5 ✓ | ✅ |
-| spin0s | Wrong | -1.0 ✓ | -1.0 ✓ | ✅ |
-| spin0w | 1.5 | 0.0 ✓ | 0.0 ✓ | ✅ |
-| spin1 | 3.0 | 0.75 | 0.75 | ⚠️ |
-| spin1 (manual δR) | — | — | 0.0 ✓ | ✅ (proves extraction works) |
-| R³ terms | 362 | 229 | — | ✅ improved |
-
-## Physics Ground Truth
-- spin1 = 0, spin0w = 0 for ALL kernels (diffeomorphism invariance)
-- ALL 4 constraints satisfied with manual flat-space δR construction
-- 3/4 constraints satisfied with perturbation-generated δR
+## Files Modified
+- `src/xperm/wrapper.jl` — `xperm_canonical_perm_ext`
+- `src/algebra/canonicalize.jl` — proper dummy routing, _apply_position_fixes
+- `src/algebra/simplify.jl` — collect_inner_sums, distribute_derivs, flatten_metric_derivs
+- `src/action/kernel_extraction.jl` — _contract_kernel_metrics, δricci_flat, δricci_scalar_flat
+- `src/TensorGR.jl` — exports

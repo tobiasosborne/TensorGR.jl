@@ -230,7 +230,7 @@ export set_conformal_to!
 export linearize, δRiemann, δRicci, δRicciScalar
 export sorted_partitions, all_compositions, multinomial
 export MetricPerturbation, define_metric_perturbation!, perturb, δinverse_metric
-export δchristoffel, δriemann, δricci, δricci_scalar, expand_perturbation
+export δchristoffel, δriemann, δricci, δricci_scalar, δricci_flat, δricci_scalar_flat, expand_perturbation
 export define_tensor_perturbation!, perturbation_order, background_solution!
 export gauge_transformation
 export maximally_symmetric_background!, cosmological_background!, vacuum_background!
