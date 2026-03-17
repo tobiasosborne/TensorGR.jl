@@ -350,7 +350,89 @@ function extract_kernel_direct(expr::TensorExpr, field::Symbol;
         push!(bilinears, bt)
     end
 
-    KineticKernel(field, bilinears)
+    # Contract metric factors in coefficients with h indices.
+    # The extraction can leave g tensors in coefficients (from ∂(g*∂h) structures)
+    # that connect coefficient indices to h indices. Contract these to produce
+    # pure scalar coefficients, matching the canonical kernel form.
+    contracted = _contract_kernel_metrics(bilinears, registry)
+
+    KineticKernel(field, contracted)
+end
+
+"""
+    _contract_kernel_metrics(bilinears, reg) -> bilinears
+
+Contract metric tensors in kernel coefficients with h index lists.
+E.g., coeff=g[c,d]*k[a]*k[b], right=[-b,-d] → coeff=k[a]*k[b], right=[-b,c]
+(g contracts d with right's d, raising it to c).
+"""
+function _contract_kernel_metrics(
+        bilinears::Vector{@NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}},
+        reg::TensorRegistry)
+    result = @NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}[]
+    for bt in bilinears
+        push!(result, _contract_one_bilinear_metric(bt, reg))
+    end
+    result
+end
+
+function _contract_one_bilinear_metric(bt, reg)
+    sc, factors = bt.coeff isa TProduct ? (bt.coeff.scalar, collect(bt.coeff.factors)) :
+                  bt.coeff isa TScalar  ? (bt.coeff.val isa Rational ? bt.coeff.val : 1 // 1, TensorExpr[]) :
+                                          (1 // 1, TensorExpr[bt.coeff])
+    left = collect(bt.left)
+    right = collect(bt.right)
+
+    changed = true
+    while changed
+        changed = false
+        for (mi, f) in enumerate(factors)
+            f isa Tensor || continue
+            has_tensor(reg, f.name) || continue
+            props = get_tensor(reg, f.name)
+            (props.is_metric || props.is_delta) || continue
+            length(f.indices) == 2 || continue
+
+            # Try to contract metric index with left or right h indices
+            for midx_pos in 1:2
+                midx = f.indices[midx_pos]
+                other_midx = f.indices[3 - midx_pos]
+
+                # Check left indices
+                for (li, lidx) in enumerate(left)
+                    if lidx.name == midx.name && lidx.position != midx.position &&
+                       lidx.vbundle == midx.vbundle
+                        # Contract: replace left index with the OTHER metric index.
+                        # The surviving index keeps the metric's position (g raises/lowers).
+                        left[li] = TIndex(other_midx.name, other_midx.position,
+                                          other_midx.vbundle)
+                        deleteat!(factors, mi)
+                        changed = true
+                        @goto next_metric
+                    end
+                end
+
+                # Check right indices
+                for (ri, ridx) in enumerate(right)
+                    if ridx.name == midx.name && ridx.position != midx.position &&
+                       ridx.vbundle == midx.vbundle
+                        right[ri] = TIndex(other_midx.name, other_midx.position,
+                                           other_midx.vbundle)
+                        deleteat!(factors, mi)
+                        changed = true
+                        @goto next_metric
+                    end
+                end
+            end
+            @label next_metric
+            changed && break  # restart loop after modifying factors
+        end
+    end
+
+    coeff = isempty(factors) ? TScalar(sc) : tproduct(sc, factors)
+    # Contract remaining g*k*k → k² in the coefficient
+    coeff = contract_momenta(contract_metrics(coeff))
+    (coeff = coeff, left = left, right = right)
 end
 
 """
