@@ -79,6 +79,62 @@ function distribute_derivs_over_sums(d::TDeriv)
 end
 
 """
+    flatten_metric_derivs(expr, metric::Symbol) -> TensorExpr
+
+Apply the Leibniz rule to derivatives of products containing the metric,
+then drop the ∂(metric) terms (metric compatibility on flat background).
+
+This converts `∂_a(g^{cd} * X)` → `g^{cd} * ∂_a(X)` by:
+1. Leibniz: `∂(g*X) → ∂g*X + g*∂X`
+2. Metric compatibility: `∂g = 0` → drop the first term
+3. Result: `g*∂X`
+
+Use as a post-processing step before kernel extraction when the background
+is flat (all curvature vanishing). NOT for the general simplify pipeline.
+"""
+flatten_metric_derivs(t::Tensor, metric::Symbol) = t
+flatten_metric_derivs(s::TScalar, metric::Symbol) = s
+
+function flatten_metric_derivs(s::TSum, metric::Symbol)
+    tsum(TensorExpr[flatten_metric_derivs(t, metric) for t in s.terms])
+end
+
+function flatten_metric_derivs(p::TProduct, metric::Symbol)
+    TProduct(p.scalar, TensorExpr[flatten_metric_derivs(f, metric) for f in p.factors])
+end
+
+function flatten_metric_derivs(d::TDeriv, metric::Symbol)
+    inner = flatten_metric_derivs(d.arg, metric)
+    if inner isa TSum
+        # Distribute derivative over sum first: ∂(A+B) → ∂A + ∂B
+        # Then recurse to flatten each term
+        terms = TensorExpr[flatten_metric_derivs(TDeriv(d.index, t, d.covd), metric)
+                           for t in inner.terms]
+        return tsum(terms)
+    elseif inner isa TProduct
+        if inner.scalar != 1 // 1
+            # Pull scalar out: ∂(c*X) → c*∂(X), then recurse
+            core = tproduct(1 // 1, inner.factors)
+            flat = flatten_metric_derivs(TDeriv(d.index, core, d.covd), metric)
+            return flat isa TSum ?
+                tsum(TensorExpr[tproduct(inner.scalar, TensorExpr[t]) for t in flat.terms]) :
+                tproduct(inner.scalar, TensorExpr[flat])
+        end
+        # Check if any factor is the metric tensor
+        metric_idx = findfirst(f -> f isa Tensor && f.name == metric, inner.factors)
+        if metric_idx !== nothing
+            # Leibniz + ∂g=0: ∂(g*X) → g*∂X (drop ∂g*X term)
+            metric_tensor = inner.factors[metric_idx]
+            other_factors = TensorExpr[inner.factors[i] for i in eachindex(inner.factors) if i != metric_idx]
+            other = tproduct(inner.scalar, other_factors)
+            new_deriv = flatten_metric_derivs(TDeriv(d.index, other, d.covd), metric)
+            return tproduct(1 // 1, TensorExpr[metric_tensor, new_deriv])
+        end
+    end
+    TDeriv(d.index, inner, d.covd)
+end
+
+"""
     collect_inner_sums(expr::TensorExpr) -> TensorExpr
 
 Recursively simplify TSum nodes inside TDeriv arguments.

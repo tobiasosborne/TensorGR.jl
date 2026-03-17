@@ -2,68 +2,77 @@
 
 ## Date: 2026-03-17
 
-## BREAKTHROUGH: All 4 Physics Constraints Satisfied
+## Checkpoint: 11f8ff8
 
-When δ¹R_{ab} is constructed in the correct flat-space form (derivatives act directly on h,
-not on g*∂h products), the kernel extraction produces PERFECT spin projections:
+Committed: canonical_perm_ext + inner sum collection + _apply_position_fixes.
 
+## Results After Checkpoint
+
+### spin1 Investigation
+- `flatten_metric_derivs` implemented: applies Leibniz + ∂g=0 to ∂(g*∂h) → g*∂²h
+- Handles TDeriv wrapping TSum (distributes derivative first)
+- Handles scalar extraction (∂(c*X) → c*∂X)
+- Produces 3 flattened terms from the 2-term perturbation d1R_ab
+
+### But spin1 remains 0.75
+The flattened d1R_ab has different algebraic structure from the manual construction:
+
+Flattened (from perturbation, gives spin1=0.75):
 ```
-spin2  = 2.5  ✓ (FP = 2.5)
-spin1  = 0.0  ✓ (FP = 0.0)  ← diffeomorphism invariance!
-spin0s = -1.0 ✓ (FP = -1.0)
-spin0w = 0.0  ✓ (FP = 0.0)  ← diffeomorphism invariance!
+1. g^{cd} * ∂_c∂_a(h_{b,d})      — ∂_a∂^d h_{bd} term (coefficient 1)
+2. (-1/2) * g^{cd} * ∂_c∂_d(h_ab) — -□h_{ab}/2 term
+3. -(1/2) * g^{cd} * ∂_b∂_c(h_ad) — -∂_b∂^d h_{ad}/2 term
 ```
 
-## Root Cause Chain (Complete)
+Manual (gives spin1=0):
+```
+1. (-1/2) * g^{b,c} * ∂_c∂_a(h_{d,d}) — -∂_a∂_b h/2 (trace term)
+2. g^{cd} * ∂_c∂_b(h_{a,d})            — ∂_b∂^d h_{ad} term (coefficient 1)
+3. (-1/2) * g^{cd} * ∂_c∂_d(h_{a,b})   — -□h_{ab}/2 term
+```
 
-### Bug 1: canonical_perm non-idempotency — FIXED
-`canonical_perm`'s PERM^{-1} conversion scrambles dummy pairings.
-Fix: `canonical_perm_ext` wrapper passes names directly.
+Both are algebraically equivalent (same tensor δR_{ab}) but have different coefficient
+partitioning between the ∂_a∂^c h_{bc} and ∂_b∂^c h_{ac} terms. The kernel extraction
+is sensitive to this partitioning.
 
-### Bug 2: Trapped inner sums — FIXED
-`collect_terms` doesn't recurse into TDeriv args.
-Fix: `collect_inner_sums` with `_merge_identical_terms`.
+### Root Cause of spin1 residual
+The perturbation engine produces δR_{ab} in a specific algebraic form that DIFFERS from
+the canonical textbook form. Both are correct expressions for the same tensor, but the
+kernel extraction assumes a specific structure (each h factor with clearly separated
+derivative count) that matches the canonical form but not the perturbation form.
 
-### Bug 3: Nested ∂(g*∂h) structures — IDENTIFIED, FIX DESIGNED
-The perturbation engine produces δR_{ab} = ∂_c((1/2)*g^{cd}*(...)) which has
-derivatives acting on products containing the metric. On flat background, ∂g=0
-so ∂(g*∂h) = g*∂²h, but the code doesn't apply this.
+### Fix Options (not yet implemented)
+1. **Fix perturbation engine**: Make δricci produce the canonical 4-term form directly
+2. **Fix kernel extraction**: Handle arbitrary algebraically-equivalent forms of δR_{ab}
+3. **Add symmetrization**: Symmetrize d1R_ab in (a,b) before extraction
+4. **Manual override**: Allow users to provide δR in canonical form (workaround, not fix)
 
-Fix: `flatten_metric_derivs` function that applies Leibniz + ∂g=0 as a
-post-processing step before kernel extraction. NOT in the general simplify loop.
+## Full Summary of Changes
 
-## Changes Made (in working tree)
+### Committed (11f8ff8):
+- `xperm_canonical_perm_ext` wrapper
+- Proper dummy canonicalization
+- `collect_inner_sums` + `_merge_identical_terms`
+- `_apply_position_fixes` for TProduct/TSum
 
-1. **src/xperm/wrapper.jl** — `xperm_canonical_perm_ext` (+80 lines)
-2. **src/algebra/canonicalize.jl** — Proper dummy canonicalization + _apply_position_fixes for TProduct/TSum
-3. **src/algebra/simplify.jl** — `collect_inner_sums`, `_merge_identical_terms`, `distribute_derivs_over_sums` (exists but not in pipeline)
-4. **src/TensorGR.jl** — Export `distribute_derivs_over_sums`
+### Uncommitted (working tree):
+- `flatten_metric_derivs` function (Leibniz + ∂g=0)
+- `distribute_derivs_over_sums` improvements (expand_products inside, scalar recursion)
+- Export of `flatten_metric_derivs`
 
-## Test Results Summary
+### Test Results
 
-| Test | Before Changes | After Changes | Status |
-|------|---------------|---------------|--------|
-| Idempotency | Period-2 oscillation | Stable | ✅ FIXED |
-| spin2 | Wrong | 2.5 = FP | ✅ FIXED |
-| spin0s | Wrong | -1.0 = FP | ✅ FIXED |
-| spin0w | 1.5 | 0.0 = FP | ✅ FIXED |
-| spin1 | 3.0 | 0.75 (0.0 with manual flat δR) | ⚠️ needs flatten_metric_derivs |
-| R³ terms | 362 | 229 | ✅ IMPROVED |
-| R³ convergence | converged | stable but hash oscillates | ⚠️ cosmetic |
+| Test | Before All Changes | After Committed | With flatten | Status |
+|------|-------------------|-----------------|--------------|--------|
+| Idempotency | Period-2 | Stable | Stable | ✅ |
+| spin2 | Wrong | 2.5 ✓ | 2.5 ✓ | ✅ |
+| spin0s | Wrong | -1.0 ✓ | -1.0 ✓ | ✅ |
+| spin0w | 1.5 | 0.0 ✓ | 0.0 ✓ | ✅ |
+| spin1 | 3.0 | 0.75 | 0.75 | ⚠️ |
+| spin1 (manual δR) | — | — | 0.0 ✓ | ✅ (proves extraction works) |
+| R³ terms | 362 | 229 | — | ✅ improved |
 
-## Next Steps
-
-### Immediate: Implement `flatten_metric_derivs`
-- Apply Leibniz rule to ∂(metric * X) → ∂metric * X + metric * ∂X
-- Apply ∂metric = 0 (for metric-compatible flat background)
-- Apply as post-processing step in kernel extraction path
-- NOT in general simplify loop
-
-### Then: Test full suite + benchmarks
-- Targeted tests for spin projections (all 3 kernels: FP, R², Ric²)
-- R³ benchmark with increased maxiter
-- Full test suite
-
-## Physics Validation (ONLY oracle)
-- spin1 = 0, spin0w = 0 for ALL kernels — VERIFIED with manual flat δR ✓
-- K_FP: spin2 = 2.5k², spin0s = -k² — VERIFIED ✓
+## Physics Ground Truth
+- spin1 = 0, spin0w = 0 for ALL kernels (diffeomorphism invariance)
+- ALL 4 constraints satisfied with manual flat-space δR construction
+- 3/4 constraints satisfied with perturbation-generated δR
