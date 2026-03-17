@@ -128,7 +128,16 @@ function flatten_metric_derivs(d::TDeriv, metric::Symbol)
             other_factors = TensorExpr[inner.factors[i] for i in eachindex(inner.factors) if i != metric_idx]
             other = tproduct(inner.scalar, other_factors)
             new_deriv = flatten_metric_derivs(TDeriv(d.index, other, d.covd), metric)
-            return tproduct(1 // 1, TensorExpr[metric_tensor, new_deriv])
+            # Deconflict dummies: the metric being pulled out may share
+            # dummy names with the derivative result from a different scope
+            new_deriv = ensure_no_dummy_clash(metric_tensor, new_deriv)
+            # Distribute metric over sum if derivative produced one
+            if new_deriv isa TSum
+                return tsum(TensorExpr[tproduct(1 // 1, TensorExpr[metric_tensor, t])
+                                       for t in new_deriv.terms])
+            else
+                return tproduct(1 // 1, TensorExpr[metric_tensor, new_deriv])
+            end
         end
     end
     TDeriv(d.index, inner, d.covd)
