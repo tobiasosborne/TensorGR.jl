@@ -59,32 +59,34 @@ function _analyze_indices(expr::TensorExpr)
     pairs = Tuple{TIndex, TIndex}[]
 
     for ((name, vb), idxs) in key_groups
-        ups = TIndex[]
-        downs = TIndex[]
-        for idx in idxs
-            if idx.position == Up
-                push!(ups, idx)
-            else
-                push!(downs, idx)
+        if length(idxs) == 2
+            # Exactly two occurrences: always a dummy pair, regardless of
+            # position.  All-free canonicalization can produce same-position
+            # pairs; these are still dummies (Einstein summation convention).
+            push!(pairs, (idxs[1], idxs[2]))
+        elseif length(idxs) == 1
+            push!(free, idxs[1])
+        else
+            # 3+ occurrences: pair as many Up/Down as possible, rest free.
+            ups = TIndex[]
+            downs = TIndex[]
+            for idx in idxs
+                if idx.position == Up
+                    push!(ups, idx)
+                else
+                    push!(downs, idx)
+                end
             end
-        end
-
-        npaired = min(length(ups), length(downs))
-        for i in 1:npaired
-            push!(pairs, (ups[i], downs[i]))
-        end
-
-        # Unpaired indices are free
-        for i in (npaired + 1):length(ups)
-            push!(free, ups[i])
-        end
-        for i in (npaired + 1):length(downs)
-            push!(free, downs[i])
-        end
-
-        # If no pairing possible (all same position), all are free
-        if isempty(ups) || isempty(downs)
-            # Already handled: npaired=0, all go to unpaired loops
+            npaired = min(length(ups), length(downs))
+            for i in 1:npaired
+                push!(pairs, (ups[i], downs[i]))
+            end
+            for i in (npaired + 1):length(ups)
+                push!(free, ups[i])
+            end
+            for i in (npaired + 1):length(downs)
+                push!(free, downs[i])
+            end
         end
     end
 
