@@ -154,3 +154,83 @@ function xperm_canonical_perm(perm::Perm, base::Vector{Int32},
 
     Perm(cperm)
 end
+
+"""
+    xperm_canonical_perm_ext(perm, base, generators, free_names, dummy_names, n;
+                             metricQ=1) -> Perm
+
+Find the canonical representative using `canonical_perm_ext` directly.
+Unlike `xperm_canonical_perm`, this function passes free and dummy indices
+as NAMES to the algorithm, avoiding the slot-conversion in `canonical_perm`
+that makes the result input-ordering-dependent.
+
+# Arguments
+- `perm::Perm`: permutation in Renato notation (name→slot, = inverse of xAct notation)
+- `base::Vector{Int32}`: base for the symmetry group
+- `generators::Vector{Perm}`: symmetry group generators (slot permutations)
+- `free_names::Vector{Int32}`: names of free indices (1-indexed)
+- `dummy_names::Vector{Int32}`: paired dummy names [u1,d1, u2,d2, ...] (1-indexed)
+- `n::Int`: degree of the permutation
+
+# Returns
+- Canonical permutation in Renato notation (name→slot).
+  Sign: `result[n-1]==n-1, result[n]==n` → positive.
+  All zeros → expression is zero.
+"""
+function xperm_canonical_perm_ext(perm::Perm, base::Vector{Int32},
+                                  generators::Vector{Perm},
+                                  free_names::Vector{Int32},
+                                  dummy_names::Vector{Int32},
+                                  n::Int;
+                                  metricQ::Int=1)
+    _ensure_lib_loaded()
+    @assert degree(perm) == n
+
+    bl = length(base)
+    m = length(generators)
+    fl = length(free_names)
+    dl = length(dummy_names)
+    dpl = div(dl, 2)
+
+    # Flatten generators
+    GS = Vector{Int32}(undef, max(m * n, 1))
+    for (i, g) in enumerate(generators)
+        @assert degree(g) == n
+        copyto!(GS, (i-1)*n + 1, g.data, 1, n)
+    end
+
+    SGSQ = Cint(0)
+
+    # Single dummyset: all pairs share the same metric symmetry
+    vds = Int32[dl]       # one dummyset containing all pairs
+    vdsl = Cint(1)
+    mQ = Int32[metricQ]
+
+    # No repeated indices
+    vrs = Int32[]
+    vrsl = Cint(0)
+    repes = Int32[]
+    rl = Cint(0)
+
+    # Output buffer
+    cperm = Vector{Int32}(undef, n)
+
+    ccall(
+        (:canonical_perm_ext, _libxperm_path),
+        Cvoid,
+        (Ptr{Cint}, Cint,
+         Cint, Ptr{Cint}, Cint, Ptr{Cint}, Cint,
+         Ptr{Cint}, Cint,
+         Ptr{Cint}, Cint, Ptr{Cint}, Cint, Ptr{Cint},
+         Ptr{Cint}, Cint, Ptr{Cint}, Cint,
+         Ptr{Cint}),
+        perm.data, n,
+        SGSQ, base, bl, GS, m,
+        free_names, fl,
+        vds, vdsl, dummy_names, dl, mQ,
+        vrs, vrsl, repes, rl,
+        cperm
+    )
+
+    Perm(cperm)
+end

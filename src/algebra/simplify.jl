@@ -37,6 +37,105 @@ function expand_products(p::TProduct)
 end
 
 """
+    distribute_derivs_over_sums(expr::TensorExpr) -> TensorExpr
+
+Distribute derivatives over sums (linearity): ∂(A+B) → ∂A + ∂B.
+Also pull scalars out: ∂(c*T) → c*∂(T).
+
+This matches xAct's eager derivative linearity (`covdL[expr_Plus] := Map[covdR, expr]`).
+"""
+distribute_derivs_over_sums(t::Tensor) = t
+distribute_derivs_over_sums(s::TScalar) = s
+
+function distribute_derivs_over_sums(s::TSum)
+    tsum(TensorExpr[distribute_derivs_over_sums(t) for t in s.terms])
+end
+
+function distribute_derivs_over_sums(p::TProduct)
+    TProduct(p.scalar, TensorExpr[distribute_derivs_over_sums(f) for f in p.factors])
+end
+
+function distribute_derivs_over_sums(d::TDeriv)
+    inner = distribute_derivs_over_sums(d.arg)
+    # Expand products inside the derivative to expose nested sums.
+    # E.g., ∂(g*(A+B)) → ∂(g*A + g*B) → ∂(g*A) + ∂(g*B)
+    inner = expand_products(inner)
+    if inner isa TSum
+        # ∂(A + B) → ∂A + ∂B
+        tsum(TensorExpr[distribute_derivs_over_sums(TDeriv(d.index, t, d.covd)) for t in inner.terms])
+    elseif inner isa TProduct && inner.scalar != 1 // 1
+        # ∂(c*T) → c*∂(T) (linearity), then recurse to distribute over
+        # any TSum that was hidden under the scalar
+        core = tproduct(1 // 1, inner.factors)
+        distributed = distribute_derivs_over_sums(TDeriv(d.index, core, d.covd))
+        if distributed isa TSum
+            tsum(TensorExpr[tproduct(inner.scalar, TensorExpr[t]) for t in distributed.terms])
+        else
+            tproduct(inner.scalar, TensorExpr[distributed])
+        end
+    else
+        TDeriv(d.index, inner, d.covd)
+    end
+end
+
+"""
+    collect_inner_sums(expr::TensorExpr) -> TensorExpr
+
+Recursively simplify TSum nodes inside TDeriv arguments.
+The top-level `collect_terms` only merges terms at the outermost TSum;
+this function reaches inner sums that are trapped inside derivative wrappers.
+"""
+collect_inner_sums(t::Tensor) = t
+collect_inner_sums(s::TScalar) = s
+
+function collect_inner_sums(s::TSum)
+    tsum(TensorExpr[collect_inner_sums(t) for t in s.terms])
+end
+
+function collect_inner_sums(p::TProduct)
+    TProduct(p.scalar, TensorExpr[collect_inner_sums(f) for f in p.factors])
+end
+
+function collect_inner_sums(d::TDeriv)
+    inner = collect_inner_sums(d.arg)
+    # Simplify any TSum inside the derivative argument.
+    # IMPORTANT: do NOT use collect_terms here — it renormalizes dummy
+    # names without knowledge of the outer context, causing clashes.
+    # Instead, merge only structurally identical terms (same core, no renaming).
+    if inner isa TSum
+        inner = _merge_identical_terms(inner)
+    elseif inner isa TProduct
+        new_factors = TensorExpr[]
+        for f in inner.factors
+            if f isa TSum
+                push!(new_factors, _merge_identical_terms(f))
+            else
+                push!(new_factors, f)
+            end
+        end
+        inner = TProduct(inner.scalar, new_factors)
+    end
+    TDeriv(d.index, inner, d.covd)
+end
+
+"""Merge terms with structurally identical cores (no dummy renaming).
+Used for inner sums where dummy normalization would clash with outer context."""
+function _merge_identical_terms(s::TSum)
+    buckets = Dict{TensorExpr, Rational{Int}}()
+    for term in s.terms
+        scalar, core = _split_scalar(term)
+        buckets[core] = get(buckets, core, 0 // 1) + scalar
+    end
+    terms = TensorExpr[]
+    for (core, coeff) in buckets
+        coeff == 0 && continue
+        push!(terms, tproduct(coeff, TensorExpr[core]))
+    end
+    sort!(terms, by = t -> hash(t))
+    tsum(terms)
+end
+
+"""
     collect_terms(expr::TSum) -> TensorExpr
 
 Combine terms that differ only by scalar coefficient.
@@ -360,6 +459,8 @@ function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
         end
     end
 
+    # Simplify inner sums trapped inside TDeriv arguments, then collect top-level
+    result = collect_inner_sums(result)
     if parallel && result isa TSum && length(result.terms) >= PARALLEL_THRESHOLD
         result = _collect_terms_parallel(result)
     else

@@ -167,25 +167,37 @@ function _canonicalize_product(p::TProduct)
     end
 
     # ── Name assignment ──────────────────────────────────────────────
-    # xperm requires a BIJECTIVE perm. Every slot gets a unique name.
-    # We treat ALL indices as free for xperm (dummies get unique names
-    # but are listed as free). Dummy renaming is handled separately in
-    # collect_terms via _normalize_dummies.
-    #
-    # This avoids xperm's double-coset algorithm moving dummy names
-    # between structurally different slots (e.g., derivative vs tensor).
+    # Pass proper dummy pairs to xperm so the Butler-Portugal algorithm
+    # maintains Up/Down pairing (like xAct's UseMetricOnVBundle->All).
+    # Dummy pairs get TWO consecutive names: pair k gets (2k-1, 2k).
+    # Free indices get names after all dummies.
+    # Same-position pairs (from legacy all-free mode) fall through to
+    # free treatment and are gradually eliminated over simplify iterations.
 
-    # Sort all slots by symbol for deterministic name assignment
-    all_slots_sorted = sort(collect(1:nslots), by = i -> all_indices[i].name)
+    # Sort for deterministic name assignment
+    sort!(dummy_info, by = x -> x[1])  # by symbol name
+    sort!(free_slots_list, by = x -> (x[1], x[2]))  # by (symbol, slot)
 
     slot_to_name = Dict{Int, Int}()
-    for (name, slot) in enumerate(all_slots_sorted)
-        slot_to_name[slot] = name
+    name_counter = 1
+
+    # Dummy pairs: each gets consecutive names
+    dummyps = Int32[]
+    for (sym, up_slot, down_slot) in dummy_info
+        slot_to_name[up_slot] = name_counter
+        slot_to_name[down_slot] = name_counter + 1
+        push!(dummyps, Int32(name_counter))
+        push!(dummyps, Int32(name_counter + 1))
+        name_counter += 2
     end
 
-    # All indices treated as free for xperm
-    freeps = Int32.(1:nslots)
-    dummyps = Int32[]
+    # Free indices: names after all dummies
+    freeps = Int32[]
+    for (sym, slot) in free_slots_list
+        slot_to_name[slot] = name_counter
+        push!(freeps, Int32(name_counter))
+        name_counter += 1
+    end
 
     perm_data = Vector{Int32}(undef, n)
     for i in 1:nslots
@@ -231,17 +243,28 @@ function _canonicalize_product(p::TProduct)
 
     isempty(all_gens) && isempty(dummyps) && return p
 
-    # ── Call xperm.c ─────────────────────────────────────────────────
+    # ── Call xperm.c via canonical_perm_ext ──────────────────────────
+    # Use canonical_perm_ext directly (not canonical_perm) to avoid
+    # the slot-conversion in canonical_perm that scrambles dummy
+    # pairings and breaks idempotency.
+    # canonical_perm_ext expects the permutation in Renato notation
+    # (name→slot = inverse of our slot→name mapping) and takes
+    # free/dummy specifications as names directly.
     base = Int32.(1:nslots)
-    perm = Perm(perm_data)
+    perm_xact = Perm(perm_data)              # slot→name (xAct notation)
+    perm_renato = perm_inverse(perm_xact)    # name→slot (Renato notation)
 
-    cperm = xperm_canonical_perm(perm, base, all_gens, freeps, dummyps, n)
+    cperm_renato = xperm_canonical_perm_ext(perm_renato, base, all_gens,
+                                            freeps, dummyps, n)
 
     # Zero?
-    all(==(Int32(0)), cperm.data) && return ZERO
+    all(==(Int32(0)), cperm_renato.data) && return ZERO
 
-    # Sign
-    sign = cperm.data[n - 1] == Int32(n - 1) ? 1 : -1
+    # canonical_perm_ext returns Renato notation; invert to xAct notation
+    cperm = perm_inverse(cperm_renato)
+
+    # Sign (in Renato notation: same convention, last two points)
+    sign = cperm_renato.data[n - 1] == Int32(n - 1) ? 1 : -1
 
     # ── Reconstruct indices from canonical permutation ───────────────
     cperm_inv = perm_inverse(cperm)
@@ -410,6 +433,20 @@ function _apply_position_fixes(d::TDeriv, base_slot::Int, fixes::Dict{Int, Index
     else
         TDeriv(d.index, _apply_position_fixes(d.arg, base_slot + 1, fixes), d.covd)
     end
+end
+
+function _apply_position_fixes(p::TProduct, base_slot::Int, fixes::Dict{Int, IndexPosition})
+    new_factors = TensorExpr[]
+    slot = base_slot
+    for f in p.factors
+        push!(new_factors, _apply_position_fixes(f, slot, fixes))
+        slot += length(indices(f))
+    end
+    TProduct(p.scalar, new_factors)
+end
+
+function _apply_position_fixes(s::TSum, base_slot::Int, fixes::Dict{Int, IndexPosition})
+    tsum(TensorExpr[_apply_position_fixes(t, base_slot, fixes) for t in s.terms])
 end
 
 function _apply_position_fixes(s::TScalar, base_slot::Int, fixes::Dict{Int, IndexPosition})
