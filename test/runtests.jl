@@ -78,6 +78,8 @@ using TensorGR
     include("test_invariants.jl")
     # Curvature syzygies (Gauss-Bonnet, dim-dependent identities)
     include("test_syzygies.jl")
+    # symmetrize_covds: scalar optimization, covd tag preservation
+    include("test_symmetrize_covds.jl")
     # Regression and coverage tests
     include("test_regressions.jl")
     # Geodesic equation
