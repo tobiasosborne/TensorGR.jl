@@ -84,6 +84,10 @@ using TensorGR
     include("test_contraction_ansatz.jl")
     # Contraction filtering by symmetry
     include("test_contraction_filtering.jl")
+    # Ground truth: contraction counts (Nutma 2014)
+    include("test_ground_truth_contractions.jl")
+    # Ground truth: quadratic Riemann invariants (Fulling et al. 1992)
+    include("test_quadratic_riemann_invariants.jl")
     # symmetrize_covds: scalar optimization, covd tag preservation
     include("test_symmetrize_covds.jl")
     # Regression and coverage tests
