@@ -35,7 +35,10 @@ include("algebra/symmetrize.jl")
 include("algebra/young.jl")
 include("algebra/solve.jl")
 
-# Layer 2.5: Scalar algebra
+# Layer 2.5: Spinor bundles
+include("spinors/spinor_bundles.jl")
+
+# Layer 2.6: Scalar algebra
 include("scalar/algebra.jl")
 include("scalar/functions.jl")
 
@@ -134,7 +137,10 @@ export has_manifold, has_tensor, has_vbundle, get_manifold, get_tensor, get_vbun
 export register_manifold!, register_tensor!, register_rule!, get_rules
 export unregister_tensor!, unregister_manifold!, unregister_covd!
 export tex_alias!
-export define_vbundle!
+export define_vbundle!, conjugate_vbundle
+export define_spinor_bundles!
+export spin_up, spin_down, spin_dot_up, spin_dot_down
+export is_spinor_index, is_dotted, conjugate_index
 export set_vanishing!
 export current_registry, with_registry
 

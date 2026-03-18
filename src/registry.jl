@@ -1,14 +1,20 @@
 """
-    VBundleProperties(name, manifold, dim, indices)
+    VBundleProperties(name, manifold, dim, indices[, options])
 
-Properties of a vector bundle: name, base manifold, fiber dimension, and index alphabet.
+Properties of a vector bundle: name, base manifold, fiber dimension, index alphabet,
+and optional metadata (e.g., `:conjugate_bundle`, `:is_spinor`).
 """
 struct VBundleProperties
     name::Symbol
     manifold::Symbol
     dim::Int
     indices::Vector{Symbol}
+    options::Dict{Symbol,Any}
 end
+
+# Backward-compatible 4-arg positional constructor
+VBundleProperties(name::Symbol, manifold::Symbol, dim::Int, indices::Vector{Symbol}) =
+    VBundleProperties(name, manifold, dim, indices, Dict{Symbol,Any}())
 
 """
     ManifoldProperties(name, dim, metric, derivative, indices)
@@ -118,18 +124,34 @@ function get_vbundle(reg::TensorRegistry, name::Symbol)
 end
 
 """
-    define_vbundle!(reg, name; manifold, dim, indices)
+    define_vbundle!(reg, name; manifold, dim, indices, conjugate_bundle=nothing)
 
 Register a vector bundle on a manifold with given fiber dimension and index alphabet.
+Optionally specify a conjugate bundle (e.g., for spinor SL2C/SL2C_dot pairs).
 """
 function define_vbundle!(reg::TensorRegistry, name::Symbol;
                          manifold::Symbol, dim::Int,
-                         indices::Vector{Symbol}=Symbol[])
+                         indices::Vector{Symbol}=Symbol[],
+                         conjugate_bundle::Union{Nothing,Symbol}=nothing)
     has_vbundle(reg, name) && error("VBundle $name already registered")
     has_manifold(reg, manifold) || error("Manifold $manifold not registered")
-    vb = VBundleProperties(name, manifold, dim, indices)
+    opts = Dict{Symbol,Any}()
+    if conjugate_bundle !== nothing
+        opts[:conjugate_bundle] = conjugate_bundle
+    end
+    vb = VBundleProperties(name, manifold, dim, indices, opts)
     reg.vbundles[name] = vb
     vb
+end
+
+"""
+    conjugate_vbundle(reg, name) -> Union{Nothing, Symbol}
+
+Return the conjugate bundle name for vbundle `name`, or `nothing` if none is defined.
+"""
+function conjugate_vbundle(reg::TensorRegistry, name::Symbol)
+    has_vbundle(reg, name) || error("VBundle $name not registered")
+    get(reg.vbundles[name].options, :conjugate_bundle, nothing)
 end
 
 function register_manifold!(reg::TensorRegistry, mp::ManifoldProperties)

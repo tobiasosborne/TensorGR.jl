@@ -104,4 +104,6 @@ using TensorGR
     include("test_ds_spin_projectors.jl")
     # sort_covds_to_box enhancement
     include("test_sort_covds_to_box.jl")
+    # Spinor VBundle registration
+    include("test_spinor_bundles.jl")
 end
