@@ -109,10 +109,8 @@ end
 
 # ─── Sort commuting partial derivative chains ────────────────────────
 #
-# Since derivative indices are excluded from the xperm domain (to prevent
-# the derivative-tensor index swap bug), commuting partial derivatives
-# must be sorted explicitly.  This is called both from _canonicalize_product
-# (on each exploded factor) and from _normalize_dummies in simplify.jl.
+# Commuting partial derivatives (∂_b∂_a → ∂_a∂_b) must be sorted for
+# canonical form.  Called from _normalize_dummies in simplify.jl.
 
 """Sort partial derivative chains for normalization (partials commute)."""
 function _sort_partial_chains(expr::TDeriv)
@@ -122,7 +120,6 @@ function _sort_partial_chains(expr::TDeriv)
     d.arg isa TDeriv || return d
     d.arg.covd == :partial || return d
 
-    # Collect chain of commuting partial derivatives
     chain_idxs = TIndex[]
     current = d
     while current isa TDeriv && current.covd == :partial
@@ -171,17 +168,12 @@ function _canonicalize_product(p::TProduct)
 
     isempty(imploded) && return p
 
-    # Gather ONLY tensor indices for xperm (derivative indices excluded).
-    # This prevents xperm's dummy relabeling group from swapping names
-    # between derivative and tensor slots, which would conflate structurally
-    # distinct expressions (e.g., trace derivative g^{pq}∂_a(h_{pq}) vs
-    # divergence g^{pq}∂_p(h_{aq})).  Commuting partial derivative sorting
-    # is handled by _sort_partial_chains in _normalize_dummies instead.
+    # Gather all indices and their slot positions
     all_indices = TIndex[]
-    slot_ranges = UnitRange{Int}[]   # tensor-only slot ranges per object
+    slot_ranges = UnitRange{Int}[]
     pos = 1
     for obj in imploded
-        idxs = obj.tensor_indices
+        idxs = _all_indices(obj)
         r = pos:(pos + length(idxs) - 1)
         push!(slot_ranges, r)
         append!(all_indices, idxs)
@@ -215,37 +207,25 @@ function _canonicalize_product(p::TProduct)
     end
 
     # ── Name assignment ──────────────────────────────────────────────
-    # Pass proper dummy pairs to xperm so the Butler-Portugal algorithm
-    # maintains Up/Down pairing (like xAct's UseMetricOnVBundle->All).
-    # Dummy pairs get TWO consecutive names: pair k gets (2k-1, 2k).
-    # Free indices get names after all dummies.
-    # Same-position pairs (from legacy all-free mode) fall through to
-    # free treatment and are gradually eliminated over simplify iterations.
+    # xperm requires a BIJECTIVE perm. Every slot gets a unique name.
+    # We treat ALL indices as free for xperm (dummies get unique names
+    # but are listed as free). Dummy renaming is handled separately in
+    # collect_terms via _normalize_dummies.
+    #
+    # This avoids xperm's double-coset algorithm moving dummy names
+    # between structurally different slots (e.g., derivative vs tensor).
 
-    # Sort for deterministic name assignment
-    sort!(dummy_info, by = x -> x[1])  # by symbol name
-    sort!(free_slots_list, by = x -> (x[1], x[2]))  # by (symbol, slot)
+    # Sort all slots by symbol for deterministic name assignment
+    all_slots_sorted = sort(collect(1:nslots), by = i -> all_indices[i].name)
 
     slot_to_name = Dict{Int, Int}()
-    name_counter = 1
+    for (name, slot) in enumerate(all_slots_sorted)
+        slot_to_name[slot] = name
+    end
 
-    # Dummy pairs: each gets consecutive names
+    # All indices treated as free for xperm
+    freeps = Int32.(1:nslots)
     dummyps = Int32[]
-    for (sym, up_slot, down_slot) in dummy_info
-        slot_to_name[up_slot] = name_counter
-        slot_to_name[down_slot] = name_counter + 1
-        push!(dummyps, Int32(name_counter))
-        push!(dummyps, Int32(name_counter + 1))
-        name_counter += 2
-    end
-
-    # Free indices: names after all dummies
-    freeps = Int32[]
-    for (sym, slot) in free_slots_list
-        slot_to_name[slot] = name_counter
-        push!(freeps, Int32(name_counter))
-        name_counter += 1
-    end
 
     perm_data = Vector{Int32}(undef, n)
     for i in 1:nslots
@@ -255,16 +235,23 @@ function _canonicalize_product(p::TProduct)
     perm_data[n]     = Int32(n)
 
     # ── Symmetry generators ──────────────────────────────────────────
+    # xperm uses left-action: cperm = g ∘ perm. Slot generators must be
+    # conjugated so that left-action produces the physical slot swap:
+    #   (perm ∘ gen_slot ∘ perm⁻¹) ∘ perm = perm ∘ gen_slot
+    perm = Perm(perm_data)
+    perm_inv_data = perm_inverse(perm)
+
     all_gens = Perm[]
     for (oi, obj) in enumerate(imploded)
         has_tensor(reg, obj.tensor_name) || continue
         props = get_tensor(reg, obj.tensor_name)
         isempty(props.symmetries) && continue
 
+        nderiv = length(obj.deriv_indices)
         nslots_t = length(obj.tensor_indices)
 
         local_gens = symmetry_generators(props.symmetries, nslots_t)
-        offset = slot_ranges[oi][1] - 1   # no nderiv: derivs excluded from xperm
+        offset = slot_ranges[oi][1] - 1 + nderiv
         for lg in local_gens
             pg = collect(Int32, 1:n)
             for j in 1:nslots_t
@@ -273,89 +260,72 @@ function _canonicalize_product(p::TProduct)
             if lg.data[nslots_t + 1] != nslots_t + 1
                 pg[n - 1], pg[n] = pg[n], pg[n - 1]
             end
-            push!(all_gens, Perm(pg))
+            # Conjugate: g_conj = perm ∘ gen_slot ∘ perm⁻¹
+            conj = Vector{Int32}(undef, n)
+            for i in 1:n
+                conj[i] = perm.data[Int(pg[Int(perm_inv_data.data[i])])]
+            end
+            push!(all_gens, Perm(conj))
         end
 
-        # NOTE: Commuting partial derivative generators are NOT added here.
-        # Derivative indices are excluded from the xperm domain to prevent
-        # the derivative-tensor index swap bug.  Commuting partial sorting
-        # is handled by _sort_partial_chains in _normalize_dummies.
+        # Commuting partial derivatives: ∂_a ∂_b = ∂_b ∂_a
+        if nderiv >= 2
+            deriv_offset = slot_ranges[oi][1] - 1
+            for k in 1:(nderiv - 1)
+                pg = collect(Int32, 1:n)
+                pg[deriv_offset + k] = Int32(deriv_offset + k + 1)
+                pg[deriv_offset + k + 1] = Int32(deriv_offset + k)
+                # Conjugate derivative swap too
+                conj = Vector{Int32}(undef, n)
+                for i in 1:n
+                    conj[i] = perm.data[Int(pg[Int(perm_inv_data.data[i])])]
+                end
+                push!(all_gens, Perm(conj))
+            end
+        end
     end
 
     isempty(all_gens) && isempty(dummyps) && return p
 
-    # ── Call xperm.c via canonical_perm_ext ──────────────────────────
-    # Use canonical_perm_ext directly (not canonical_perm) to avoid
-    # the slot-conversion in canonical_perm that scrambles dummy
-    # pairings and breaks idempotency.
-    # canonical_perm_ext expects the permutation in Renato notation
-    # (name→slot = inverse of our slot→name mapping) and takes
-    # free/dummy specifications as names directly.
+    # ── Call xperm.c ─────────────────────────────────────────────────
     base = Int32.(1:nslots)
-    perm_xact = Perm(perm_data)              # slot→name (xAct notation)
-    perm_renato = perm_inverse(perm_xact)    # name→slot (Renato notation)
 
-    cperm_renato = xperm_canonical_perm_ext(perm_renato, base, all_gens,
-                                            freeps, dummyps, n)
+    cperm = xperm_canonical_perm(perm, base, all_gens, freeps, dummyps, n)
 
     # Zero?
-    all(==(Int32(0)), cperm_renato.data) && return ZERO
+    all(==(Int32(0)), cperm.data) && return ZERO
 
-    # canonical_perm_ext returns Renato notation; invert to xAct notation
-    cperm = perm_inverse(cperm_renato)
-
-    # Sign (in Renato notation: same convention, last two points)
-    sign = cperm_renato.data[n - 1] == Int32(n - 1) ? 1 : -1
+    # Sign
+    sign = cperm.data[n - 1] == Int32(n - 1) ? 1 : -1
 
     # ── Reconstruct indices from canonical permutation ───────────────
-    cperm_inv = perm_inverse(cperm)
-
+    # With conjugated generators, cperm = perm ∘ π (physical slot perm).
+    # cperm[slot] = name at slot in canonical config.
     name_to_sym = Dict{Int, Symbol}()
-    name_to_vbundle = Dict{Int, Symbol}()
     for (slot, name) in slot_to_name
         name_to_sym[name] = all_indices[slot].name
-        name_to_vbundle[name] = all_indices[slot].vbundle
     end
-
-    # For dummy indices, derive position from the canonical name:
-    # name 2k-1 was assigned to the Up slot, name 2k to the Down slot.
-    # Using the original slot position is WRONG when xperm moves names
-    # between slots, producing same-position dummy pairs.
-    # For free indices, preserve the original slot position.
-    # vbundle always comes from the name (not the slot) to handle
-    # multi-vbundle expressions where xperm moves names across vbundles.
-    n_dummy_names = 2 * length(dummy_info)
 
     new_all_indices = Vector{TIndex}(undef, nslots)
     for slot in 1:nslots
-        cname = Int(cperm_inv.data[slot])
+        cname = Int(cperm.data[slot])
         sym = name_to_sym[cname]
-        vb = name_to_vbundle[cname]
-        if cname <= n_dummy_names
-            # Dummy index: odd name = Up, even name = Down
-            pos = isodd(cname) ? Up : Down
-        else
-            # Free index: preserve original slot position
-            pos = all_indices[slot].position
-        end
-        new_all_indices[slot] = TIndex(sym, pos, vb)
+        new_all_indices[slot] = TIndex(sym, all_indices[slot].position, all_indices[slot].vbundle)
     end
 
-    # Explode back into TDeriv chains.
-    # Tensor indices come from the canonical permutation; derivative indices
-    # are preserved verbatim (they were excluded from the xperm domain).
+    # Explode back into TDeriv chains
     new_factors = copy(non_tensor_factors)
     for (oi, obj) in enumerate(imploded)
         range = slot_ranges[oi]
+        new_idxs = new_all_indices[range]
+        nderiv = length(obj.deriv_indices)
         new_obj = _ImplodedObject(
             obj.tensor_name,
-            obj.deriv_indices,          # ORIGINAL derivative indices
-            new_all_indices[range],     # canonical tensor indices from xperm
+            new_idxs[1:nderiv],
+            new_idxs[nderiv+1:end],
             obj.deriv_covds
         )
-        # Sort commuting partial derivative chains (∂_b∂_a → ∂_a∂_b) since
-        # derivative indices are excluded from xperm and can't be sorted there.
-        push!(new_factors, _sort_partial_chains(_explode(new_obj)))
+        push!(new_factors, _explode(new_obj))
     end
 
     # Sort factors by canonical key so that e.g. RicScalar*g and g*RicScalar
@@ -495,20 +465,6 @@ function _apply_position_fixes(d::TDeriv, base_slot::Int, fixes::Dict{Int, Index
     else
         TDeriv(d.index, _apply_position_fixes(d.arg, base_slot + 1, fixes), d.covd)
     end
-end
-
-function _apply_position_fixes(p::TProduct, base_slot::Int, fixes::Dict{Int, IndexPosition})
-    new_factors = TensorExpr[]
-    slot = base_slot
-    for f in p.factors
-        push!(new_factors, _apply_position_fixes(f, slot, fixes))
-        slot += length(indices(f))
-    end
-    TProduct(p.scalar, new_factors)
-end
-
-function _apply_position_fixes(s::TSum, base_slot::Int, fixes::Dict{Int, IndexPosition})
-    tsum(TensorExpr[_apply_position_fixes(t, base_slot, fixes) for t in s.terms])
 end
 
 function _apply_position_fixes(s::TScalar, base_slot::Int, fixes::Dict{Int, IndexPosition})
