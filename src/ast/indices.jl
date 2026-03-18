@@ -94,24 +94,40 @@ function _analyze_indices(expr::TensorExpr)
 end
 
 """
-    fresh_index(used::Set{Symbol}) -> Symbol
+    fresh_index(used::Set{Symbol}; vbundle::Symbol=:Tangent) -> Symbol
 
 Generate a fresh index name not in `used`.
-Tries the standard alphabet a-z first, then a1, b1, ... etc.
+For `:Tangent` (default), tries a-z then a1, b1, ...
+For `:SL2C`, tries A-F then A1, B1, ...
+For `:SL2C_dot`, tries Ap-Fp then Ap1, Bp1, ...
+For other vbundles, falls back to a-z.
 """
-function fresh_index(used::Set{Symbol})
-    for c in 'a':'z'
-        s = Symbol(c)
+function fresh_index(used::Set{Symbol}; vbundle::Symbol=:Tangent)
+    alphabet = _vbundle_alphabet(vbundle)
+    for s in alphabet
         s in used || return s
     end
     # Extended names
     for n in 1:100
-        for c in 'a':'z'
-            s = Symbol(c, n)
-            s in used || return s
+        for s in alphabet
+            ext = Symbol(s, n)
+            ext in used || return ext
         end
     end
-    error("Could not generate fresh index (exhausted 2600+ names)")
+    error("Could not generate fresh index (exhausted names for vbundle $vbundle)")
+end
+
+# Keep the old positional-only signature working (callers pass just a Set)
+# The kwarg form handles this via default vbundle=:Tangent.
+
+const _TANGENT_ALPHABET = Symbol[Symbol(c) for c in 'a':'z']
+const _SL2C_ALPHABET = [:A, :B, :C, :D, :E, :F]
+const _SL2C_DOT_ALPHABET = [:Ap, :Bp, :Cp, :Dp, :Ep, :Fp]
+
+function _vbundle_alphabet(vbundle::Symbol)
+    vbundle === :SL2C     && return _SL2C_ALPHABET
+    vbundle === :SL2C_dot && return _SL2C_DOT_ALPHABET
+    _TANGENT_ALPHABET
 end
 
 """

@@ -106,4 +106,6 @@ using TensorGR
     include("test_sort_covds_to_box.jl")
     # Spinor VBundle registration
     include("test_spinor_bundles.jl")
+    # Spinor dummy pair analysis
+    include("test_spinor_dummy_pairs.jl")
 end
