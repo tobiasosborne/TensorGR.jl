@@ -7,6 +7,22 @@
 - Full documentation round complete (README, tutorial, 13 API pages, examples guide)
 - Run `bd ready` to see available work; `bd stats` for overview
 
+## Next: Chaos Branch Integration
+
+Master is GREEN: 337,311 tests, 0 failures, 53 benchmarks. Start integrating march15-preserve subsystems ONE AT A TIME. See memory/project_chaos_integration.md for the full plan.
+
+**Already merged:** c40367c (symmetrize_covds improvements)
+
+**Next safe merges** (existing-file enhancements, no new directories):
+- 255b4a5: sort_covds_to_box enhancements
+- 622e03b: sort_covds_to_div
+- 5300ce7: contraction_ansatz new method
+- da7df98: all_contractions(expr, metric)
+
+**Then:** ground truth tests, then new subsystem directories (spinors first).
+
+**CRITICAL:** Follow the 9 rules. ONE commit at a time. Full test suite after each. STOP if any test regresses.
+
 ### TGR-9ay Resolution (2026-03-18)
 
 **Root cause**: `_distribute_derivs_sums(::TDeriv)` in `kernel_extraction.jl` did not call `expand_products` on the inner expression before checking for TSum. This meant `expand_products` later created `TDeriv(TSum)` structures from products-containing-sums inside derivative arguments, which `_unwrap_field_chain` could not traverse.
