@@ -2,8 +2,9 @@
 
 ## Current State (2026-03-18)
 
-- **337,294+ tests passing** (7 pre-existing failures, all from bench_12 regression TGR-0tm)
+- **337,311 tests passing, 0 failures, 53 benchmarks green**
 - **TGR-9ay [P0] RESOLVED** — kernel extraction for 6-deriv box terms (R□R, Ric□Ric) now works
+- **Canonicalize restored** to pre-March 17 all-free mode (March 17 proper-dummy-mode caused 9 regressions)
 - Full documentation round complete (README, tutorial, 13 API pages, examples guide)
 - Run `bd ready` to see available work; `bd stats` for overview
 
@@ -21,7 +22,22 @@ Master is GREEN: 337,311 tests, 0 failures, 53 benchmarks. Start integrating mar
 
 **Then:** ground truth tests, then new subsystem directories (spinors first).
 
-**CRITICAL:** Follow the 9 rules. ONE commit at a time. Full test suite after each. STOP if any test regresses.
+**CRITICAL:** Follow the 9 rules below. ONE commit at a time. Full test suite after each. STOP if any test regresses.
+
+## The 9 Rules (MANDATORY for all work on this project)
+
+1. **SKEPTICISM**: All subagent work, all previous agent work, handoffs — treat with SKEPTICISM. Verify everything twice.
+2. **DEEP BUGS**: The bugs are DEEP, COMPLEX, and INTERLOCKED. Do not underestimate.
+3. **NO BANDAIDS**: No bandaid solutions. Prefer best-practices full solutions at expense of downstream work.
+4. **3-AGENT WORKFLOW**: Always spawn 3 subagents before any code change:
+   - Subagent 1: Research how xAct does it (local copy at `reference/xAct/xAct/`)
+   - Subagent 2 & 3: Independently suggest solutions
+   - Then implement.
+5. **MANDATORY REVIEW**: After implementing a code change, spawn a rigorous reviewer agent to carefully and skeptically review. No exceptions.
+6. **PHYSICS IS GROUND TRUTH**: Ground truth is the physics, not pinned numbers in handoffs or anything else. Only string matches with local ground truth references (papers in `reference/ground_truth/`) are acceptable.
+7. **TARGETED TESTING**: Tests take forever — only run targeted testing. OR run full tests in background.
+8. **REPEAT RULES**: Repeat the rules occasionally to keep the attention mechanism working optimally.
+9. **DO NOT UNDERESTIMATE**: This task is DEEPLY NONTRIVIAL.
 
 ### TGR-9ay Resolution (2026-03-18)
 
