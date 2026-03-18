@@ -108,4 +108,6 @@ using TensorGR
     include("test_spinor_bundles.jl")
     # Spinor dummy pair analysis
     include("test_spinor_dummy_pairs.jl")
+    # Spin metric epsilon
+    include("test_spin_metric.jl")
 end

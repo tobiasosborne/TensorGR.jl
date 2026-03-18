@@ -22,12 +22,13 @@ function contract_metrics(t::Tensor)
         if props.is_delta && length(t.indices) == 2
             # Self-traced delta: δ^a_a or δ^a^a (same-position dummy) → dim
             if t.indices[1].name == t.indices[2].name
-                mp = get_manifold(reg, props.manifold)
-                return TScalar(mp.dim // 1)
+                dim = _effective_dim(reg, t.name)
+                return TScalar(dim // 1)
             end
             # Same-position delta → metric: δ_{ab} = g_{ab}
             if t.indices[1].position == t.indices[2].position
-                metric_name = _find_metric(reg, props.manifold)
+                vb = t.indices[1].vbundle
+                metric_name = _find_metric_for_vbundle(reg, vb, props.manifold)
                 if metric_name !== nothing
                     return Tensor(metric_name, copy(t.indices))
                 end
@@ -37,8 +38,8 @@ function contract_metrics(t::Tensor)
             if t.indices[1].name == t.indices[2].name &&
                t.indices[1].vbundle == t.indices[2].vbundle
                 # Self-traced metric: g^a_a or g^a^a (same-position dummy) → dim
-                mp = get_manifold(reg, props.manifold)
-                return TScalar(mp.dim // 1)
+                dim = _effective_dim(reg, t.name)
+                return TScalar(dim // 1)
             end
         end
     end
@@ -105,7 +106,8 @@ function _contract_one(p::TProduct)
         elseif props.is_delta
             # Same-position delta → metric: δ_{ab} = g_{ab}, δ^{ab} = g^{ab}
             if length(fi.indices) == 2 && fi.indices[1].position == fi.indices[2].position
-                metric_name = _find_metric(reg, props.manifold)
+                vb = fi.indices[1].vbundle
+                metric_name = _find_metric_for_vbundle(reg, vb, props.manifold)
                 if metric_name !== nothing
                     new_tensor = Tensor(metric_name, copy(fi.indices))
                     new_factors = TensorExpr[k == i ? new_tensor : fk for (k, fk) in enumerate(factors)]
@@ -140,17 +142,30 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
                     fj_props = has_tensor(reg, fj.name) ? get_tensor(reg, fj.name) : nothing
                     is_partner_metric = fj_props !== nothing && fj_props.is_metric
 
+                    # Antisymmetric sign: for epsilon_{AB}, contraction on slot 1 flips sign
+                    antisym = _is_antisym_metric(reg, metric.name)
+                    sign = 1 // 1
+
                     if is_partner_metric
                         # g^{ab} g_{bc} → δ^a_c
                         other_fidx = fj.indices[3 - ti]
-                        delta_name = _find_delta(reg, get_tensor(reg, metric.name).manifold)
+                        vb = midx.vbundle
+                        delta_name = _find_delta_for_vbundle(reg, vb, get_tensor(reg, metric.name).manifold)
                         new_tensor = Tensor(delta_name,
                             [other_midx, TIndex(other_fidx.name, other_fidx.position, other_fidx.vbundle)])
+                        if antisym
+                            # Sign = (-1)^(mi==1) * (-1)^(ti==2)
+                            sign = ((mi == 1) ? -1 // 1 : 1 // 1) * ((ti == 2) ? -1 // 1 : 1 // 1)
+                        end
                     else
                         # g^{ab} T_{bc} → T^a_c  (raise/lower index)
                         new_indices = copy(fj.indices)
                         new_indices[ti] = TIndex(other_midx.name, other_midx.position, other_midx.vbundle)
                         new_tensor = Tensor(fj.name, new_indices)
+                        if antisym
+                            # Sign = (-1)^(mi==1)
+                            sign = (mi == 1) ? -1 // 1 : 1 // 1
+                        end
                     end
 
                     new_factors = TensorExpr[]
@@ -163,7 +178,7 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
                             push!(new_factors, fk)
                         end
                     end
-                    return tproduct(p.scalar, new_factors)
+                    return tproduct(p.scalar * sign, new_factors)
                 end
             end
         end
@@ -173,9 +188,9 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
     if midxs[1].name == midxs[2].name &&
        midxs[1].position != midxs[2].position &&
        midxs[1].vbundle == midxs[2].vbundle
-        mp = get_manifold(reg, get_tensor(reg, metric.name).manifold)
+        dim = _effective_dim(reg, metric.name)
         new_factors = TensorExpr[f for (k, f) in enumerate(p.factors) if k != metric_idx]
-        return tproduct(p.scalar * mp.dim, new_factors)
+        return tproduct(p.scalar * dim, new_factors)
     end
 
     nothing
@@ -189,6 +204,32 @@ end
 """Find the metric tensor name for a manifold, or nothing."""
 function _find_metric(reg::TensorRegistry, manifold::Symbol)
     get(reg.metric_cache, manifold, nothing)
+end
+
+"""Find the delta for a given index's vbundle, falling back to manifold lookup."""
+function _find_delta_for_vbundle(reg::TensorRegistry, vbundle::Symbol, manifold::Symbol)
+    vbundle !== :Tangent && haskey(reg.delta_cache, vbundle) && return reg.delta_cache[vbundle]
+    _find_delta(reg, manifold)
+end
+
+"""Find the metric for a given index's vbundle, falling back to manifold lookup."""
+function _find_metric_for_vbundle(reg::TensorRegistry, vbundle::Symbol, manifold::Symbol)
+    vbundle !== :Tangent && haskey(reg.metric_cache, vbundle) && return reg.metric_cache[vbundle]
+    _find_metric(reg, manifold)
+end
+
+"""Get the effective dimension for a tensor (vbundle dim if set, else manifold dim)."""
+function _effective_dim(reg::TensorRegistry, tensor_name::Symbol)
+    props = get_tensor(reg, tensor_name)
+    vb_dim = get(props.options, :vbundle_dim, nothing)
+    vb_dim !== nothing && return vb_dim
+    get_manifold(reg, props.manifold).dim
+end
+
+"""Check if a metric tensor is antisymmetric (for sign tracking in spinor contraction)."""
+function _is_antisym_metric(reg::TensorRegistry, tensor_name::Symbol)
+    props = get_tensor(reg, tensor_name)
+    any(s -> s isa AntiSymmetric, props.symmetries)
 end
 
 function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)
@@ -228,8 +269,7 @@ function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)
 
     # Self-trace: δ^a_a → dimension
     if didxs[1].name == didxs[2].name && didxs[1].position != didxs[2].position && didxs[1].vbundle == didxs[2].vbundle
-        mp = get_manifold(reg, get_tensor(reg, delta.name).manifold)
-        dim = mp.dim
+        dim = _effective_dim(reg, delta.name)
         new_factors = TensorExpr[f for (k, f) in enumerate(p.factors) if k != delta_idx]
         return tproduct(p.scalar * dim, new_factors)
     end
