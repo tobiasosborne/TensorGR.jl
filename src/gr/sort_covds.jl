@@ -118,32 +118,167 @@ Rewrite derivative expressions to expose the d'Alembertian (box) operator
 □ = ∇^a ∇_a = g^{ab} ∂_a ∂_b.
 
 Detects patterns like ∂_a(∂^a(T)) and labels them as box(T).
+Also detects g^{ab} ∂_a(∂_b(T)) in products and ∂_a(φ)∂^a(φ) grad_squared patterns.
 """
 function sort_covds_to_box(expr::TensorExpr; metric::Symbol=:g)
+    _detect_box_patterns(expr, metric)
+end
+
+"""
+    sort_covds_to_box(expr, covd_name; registry=current_registry()) -> TensorExpr
+
+Sort covariant derivatives and convert g^{ab}∇_a∇_b patterns to Box operator.
+Uses commute_covds first to sort derivatives, then identifies Box patterns.
+"""
+function sort_covds_to_box(expr::TensorExpr, covd_name::Symbol;
+                           registry::TensorRegistry=current_registry())
+    with_registry(registry) do
+        covd_props = get_covd(registry, covd_name)
+        metric = covd_props.metric
+        sorted = commute_covds(expr, covd_name; registry=registry)
+        result = _detect_box_patterns(sorted, metric)
+        simplify(result; registry=registry)
+    end
+end
+
+"""
+Walk the expression tree, replacing box and grad_squared patterns.
+Handles:
+  1. ∂_a(∂^a(T)) or ∂^a(∂_a(T)) → g^{ab} ∂_a(∂_b(T))  (already-contracted double deriv)
+  2. g^{ab} ∂_a(∂_b(T)) inside TProduct → box(T, metric)  (explicit metric form)
+  3. ∂_a(φ) ∂^a(φ) inside TProduct → grad_squared(φ, metric) (gradient squared)
+"""
+function _detect_box_patterns(expr::TensorExpr, metric::Symbol)
     walk(expr) do node
-        node isa TDeriv || return node
-        inner = node.arg
-        inner isa TDeriv || return node
-        outer_idx = node.index
-        inner_idx = inner.index
-        # Detect ∂_a(∂^a(T)) or ∂^a(∂_a(T)): same name, opposite positions
-        if outer_idx.name == inner_idx.name && outer_idx.position != inner_idx.position
-            # Rewrite as g^{ab}∂_a∂_b T (box operator structure)
-            # Introduce explicit metric contraction
-            used = Set{Symbol}()
-            for idx in indices(inner.arg)
-                push!(used, idx.name)
-            end
-            a = fresh_index(used); push!(used, a)
-            b = fresh_index(used)
-            # □T = g^{ab} ∂_a(∂_b(T))
-            return tproduct(1 // 1, TensorExpr[
-                Tensor(metric, [up(a), up(b)]),
-                TDeriv(down(a), TDeriv(down(b), inner.arg, inner.covd), node.covd)
-            ])
+        # Pattern 1: already-contracted form ∂_a(∂^a(T)) in TDeriv nesting
+        if node isa TDeriv
+            r = _try_contracted_box(node, metric)
+            r !== nothing && return r
+        end
+        # Patterns 2 & 3: metric * double-deriv or deriv-pair in TProduct
+        if node isa TProduct
+            r = _try_product_box(node, metric)
+            r !== nothing && return r
+            r = _try_grad_squared(node, metric)
+            r !== nothing && return r
         end
         node
     end
+end
+
+"""Detect ∂_a(∂^a(T)): same name, opposite positions → box form."""
+function _try_contracted_box(node::TDeriv, metric::Symbol)
+    inner = node.arg
+    inner isa TDeriv || return nothing
+    outer_idx = node.index
+    inner_idx = inner.index
+    outer_idx.name == inner_idx.name && outer_idx.position != inner_idx.position || return nothing
+
+    used = Set{Symbol}()
+    for idx in indices(inner.arg)
+        push!(used, idx.name)
+    end
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used)
+    tproduct(1 // 1, TensorExpr[
+        Tensor(metric, [up(a), up(b)]),
+        TDeriv(down(a), TDeriv(down(b), inner.arg, inner.covd), node.covd)
+    ])
+end
+
+"""Detect g^{ab} ∂_a(∂_b(T)) in a TProduct → box(T, metric)."""
+function _try_product_box(p::TProduct, metric::Symbol)
+    for (i, fi) in enumerate(p.factors)
+        fi isa Tensor && fi.name == metric || continue
+        length(fi.indices) == 2 || continue
+        fi.indices[1].position == Up && fi.indices[2].position == Up || continue
+        m1, m2 = fi.indices[1].name, fi.indices[2].name
+
+        for (j, fj) in enumerate(p.factors)
+            i == j && continue
+            fj isa TDeriv || continue
+            inner = fj.arg
+            inner isa TDeriv || continue
+            oi = fj.index
+            ii = inner.index
+            oi.position == Down && ii.position == Down || continue
+
+            # Check if metric indices match the derivative indices (either order)
+            matched = (oi.name == m1 && ii.name == m2) ||
+                      (oi.name == m2 && ii.name == m1)
+            matched || continue
+
+            # Build box(inner.arg, metric) = g^{cd} ∂_c(∂_d(inner.arg))
+            body = inner.arg
+            used = Set{Symbol}()
+            for idx in indices(body)
+                push!(used, idx.name)
+            end
+            # Collect index names from remaining factors too
+            for (k, fk) in enumerate(p.factors)
+                (k == i || k == j) && continue
+                for idx in indices(fk)
+                    push!(used, idx.name)
+                end
+            end
+            c = fresh_index(used); push!(used, c)
+            d = fresh_index(used)
+            box_expr = tproduct(1 // 1, TensorExpr[
+                Tensor(metric, [up(c), up(d)]),
+                TDeriv(down(c), TDeriv(down(d), body, inner.covd), fj.covd)
+            ])
+
+            remaining = TensorExpr[p.factors[k] for k in eachindex(p.factors) if k != i && k != j]
+            if isempty(remaining)
+                return tproduct(p.scalar, TensorExpr[box_expr])
+            else
+                push!(remaining, box_expr)
+                return tproduct(p.scalar, remaining)
+            end
+        end
+    end
+    nothing
+end
+
+"""Detect ∂_a(φ) ∂^a(φ) in a TProduct → grad_squared(φ, metric)."""
+function _try_grad_squared(p::TProduct, metric::Symbol)
+    for (i, fi) in enumerate(p.factors)
+        fi isa TDeriv || continue
+        fi.arg isa Tensor || continue
+        for (j, fj) in enumerate(p.factors)
+            j <= i && continue
+            fj isa TDeriv || continue
+            fj.arg isa Tensor || continue
+            fi.arg == fj.arg || continue  # same scalar field
+            # Check: same index name, opposite positions
+            fi.index.name == fj.index.name || continue
+            fi.index.position != fj.index.position || continue
+
+            body = fi.arg
+            used = Set{Symbol}()
+            for idx in indices(body)
+                push!(used, idx.name)
+            end
+            for (k, fk) in enumerate(p.factors)
+                (k == i || k == j) && continue
+                for idx in indices(fk)
+                    push!(used, idx.name)
+                end
+            end
+            a = fresh_index(used); push!(used, a)
+            b = fresh_index(used)
+            gs = Tensor(metric, [up(a), up(b)]) * TDeriv(down(a), body) * TDeriv(down(b), body)
+
+            remaining = TensorExpr[p.factors[k] for k in eachindex(p.factors) if k != i && k != j]
+            if isempty(remaining)
+                return tproduct(p.scalar, TensorExpr[gs])
+            else
+                push!(remaining, gs)
+                return tproduct(p.scalar, remaining)
+            end
+        end
+    end
+    nothing
 end
 
 """

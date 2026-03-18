@@ -92,4 +92,6 @@ using TensorGR
     include("test_tov.jl")
     # dS-adapted spin projectors (MSS form factors)
     include("test_ds_spin_projectors.jl")
+    # sort_covds_to_box enhancement
+    include("test_sort_covds_to_box.jl")
 end
