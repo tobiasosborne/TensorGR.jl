@@ -107,6 +107,49 @@ function _explode(obj::_ImplodedObject)
     result
 end
 
+# ─── Sort commuting partial derivative chains ────────────────────────
+#
+# Since derivative indices are excluded from the xperm domain (to prevent
+# the derivative-tensor index swap bug), commuting partial derivatives
+# must be sorted explicitly.  This is called both from _canonicalize_product
+# (on each exploded factor) and from _normalize_dummies in simplify.jl.
+
+"""Sort partial derivative chains for normalization (partials commute)."""
+function _sort_partial_chains(expr::TDeriv)
+    inner = _sort_partial_chains(expr.arg)
+    d = TDeriv(expr.index, inner, expr.covd)
+    d.covd == :partial || return d
+    d.arg isa TDeriv || return d
+    d.arg.covd == :partial || return d
+
+    # Collect chain of commuting partial derivatives
+    chain_idxs = TIndex[]
+    current = d
+    while current isa TDeriv && current.covd == :partial
+        push!(chain_idxs, current.index)
+        current = current.arg
+    end
+    length(chain_idxs) < 2 && return d
+
+    sorted_idxs = sort(chain_idxs, by = idx -> idx.name)
+    sorted_idxs == chain_idxs && return d
+
+    result = current
+    for i in length(sorted_idxs):-1:1
+        result = TDeriv(sorted_idxs[i], result, :partial)
+    end
+    result
+end
+
+function _sort_partial_chains(expr::TProduct)
+    TProduct(expr.scalar, TensorExpr[_sort_partial_chains(f) for f in expr.factors])
+end
+function _sort_partial_chains(expr::TSum)
+    TSum(TensorExpr[_sort_partial_chains(t) for t in expr.terms])
+end
+_sort_partial_chains(expr::Tensor) = expr
+_sort_partial_chains(expr::TScalar) = expr
+
 # ─── Core engine ─────────────────────────────────────────────────────
 
 function _canonicalize_product(p::TProduct)
@@ -128,12 +171,17 @@ function _canonicalize_product(p::TProduct)
 
     isempty(imploded) && return p
 
-    # Gather all indices and their slot positions
+    # Gather ONLY tensor indices for xperm (derivative indices excluded).
+    # This prevents xperm's dummy relabeling group from swapping names
+    # between derivative and tensor slots, which would conflate structurally
+    # distinct expressions (e.g., trace derivative g^{pq}∂_a(h_{pq}) vs
+    # divergence g^{pq}∂_p(h_{aq})).  Commuting partial derivative sorting
+    # is handled by _sort_partial_chains in _normalize_dummies instead.
     all_indices = TIndex[]
-    slot_ranges = UnitRange{Int}[]
+    slot_ranges = UnitRange{Int}[]   # tensor-only slot ranges per object
     pos = 1
     for obj in imploded
-        idxs = _all_indices(obj)
+        idxs = obj.tensor_indices
         r = pos:(pos + length(idxs) - 1)
         push!(slot_ranges, r)
         append!(all_indices, idxs)
@@ -213,11 +261,10 @@ function _canonicalize_product(p::TProduct)
         props = get_tensor(reg, obj.tensor_name)
         isempty(props.symmetries) && continue
 
-        nderiv = length(obj.deriv_indices)
         nslots_t = length(obj.tensor_indices)
 
         local_gens = symmetry_generators(props.symmetries, nslots_t)
-        offset = slot_ranges[oi][1] - 1 + nderiv
+        offset = slot_ranges[oi][1] - 1   # no nderiv: derivs excluded from xperm
         for lg in local_gens
             pg = collect(Int32, 1:n)
             for j in 1:nslots_t
@@ -229,16 +276,10 @@ function _canonicalize_product(p::TProduct)
             push!(all_gens, Perm(pg))
         end
 
-        # Commuting partial derivatives: ∂_a ∂_b = ∂_b ∂_a
-        if nderiv >= 2
-            deriv_offset = slot_ranges[oi][1] - 1
-            for k in 1:(nderiv - 1)
-                pg = collect(Int32, 1:n)
-                pg[deriv_offset + k] = Int32(deriv_offset + k + 1)
-                pg[deriv_offset + k + 1] = Int32(deriv_offset + k)
-                push!(all_gens, Perm(pg))
-            end
-        end
+        # NOTE: Commuting partial derivative generators are NOT added here.
+        # Derivative indices are excluded from the xperm domain to prevent
+        # the derivative-tensor index swap bug.  Commuting partial sorting
+        # is handled by _sort_partial_chains in _normalize_dummies.
     end
 
     isempty(all_gens) && isempty(dummyps) && return p
@@ -281,19 +322,21 @@ function _canonicalize_product(p::TProduct)
         new_all_indices[slot] = TIndex(sym, all_indices[slot].position, all_indices[slot].vbundle)
     end
 
-    # Explode back into TDeriv chains
+    # Explode back into TDeriv chains.
+    # Tensor indices come from the canonical permutation; derivative indices
+    # are preserved verbatim (they were excluded from the xperm domain).
     new_factors = copy(non_tensor_factors)
     for (oi, obj) in enumerate(imploded)
         range = slot_ranges[oi]
-        new_idxs = new_all_indices[range]
-        nderiv = length(obj.deriv_indices)
         new_obj = _ImplodedObject(
             obj.tensor_name,
-            new_idxs[1:nderiv],
-            new_idxs[nderiv+1:end],
+            obj.deriv_indices,          # ORIGINAL derivative indices
+            new_all_indices[range],     # canonical tensor indices from xperm
             obj.deriv_covds
         )
-        push!(new_factors, _explode(new_obj))
+        # Sort commuting partial derivative chains (∂_b∂_a → ∂_a∂_b) since
+        # derivative indices are excluded from xperm and can't be sorted there.
+        push!(new_factors, _sort_partial_chains(_explode(new_obj)))
     end
 
     # Sort factors by canonical key so that e.g. RicScalar*g and g*RicScalar

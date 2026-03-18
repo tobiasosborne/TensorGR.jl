@@ -1,188 +1,122 @@
-# HANDOFF — 2026-03-16 Regression Investigation & Partial Fix
+# HANDOFF — 2026-03-18 Session Recovery
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
-## Executive Summary
+## TOBIAS'S RULES — FOLLOW TO THE LETTER
 
-A deep investigation found TWO independent regressions causing the bench_12 R³ term count to inflate from 324 to 685. Regression 1 (canonicalize.jl conjugation) has been reverted. Regression 2 (perturbation `_avoid` sets) is kept because removing it breaks kernel extraction. The March 15 chaos wave (~20 parallel agents, 15k lines) has been quarantined on `march15-preserve`. Current state: R³=409, 337,351 pass, 19 fail, 0 error. The 19 failures need fixing before anything else.
+These rules were given explicitly by Tobias. They override any other guidance.
 
----
+**Rule 1:** Previous work and handoff is never to be completely trusted. Generations of agents have committed heresies.
 
-## What Happened (Chronological)
+**Rule 2:** Goal is to fix the current bugs. Nothing else is currently in scope.
 
-### March 10: Regression 1 — canonicalize.jl (commit 1faf32f)
-An agent added generator conjugation (`perm * gen * perm_inv`) to `_canonicalize_product` and changed reconstruction from `cperm_inv.data[slot]` to `cperm.data[slot]`. The stated goal was fixing dummy index pairing for spin projection. The actual effect: canonicalization became ~2x weaker (324→505 terms for R³ on dS). **This has been REVERTED** — unconjugated generators + `cperm_inv` reconstruction restored.
+**Rule 3:** These bugs are DEEP and COMPLEX. Do NOT underestimate this task.
 
-### March 11: Regression 2 — perturbation expand.jl (commit 858d73e)
-An agent added `_avoid::Set{Symbol}` parameter threading through the entire perturbation expansion chain (`δinverse_metric` → `δchristoffel` → `δriemann` → `δricci` → `δricci_scalar`). When `_avoid` is non-empty, the memo cache is bypassed and each sub-expression uses fresh dummy names. Effect: 303→409 terms for R³. **This is KEPT** because removing it causes index scoping bugs in kernel extraction (indices appearing 3+ times after flattening nested `TDeriv(TProduct(...))` structures).
+**Rule 4:** Use smart subagents to get a full overview of all the project. There is deep interlock between the current bugs, probably at the module contract level as well as line-by-line level.
 
-### March 15: The Chaos Wave
-~20 parallel worktree agents committed 15,239 lines across 62 files in a 3-hour window (16:14-18:57). Multiple agents edited the same core pipeline files from isolated worktrees, merged together via conflict resolution. Key commits that compounded regression 1:
-- `355d298` — extended canonicalize.jl with vbundle sort key (505→685)
-- `79c617b` / `7012156` — added enforce_tracefree/enforce_divfree to simplify pipeline
-- `9aed69d` — mega-squash "Add 9 new subsystems"
+**Rule 5:** Liberally clean-room suspect modules to INDEPENDENT smart subagents.
 
-**All March 15+ work preserved on `march15-preserve` branch.** Master reset to `9c65895` (March 14 EOD).
+**Rule 6:** No more than 2-3 subagents at a time.
 
-### March 16: This Investigation
-- Git bisect confirmed 1faf32f as first bad commit
-- Verified 858d73e as secondary regression source via worktree testing
-- Reverted canonicalize.jl conjugation (restores strong term merging)
-- Fixed `contract_metrics` to handle same-position metric traces (`g^{a,a}` → dim)
-- Fixed `extract_kernel_direct` to deconflict duplicate dummy names between field halves
-- Fixed `spin_project` to call `fix_dummy_positions` on coefficients and post-simplify results
-- Verified (δR)² spin projections give correct physics values (0, 3, 0, 0)
+**Rule 7:** DO NOT UNDERESTIMATE THIS TASK. Robust solutions, NO BANDAIDS. Prefer to work longer for a more solid solution, even at the expense of downstream work.
 
----
+**Rule 8:** Workflow for code changes: always spawn two independent subagents to propose a codebase change. Review and take best solution. THEN spawn a rigorous reviewer to IMMEDIATELY review the work. Do not deviate.
 
-## Current State of the Code
+**Rule 9:** Repeat rules when asked.
 
-### Modified Files (relative to March 14 HEAD)
+**Corollary of Rule 1:** Tests may be suspect. Only trustworthy source is physics ground truth. Numbers of terms are not necessarily physics ground truth.
 
-**`src/algebra/canonicalize.jl`** — Reverted conjugation:
-- Removed `perm * gen * perm_inv` conjugation of xperm generators (lines ~205-250)
-- Removed pre-loop `perm = Perm(perm_data)` and `perm_inv_data = perm_inverse(perm)`
-- Restored `cperm_inv = perm_inverse(cperm)` in reconstruction
-- Changed `cname = Int(cperm.data[slot])` back to `cname = Int(cperm_inv.data[slot])`
-- Kept ALL vbundle-aware changes (Dict{Tuple{Symbol,Symbol}}, vbundle sort key)
-
-**`src/algebra/contraction.jl`** — Same-position metric/delta trace:
-- Line ~24: Removed `position != position` requirement for delta self-contraction
-- Line ~38: Removed `position != position` requirement for metric self-contraction
-- Now `g^{a,a}` and `δ^{a,a}` correctly contract to dim (was silently passed through)
-
-**`src/action/kernel_extraction.jl`** — Three fixes:
-1. `extract_kernel_direct`: calls `fix_dummy_positions` on input, then `_deconflict_field_halves` to rename dummies in the second field-containing factor
-2. `_deconflict_field_halves`: new function that identifies two field-containing factors in a TProduct and calls `ensure_no_dummy_clash` between them
-3. `spin_project`: calls `fix_dummy_positions(bt.coeff)` before projector construction, and `fix_dummy_positions(next)` after each simplify iteration
-
-### Test Results
-```
-337,351 passed, 19 failed, 0 errored, 0 broken
-```
-
-### Failing Tests (19 total)
-
-| Test | File:Line | Count | Issue |
-|------|-----------|-------|-------|
-| δ²S term counts | test_6deriv_spectrum.jl:816,854 | 2 | `length(δ2R.terms) == 22` evaluates to `9 == 22` (better simplification, assertion needs updating) |
-| h^{ab}δ¹G = FP kernel | test_kernel_extraction.jl:129 | 2 | spin1=3.0 (expected 0), spin0w=1.5 (expected 0) — gauge sectors nonzero |
-| (δRic)² spin projections | test_kernel_extraction.jl:165-166 | 2 | spin0s and spin1 values wrong |
-| 4-derivative flat spectrum | test_kernel_extraction.jl:207 | 13 | Multiple parameter combinations give wrong spin projection values |
-
-### Root Cause of Remaining 19 Failures
-
-The unconjugated canonicalization produces **same-position dummy pairs** (e.g., both Up or both Down for the same index name). This is mathematically valid for term merging but breaks three downstream mechanisms:
-
-1. **`_analyze_indices`** (in indices.jl) — only detects Up/Down pairs as dummies. Same-position pairs are invisible, so `ensure_no_dummy_clash` misses them.
-
-2. **`contract_momenta`** (in kernel_extraction.jl) — requires opposite positions to contract `k_a k^a → k²`. Same-position `k_a k_a` passes through uncontracted.
-
-3. **`_try_metric_contraction`** in products (contraction.jl) — the product-level metric contraction also checks `position != position` for dummy detection. Same-position dummies in products don't trigger contraction.
-
-The `contract_metrics` fix for self-traced metrics was necessary but not sufficient. The same-position issue permeates the contraction pipeline.
-
-### Architecture: Why This Is Hard
-
-The canonicalization uses **all-free mode** — it treats every index as free for xperm, getting maximum symmetry exploitation. The trade-off: xperm can swap index names between Up and Down slots, producing same-position dummy pairs. These are valid canonical representatives (two terms that differ only by dummy position are mathematically identical and WILL be merged by `collect_terms`). But downstream code that needs to CONTRACT indices requires proper Up/Down pairing.
-
-Two approaches to fix:
-1. **Make all downstream consumers same-position-aware** — modify `_analyze_indices`, `contract_momenta`, `_try_metric_contraction`, etc. to treat same-name same-position pairs as dummies. This is the thorough fix.
-2. **Apply `fix_dummy_positions` at the API boundary** — call it in `simplify`'s output, or in `extract_kernel_direct`, or wherever downstream code needs valid pairs. The challenge: adding it to the simplify inner loop broke convergence (tried and reverted).
-
-Approach 1 is cleaner. Approach 2 is faster but fragile.
+**Additional:**
+- BEFORE making any changes, review xAct source (stored locally) to understand how the problem is solved there. Changing contraction.jl without this has led to "pain and misery."
+- Tests take ages — run selectively or in background only.
+- Document regularly / checkpoint in case of premature termination.
+- Move slowly and carefully via cleanroom testing and auditing of subagent proposals.
 
 ---
 
-## Git Recovery Information
+## Current Bug Status
 
-| Tag/Branch | Commit | Description |
-|------------|--------|-------------|
-| `march15-preserve` | `ebfae36` | Full HEAD before reset — ALL March 15+ work (15k lines, 62 files) |
-| `pre-regression-baseline` | `09be750` | Last state where R³ = 324 with all tests passing |
-| `regression1-canonicalize` | `1faf32f` | The canonicalization conjugation commit |
-| `regression2-avoid` | `858d73e` | The perturbation `_avoid` commit |
-| `march15-chaos-start` | `9c65895` | Last commit before March 15 chaos (current master base) |
+### The bugs being fixed (Rule 2 scope)
 
----
+1. **bench_12 regression**: R³ simplified term count inflated (was 324, currently ~229-362 depending on pipeline state). Root cause: `_avoid` set in perturbation engine producing 35 unique dummy names instead of 9, preventing `_normalize_dummies` from merging same-position pairs.
 
-## Beads Issues
+2. **Spin projection failures**: Kernel extraction gives spin1≠0, spin0w≠0 for Fierz-Pauli kernel (physics requires both = 0 for gauge invariance). Root cause: perturbation engine's δR_{ab} is not manifestly symmetric; inner sum merging corrupts coefficient ratios.
 
-| ID | Priority | Title | Status |
-|----|----------|-------|--------|
-| TGR-9ay | P0 | Fix kernel extraction index scoping for unconjugated canonicalization | in_progress |
-| TGR-3et | P1 | Update test assertions for improved canonicalization term counts | open (blocked by 9ay) |
-| TGR-e04 | P2 | Investigate removing `_avoid` to recover 303-term R³ simplification | open (blocked by 9ay) |
-| TGR-t28 | P2 | Incrementally merge March 15 subsystems from march15-preserve | open (blocked by 9ay) |
+### What the crashed session achieved (uncommitted, in working tree)
 
----
+Three files modified but NOT committed:
 
-## How to Test
+**`src/algebra/canonicalize.jl`** (+85 lines):
+- Moved `_sort_partial_chains` here from simplify.jl
+- Excluded derivative indices from xperm domain (only tensor indices enter xperm). This prevents xperm from swapping names between derivative and tensor slots.
+- Removed partial-derivative symmetry generators from xperm (sorting handled by `_sort_partial_chains` instead)
 
-```bash
-# R³ benchmark (currently 409, target ≤324):
-julia --project -e '
-using TensorGR
-reg = TensorRegistry()
-with_registry(reg) do
-    @manifold M4 dim=4 metric=g
-    define_curvature_tensors!(reg, :M4, :g)
-    maximally_symmetric_background!(reg, :M4; metric=:g, cosmological_constant=:Λ)
-    @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
-    mp = define_metric_perturbation!(reg, :g, :h; curved=true)
-    R1 = Tensor(:RicScalar, TIndex[])
-    expr = R1 * R1 * R1
-    raw = expand_perturbation(expr, mp, 2)
-    s = simplify(raw; registry=reg, maxiter=100)
-    n = s isa TSum ? length(s.terms) : 1
-    println("R^3 terms: $n")
-end'
+**`src/algebra/simplify.jl`** (-35 lines):
+- Removed `_sort_partial_chains` definition (moved to canonicalize.jl)
 
-# Quick spin projection sanity check ((δR)² should give 0, 3, 0, 0):
-julia --project -e '
-using TensorGR
-reg = TensorRegistry()
-with_registry(reg) do
-    @manifold M4 dim=4 metric=g
-    define_curvature_tensors!(reg, :M4, :g)
-    @define_tensor h on=M4 rank=(0,2) symmetry=Symmetric(1,2)
-    mp = define_metric_perturbation!(reg, :g, :h)
-    set_vanishing!(reg, :Ric); set_vanishing!(reg, :RicScalar); set_vanishing!(reg, :Riem)
-    kw = (dim=4, metric=:g, k_name=:k, k_sq=:k², registry=reg)
-    d1R = simplify(δricci_scalar(mp, 1); registry=reg)
-    K = extract_kernel_direct(d1R * d1R, :h; registry=reg)
-    for s in [:spin2, :spin0s, :spin1, :spin0w]
-        v = _eval_spin_scalar(spin_project(K, s; kw...), 1.0)
-        println("  $s = $v")
-    end
-end'
+**`src/action/kernel_extraction.jl`** (+283 lines):
+- `_lower_h_indices_to_down`: Lower all Up h-indices to Down via metric connectors
+- `_contract_via_tagged_tensors`: Replace h factors with synthetic `_KL_field`/`_KR_field` tensors, run contract_metrics on full expression, then re-extract bilinear structure
+- `_safe_surviving_name!`: Prevent index name collisions during metric contraction in bilinear terms
 
-# Full test suite (target: 0 fail, 0 error):
-julia --project -e 'using Pkg; Pkg.test()'
+### Earlier committed work (from 2026-03-17 sessions)
+
+- `11f8ff8`: `canonical_perm_ext` + inner sum collection + `_apply_position_fixes`
+- `f51146f`: `flatten_metric_derivs` + `distribute_derivs` improvements
+- `5c49566`: Kernel extraction bug identification
+- `612a60a`: Kernel metric contraction in coefficients
+- `f3444ed`: `δricci_flat`, kernel metric contraction, worklog
+
+### Key findings from xAct research
+
+- xAct does NOT have built-in kernel extraction or spin projections
+- Users extract kernels manually via `IndexCoefficient` + `CollectTensors`
+- Key enabler: `UseMetricOnVBundle->All` in `ToCanonical` allows Butler-Portugal to merge via metric-aware dummy relabeling
+- TensorGR now has this via `canonical_perm_ext`
+
+### Test results as of last run (WORKLOG-canonicalize-fix.md)
+
+| Test | Result | Status |
+|------|--------|--------|
+| spin2 (with δricci_flat) | 2.5 = FP | PASS |
+| spin1 (with δricci_flat) | 0.0 = FP | PASS |
+| spin0s (with δricci_flat) | 0.5 ≠ -1.0 | FAIL |
+| spin0w (with δricci_flat) | -1.5 ≠ 0.0 | FAIL |
+| R³ terms | 229 (was 362) | improved |
+
+### Physics ground truth (the ONLY trustworthy reference)
+
+- K_FP: spin2=2.5k², spin0s=-k², spin1=0, spin0w=0
+- K_R²: spin2=0, spin0s=3k⁴, spin1=0, spin0w=0
+- K_Ric²: spin2=1.25k⁴, spin0s=k⁴, spin1=0, spin0w=0
+- spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
+- On MSS: R₀ = 4Λ, Ric₀_{ab} = Λg_{ab}, Riem₀_{abcd} = (Λ/3)(g_{ac}g_{bd} - g_{ad}g_{bc})
+
+### Immediate next step identified by crashed session
+
+Fix `δricci_scalar_flat`: instead of a separate 3-term formula, TRACE the δricci_flat result:
+```julia
+d1R = simplify(Tensor(:g, [up(:a), up(:b)]) * δricci_flat(mp, down(:a), down(:b)); registry=reg)
 ```
 
 ---
 
-## Rules for Future Agents
+## Other handoff files (read with Rule 1 skepticism)
 
-1. **DO NOT re-introduce generator conjugation in canonicalize.jl.** The unconjugated approach gives 2x better simplification. The downstream issues must be fixed downstream.
-2. **DO NOT batch-merge from march15-preserve.** Merge subsystems one at a time with full test suite validation.
-3. **DO NOT use parallel worktree agents on core pipeline files.** The March 15 chaos resulted from this.
-4. **DO NOT modify canonicalize.jl without running R³ benchmark.** Ground truth is ≤409 terms.
-5. **DO NOT trust subagent outputs without independent verification.** An agent fabricated 31 test failures during this investigation.
-6. **DO NOT add `fix_dummy_positions` to the inner simplify loop.** This was tried and broke convergence. Fix consumers instead.
+- `HANDOFF-canonicalize-investigation.md` — 2026-03-17 root cause analysis
+- `HANDOFF-6deriv-crosscheck.md` — Covariant pipeline / √g perturbation approaches
+- `HANDOFF-6deriv-spectrum.md` — Full spectrum mission specs
+- `HANDOFF-next-session.md` — TOV solver + remaining issues (OUT OF SCOPE per Rule 2)
+- `WORKLOG-canonicalize-fix.md` — Detailed change log from 2026-03-17 session
 
----
+## Key source files
 
-## Key Source Files
-
-| File | Role | Modified? |
-|------|------|-----------|
-| `src/algebra/canonicalize.jl` | xperm canonicalization (THE core fix) | YES |
-| `src/algebra/contraction.jl` | Metric/delta contraction | YES (same-position trace) |
-| `src/action/kernel_extraction.jl` | Bilinear kernel extraction + spin projection | YES (deconflict + fix_dummy) |
-| `src/algebra/simplify.jl` | Simplify pipeline orchestrator | no |
-| `src/perturbation/expand.jl` | Perturbation engine (has _avoid) | no |
-| `src/xperm/wrapper.jl` | xperm.c FFI | no |
-| `docs/xperm_algorithm.md` | xperm convention documentation | no |
-| `src/algebra/canonicalize.jl` → `fix_dummy_positions` | Repair same-position dummy pairs | no (utility, already existed) |
+| File | Role |
+|------|------|
+| `src/algebra/canonicalize.jl` | xperm canonicalization (modified, uncommitted) |
+| `src/algebra/simplify.jl` | Simplify pipeline (modified, uncommitted) |
+| `src/action/kernel_extraction.jl` | Kernel extraction + spin projection (modified, uncommitted) |
+| `src/ast/indices.jl` | `_analyze_indices` — same-position pair recognition (committed) |
+| `src/perturbation/expand.jl` | Perturbation engine with `_avoid` set |
+| `src/xperm/wrapper.jl` | xperm.c FFI + `canonical_perm_ext` |
+| `reference/xAct/` | Local xAct source for research |

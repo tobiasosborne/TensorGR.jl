@@ -281,41 +281,7 @@ function _normalize_dummies(expr::TensorExpr)
     isempty(phase2) ? result : rename_dummies(result, phase2)
 end
 
-"""Sort partial derivative chains for normalization (partials commute)."""
-function _sort_partial_chains(expr::TDeriv)
-    inner = _sort_partial_chains(expr.arg)
-    d = TDeriv(expr.index, inner, expr.covd)
-    d.covd == :partial || return d
-    d.arg isa TDeriv || return d
-    d.arg.covd == :partial || return d
-
-    # Collect chain of commuting partial derivatives
-    chain_idxs = TIndex[]
-    current = d
-    while current isa TDeriv && current.covd == :partial
-        push!(chain_idxs, current.index)
-        current = current.arg
-    end
-    length(chain_idxs) < 2 && return d
-
-    sorted_idxs = sort(chain_idxs, by = idx -> idx.name)
-    sorted_idxs == chain_idxs && return d
-
-    result = current
-    for i in length(sorted_idxs):-1:1
-        result = TDeriv(sorted_idxs[i], result, :partial)
-    end
-    result
-end
-
-function _sort_partial_chains(expr::TProduct)
-    TProduct(expr.scalar, TensorExpr[_sort_partial_chains(f) for f in expr.factors])
-end
-function _sort_partial_chains(expr::TSum)
-    TSum(TensorExpr[_sort_partial_chains(t) for t in expr.terms])
-end
-_sort_partial_chains(expr::Tensor) = expr
-_sort_partial_chains(expr::TScalar) = expr
+# _sort_partial_chains is defined in canonicalize.jl (loaded before simplify.jl)
 
 """Split a TensorExpr into (scalar coefficient, tensor part)."""
 function _split_scalar(expr::TProduct)

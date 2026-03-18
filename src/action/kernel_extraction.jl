@@ -260,6 +260,93 @@ function _extract_bilinear_direct(term::TensorExpr, field::Symbol, k_name::Symbo
     (coeff = coeff, left = fu1.field_indices, right = fu2.field_indices)
 end
 
+# ─── Post-extraction: lower h indices to all-Down ─────────────────
+
+"""
+    _lower_h_indices_to_down(bt, metric, registry) -> bilinear term
+
+Lower all Up h-indices to Down by inserting metric connectors into the coefficient.
+
+For each Up index in `left` or `right`, generates a fresh Down index name, inserts
+`Tensor(metric, [old_up, fresh_up])` into the coefficient, and replaces the h-index
+with `TIndex(fresh, Down, vbundle)`.  This ensures the kernel has the same structure
+as the analytic momentum-space builders: all h indices Down with metric connectors
+in the coefficient.
+
+Also ensures left and right index names are disjoint by renaming clashing right
+indices via further metric insertions.
+"""
+function _lower_h_indices_to_down(
+        bt::@NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}},
+        metric::Symbol, registry::TensorRegistry)
+    # Collect all index names in play (coeff + left + right)
+    all_names = Set{Symbol}()
+    for idx in indices(bt.coeff)
+        push!(all_names, idx.name)
+    end
+    for idx in bt.left
+        push!(all_names, idx.name)
+    end
+    for idx in bt.right
+        push!(all_names, idx.name)
+    end
+
+    metric_inserts = TensorExpr[]
+    new_left = TIndex[]
+    new_right = TIndex[]
+
+    # Lower left Up indices
+    for idx in bt.left
+        if idx.position == Up
+            fn = fresh_index(all_names)
+            push!(all_names, fn)
+            push!(new_left, TIndex(fn, Down, idx.vbundle))
+            # Metric connector: g^{old_name, fresh_name} (both Up, contracts old with coeff)
+            push!(metric_inserts, Tensor(metric, [idx, TIndex(fn, Up, idx.vbundle)]))
+        else
+            push!(new_left, idx)
+        end
+    end
+
+    # Lower right Up indices
+    for idx in bt.right
+        if idx.position == Up
+            fn = fresh_index(all_names)
+            push!(all_names, fn)
+            push!(new_right, TIndex(fn, Down, idx.vbundle))
+            push!(metric_inserts, Tensor(metric, [idx, TIndex(fn, Up, idx.vbundle)]))
+        else
+            push!(new_right, idx)
+        end
+    end
+
+    # Ensure left and right Down index names are disjoint
+    left_names = Set(i.name for i in new_left)
+    for (j, idx) in enumerate(new_right)
+        if idx.name in left_names
+            fn = fresh_index(all_names)
+            push!(all_names, fn)
+            # Insert g^{old, fresh} to rename the index in the coefficient context
+            push!(metric_inserts, Tensor(metric,
+                [TIndex(idx.name, Up, idx.vbundle), TIndex(fn, Up, idx.vbundle)]))
+            new_right[j] = TIndex(fn, Down, idx.vbundle)
+        end
+    end
+
+    # Build new coefficient including metric connectors
+    if isempty(metric_inserts)
+        new_coeff = bt.coeff
+    else
+        sc, factors = bt.coeff isa TProduct ? (bt.coeff.scalar, collect(bt.coeff.factors)) :
+                      bt.coeff isa TScalar  ? (bt.coeff.val isa Rational ? bt.coeff.val : 1 // 1,
+                                               bt.coeff.val isa Rational ? TensorExpr[] : TensorExpr[bt.coeff]) :
+                                              (1 // 1, TensorExpr[bt.coeff])
+        new_coeff = tproduct(sc, vcat(factors, metric_inserts))
+    end
+
+    (coeff = new_coeff, left = new_left, right = new_right)
+end
+
 # ─── Pre-processing: deconflict field halves ────────────────────────
 
 """
@@ -350,13 +437,136 @@ function extract_kernel_direct(expr::TensorExpr, field::Symbol;
         push!(bilinears, bt)
     end
 
-    # Contract metric factors in coefficients with h indices.
-    # The extraction can leave g tensors in coefficients (from ∂(g*∂h) structures)
-    # that connect coefficient indices to h indices. Contract these to produce
-    # pure scalar coefficients, matching the canonical kernel form.
-    contracted = _contract_kernel_metrics(bilinears, registry)
+    # Contract metrics in coefficients that connect to h indices.
+    #
+    # The perturbation engine produces δRic with g^{cd} (inverse metric)
+    # embedded in the expression, and the user's contraction metrics (e.g.
+    # g^{ac}g^{bd} for Ric²) share index names with h.  After bilinear
+    # extraction, the coefficient contains metrics whose indices connect
+    # to h index lists.  These must be contracted before spin projection.
+    #
+    # The old approach (_contract_kernel_metrics) greedily contracted
+    # metrics between coefficient and h-index lists, but introduced name
+    # collisions when the "other" metric index already appeared in the
+    # coefficient (e.g. k-factors), producing 3+ occurrences of the same
+    # index name and corrupting the spin projection.
+    #
+    # The fix: use tagged dummy tensors _KL/_KR to mark the two h copies,
+    # then run contract_metrics on the FULL product (coefficient + tagged
+    # h markers).  contract_metrics handles name collisions correctly
+    # because it operates on the complete index environment.  After
+    # contraction, re-extract the bilinear structure from the tagged
+    # expression.
+    contracted = _contract_via_tagged_tensors(bilinears, field, k_name, registry)
 
     KineticKernel(field, contracted)
+end
+
+"""Look up the metric name for the manifold that `field` lives on."""
+function _kernel_metric_name(field::Symbol, reg::TensorRegistry)
+    if has_tensor(reg, field)
+        props = get_tensor(reg, field)
+        if haskey(reg.metric_cache, props.manifold)
+            return reg.metric_cache[props.manifold]
+        end
+    end
+    :g  # fallback
+end
+
+"""
+    _contract_via_tagged_tensors(bilinears, field, k_name, registry)
+
+Contract metric factors in kernel coefficients using tagged dummy tensors.
+
+Replaces each h(left) and h(right) factor with synthetic tensors `_KL_field`
+and `_KR_field`, builds the full product `coeff * _KL[left] * _KR[right]`,
+and runs `contract_metrics` + `contract_momenta` on the complete expression.
+This correctly handles index name collisions because the contraction engine
+operates on the full index environment rather than a split (coeff, left, right)
+representation.
+
+After contraction, the tagged tensors are re-extracted from each term to
+recover the bilinear `(coeff, left, right)` structure.
+"""
+function _contract_via_tagged_tensors(
+        bilinears::Vector{@NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}},
+        field::Symbol, k_name::Symbol, registry::TensorRegistry)
+    isempty(bilinears) && return bilinears
+
+    kl_name = Symbol("_KL_", field)
+    kr_name = Symbol("_KR_", field)
+
+    # Register tagged tensors with the SAME symmetry as the field so that
+    # contract_metrics and canonicalize recognize their index structure.
+    if has_tensor(registry, field)
+        field_props = get_tensor(registry, field)
+        for sname in (kl_name, kr_name)
+            if !has_tensor(registry, sname)
+                register_tensor!(registry, TensorProperties(
+                    name=sname, manifold=field_props.manifold,
+                    rank=field_props.rank, symmetries=field_props.symmetries))
+            end
+        end
+    end
+
+    # Build tagged expressions: coeff * _KL[left] * _KR[right]
+    tagged_terms = TensorExpr[]
+    for bt in bilinears
+        kl = Tensor(kl_name, bt.left)
+        kr = Tensor(kr_name, bt.right)
+        full = tproduct(1 // 1, TensorExpr[bt.coeff, kl, kr])
+        push!(tagged_terms, full)
+    end
+
+    # Contract metrics and momenta on the full expression.
+    #
+    # IMPORTANT: use contract_metrics + expand_products + contract_momenta
+    # only -- NOT simplify.  simplify triggers canonicalization which
+    # scrambles index assignments between _KL/_KR and the coefficient,
+    # producing uncontracted k-factors and wrong results.
+    #
+    # contract_metrics operates on the full index environment of each
+    # product term, correctly resolving metric chains (g^{ab}g_{ac} → δ^b_c)
+    # without the name collision bugs of the old _contract_kernel_metrics
+    # which split coefficient and h-index lists apart.
+    tagged_sum = with_registry(registry) do
+        # expand_products first to flatten nested TProducts, exposing all
+        # Tensor factors to contract_metrics at the same product level.
+        s = expand_products(tsum(tagged_terms))
+        # Iterate contract_metrics + contract_momenta until stable.
+        # One round of metric contraction can expose new momentum pairs
+        # (g_{ac} k^a k^c → k_c k^c → k²), and momentum contraction
+        # can produce TScalar(k²) that simplifies further.
+        for _ in 1:3
+            prev = s
+            s = contract_metrics(s)
+            s = expand_products(s)
+            s = contract_momenta(s; k_name, k_sq=:k²)
+            s == prev && break
+        end
+        fix_dummy_positions(s)
+    end
+
+    # Re-extract bilinear structure from the contracted expression.
+    c_terms = tagged_sum isa TSum ? tagged_sum.terms : TensorExpr[tagged_sum]
+    result = @NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}[]
+
+    for term in c_terms
+        sc, factors = term isa TProduct ? (term.scalar, collect(term.factors)) :
+                                          (1 // 1, TensorExpr[term])
+        kl_idx = findfirst(f -> f isa Tensor && f.name == kl_name, factors)
+        kr_idx = findfirst(f -> f isa Tensor && f.name == kr_name, factors)
+        (kl_idx === nothing || kr_idx === nothing) && continue
+
+        left = collect(factors[kl_idx].indices)
+        right = collect(factors[kr_idx].indices)
+        cf = TensorExpr[factors[i] for i in eachindex(factors)
+                         if i != kl_idx && i != kr_idx]
+        coeff = isempty(cf) ? TScalar(sc) : tproduct(sc, cf)
+        push!(result, (coeff = coeff, left = left, right = right))
+    end
+
+    result
 end
 
 """
@@ -563,10 +773,15 @@ function _contract_one_bilinear_metric(bt, reg)
                 for (li, lidx) in enumerate(left)
                     if lidx.name == midx.name && lidx.position != midx.position &&
                        lidx.vbundle == midx.vbundle
-                        # Contract: replace left index with the OTHER metric index.
-                        # The surviving index keeps the metric's position (g raises/lowers).
-                        left[li] = TIndex(other_midx.name, other_midx.position,
-                                          other_midx.vbundle)
+                        # Before replacing: check if other_midx.name collides with
+                        # any existing index in right, remaining left, or other factors.
+                        surviving_name = other_midx.name
+                        surviving_pos  = other_midx.position
+                        surviving_vb   = other_midx.vbundle
+                        surviving_name = _safe_surviving_name!(
+                            surviving_name, surviving_pos, surviving_vb,
+                            li, left, right, factors, mi)
+                        left[li] = TIndex(surviving_name, surviving_pos, surviving_vb)
                         deleteat!(factors, mi)
                         changed = true
                         @goto next_metric
@@ -577,8 +792,13 @@ function _contract_one_bilinear_metric(bt, reg)
                 for (ri, ridx) in enumerate(right)
                     if ridx.name == midx.name && ridx.position != midx.position &&
                        ridx.vbundle == midx.vbundle
-                        right[ri] = TIndex(other_midx.name, other_midx.position,
-                                           other_midx.vbundle)
+                        surviving_name = other_midx.name
+                        surviving_pos  = other_midx.position
+                        surviving_vb   = other_midx.vbundle
+                        surviving_name = _safe_surviving_name!(
+                            surviving_name, surviving_pos, surviving_vb,
+                            ri, right, left, factors, mi)
+                        right[ri] = TIndex(surviving_name, surviving_pos, surviving_vb)
                         deleteat!(factors, mi)
                         changed = true
                         @goto next_metric
@@ -594,6 +814,47 @@ function _contract_one_bilinear_metric(bt, reg)
     # Contract remaining g*k*k → k² in the coefficient
     coeff = contract_momenta(contract_metrics(coeff))
     (coeff = coeff, left = left, right = right)
+end
+
+"""
+Check if `name` would collide with existing indices and rename if needed.
+
+`skip_idx` is the index position in `this_list` being replaced (skip it).
+`other_list` is the other h-index list.  `factors` are coefficient factors,
+`skip_factor` is the metric being removed.
+
+Returns the safe name (original or fresh).  If renamed, also renames the
+name in `factors` so the coefficient stays consistent.
+"""
+function _safe_surviving_name!(name::Symbol, pos, vb,
+        skip_idx::Int, this_list::Vector{TIndex}, other_list::Vector{TIndex},
+        factors::Vector{TensorExpr}, skip_factor::Int)
+    # Collect all names in the environment (excluding the slot being replaced
+    # and the metric being removed)
+    used = Set{Symbol}()
+    for (i, idx) in enumerate(this_list)
+        i == skip_idx && continue
+        push!(used, idx.name)
+    end
+    for idx in other_list
+        push!(used, idx.name)
+    end
+    for (i, f) in enumerate(factors)
+        i == skip_factor && continue
+        for idx in indices(f)
+            push!(used, idx.name)
+        end
+    end
+
+    name in used || return name  # no collision
+
+    # Collision: rename to fresh name, also in factors
+    fn = fresh_index(union(used, Set([name])))
+    for (i, f) in enumerate(factors)
+        i == skip_factor && continue
+        factors[i] = rename_dummy(f, name, fn)
+    end
+    fn
 end
 
 """
