@@ -267,7 +267,7 @@ function _try_grad_squared(p::TProduct, metric::Symbol)
             end
             a = fresh_index(used); push!(used, a)
             b = fresh_index(used)
-            gs = Tensor(metric, [up(a), up(b)]) * TDeriv(down(a), body) * TDeriv(down(b), body)
+            gs = Tensor(metric, [up(a), up(b)]) * TDeriv(down(a), body, fi.covd) * TDeriv(down(b), body, fj.covd)
 
             remaining = TensorExpr[p.factors[k] for k in eachindex(p.factors) if k != i && k != j]
             if isempty(remaining)
