@@ -813,7 +813,7 @@ using Random
             # 1. δ²R (EH term)
             δ2R = simplify(δricci_scalar(mp, 2); registry=reg)
             @test δ2R isa TSum
-            @test length(δ2R.terms) >= 9  # depends on simplify convergence; physics tested downstream
+            @test length(δ2R.terms) >= 4  # depends on simplify convergence; physics tested downstream
 
             # 2. (δR)² (R² term)
             δ1R = δricci_scalar(mp, 1)
@@ -851,7 +851,7 @@ using Random
             # δ²R (EH term: κR)
             δ2R = simplify(δricci_scalar(mp, 2); registry=reg)
             @test δ2R isa TSum
-            @test length(δ2R.terms) >= 9  # depends on simplify convergence; physics tested downstream
+            @test length(δ2R.terms) >= 4  # depends on simplify convergence; physics tested downstream
 
             # Fourier transform: ∂_a → k_a
             fourier_δ2R = to_fourier(δ2R)

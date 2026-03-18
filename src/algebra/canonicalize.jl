@@ -311,15 +311,34 @@ function _canonicalize_product(p::TProduct)
     cperm_inv = perm_inverse(cperm)
 
     name_to_sym = Dict{Int, Symbol}()
+    name_to_vbundle = Dict{Int, Symbol}()
     for (slot, name) in slot_to_name
         name_to_sym[name] = all_indices[slot].name
+        name_to_vbundle[name] = all_indices[slot].vbundle
     end
+
+    # For dummy indices, derive position from the canonical name:
+    # name 2k-1 was assigned to the Up slot, name 2k to the Down slot.
+    # Using the original slot position is WRONG when xperm moves names
+    # between slots, producing same-position dummy pairs.
+    # For free indices, preserve the original slot position.
+    # vbundle always comes from the name (not the slot) to handle
+    # multi-vbundle expressions where xperm moves names across vbundles.
+    n_dummy_names = 2 * length(dummy_info)
 
     new_all_indices = Vector{TIndex}(undef, nslots)
     for slot in 1:nslots
         cname = Int(cperm_inv.data[slot])
         sym = name_to_sym[cname]
-        new_all_indices[slot] = TIndex(sym, all_indices[slot].position, all_indices[slot].vbundle)
+        vb = name_to_vbundle[cname]
+        if cname <= n_dummy_names
+            # Dummy index: odd name = Up, even name = Down
+            pos = isodd(cname) ? Up : Down
+        else
+            # Free index: preserve original slot position
+            pos = all_indices[slot].position
+        end
+        new_all_indices[slot] = TIndex(sym, pos, vb)
     end
 
     # Explode back into TDeriv chains.
