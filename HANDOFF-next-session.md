@@ -1,11 +1,19 @@
-# HANDOFF: Close Remaining 3 Issues
+# HANDOFF: Close Remaining Issues
 
-## Current State
+## Current State (2026-03-18)
 
-- **35 of 38 issues closed**, all pushed to master
-- **337,176+ tests passing**
+- **337,294+ tests passing** (7 pre-existing failures, all from bench_12 regression TGR-0tm)
+- **TGR-9ay [P0] RESOLVED** — kernel extraction for 6-deriv box terms (R□R, Ric□Ric) now works
 - Full documentation round complete (README, tutorial, 13 API pages, examples guide)
 - Run `bd ready` to see available work; `bd stats` for overview
+
+### TGR-9ay Resolution (2026-03-18)
+
+**Root cause**: `_distribute_derivs_sums(::TDeriv)` in `kernel_extraction.jl` did not call `expand_products` on the inner expression before checking for TSum. This meant `expand_products` later created `TDeriv(TSum)` structures from products-containing-sums inside derivative arguments, which `_unwrap_field_chain` could not traverse.
+
+**Fix**: One line added — `inner = expand_products(inner)` — mirroring xAct/xTensor's automatic `CovD[expr_Plus, ders__]` distribution. Verified by 3-agent workflow (xAct research, 2 independent solution proposals, rigorous reviewer).
+
+**Impact**: R□R and Ric□Ric kernel extraction now produces 36 terms each (was 0). All gauge sectors satisfy spin-1=0, spin-0w=0. No regressions. 29 new regression tests added.
 
 ## The 3 Remaining Issues
 

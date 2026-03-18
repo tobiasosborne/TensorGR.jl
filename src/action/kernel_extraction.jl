@@ -100,6 +100,13 @@ end
 
 function _distribute_derivs_sums(expr::TDeriv)
     inner = _distribute_derivs_sums(expr.arg)
+    # Expand products inside the derivative arg to expose hidden sums.
+    # Without this, ∂(g*(A+B)) stays as TDeriv(TProduct(...)) and the
+    # outer expand_products later creates TDeriv(TSum) structures that
+    # _unwrap_field_chain cannot traverse.  Mirrors the approach in
+    # distribute_derivs_over_sums (simplify.jl) and xAct/xTensor's
+    # automatic CovD[expr_Plus, ders__] distribution.
+    inner = expand_products(inner)
     if inner isa TSum
         terms = TensorExpr[_distribute_derivs_sums(TDeriv(expr.index, t, expr.covd))
                            for t in inner.terms]

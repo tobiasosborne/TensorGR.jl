@@ -70,8 +70,12 @@ DEPENDENCY CHAIN:
 | dS 6 cubics (parallel 8T) | 66s | varies |
 | extract_quadratic_form(δ²R, [:h]) | 1.0s | BROKEN output |
 | Barnes-Rivers P² construction | instant | 2 TSum terms |
+| extract_kernel_direct(δR*□δR, :h) | ~5s | 36 terms | **FIXED 2026-03-18** |
+| extract_kernel_direct(δRic*□δRic, :h) | ~5s | 36 terms | **FIXED 2026-03-18** |
 
 **WARNING**: `simplify` emits "did not converge after 20 iterations" on some expressions. Results appear correct. Use `maxiter=40` in the example script if needed.
+
+**NOTE (2026-03-18)**: TGR-9ay resolved. Box kernel extraction (R□R, Ric□Ric) now works via one-line fix in `_distribute_derivs_sums`. All gauge sectors verified (spin-1=0, spin-0w=0). See HANDOFF-canonicalize-investigation.md for details.
 
 ---
 
