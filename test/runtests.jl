@@ -78,6 +78,12 @@ using TensorGR
     include("test_invariants.jl")
     # Curvature syzygies (Gauss-Bonnet, dim-dependent identities)
     include("test_syzygies.jl")
+    # All contractions (metric-based full contraction enumeration)
+    include("test_all_contractions.jl")
+    # Contraction ansatz (most general scalar from tensor products)
+    include("test_contraction_ansatz.jl")
+    # Contraction filtering by symmetry
+    include("test_contraction_filtering.jl")
     # symmetrize_covds: scalar optimization, covd tag preservation
     include("test_symmetrize_covds.jl")
     # Regression and coverage tests
