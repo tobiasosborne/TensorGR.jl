@@ -375,6 +375,7 @@ export bianchi_I, bianchi_II, bianchi_VI0, bianchi_VII0, bianchi_VIII, bianchi_I
 # Exports: Quadratic action
 export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic_form
 export sym_det, sym_inv, sym_eval
+export SpinSectorDecomposition, moore_penrose_propagator, no_ghost, no_tachyon
 export KineticKernel, extract_kernel, extract_kernel_direct, spin_project, contract_momenta
 export MultiFieldKernels, extract_kernel_multi
 export build_FP_momentum_kernel, build_R2_momentum_kernel, build_Ric2_momentum_kernel

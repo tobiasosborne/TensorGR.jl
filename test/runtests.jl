@@ -242,4 +242,6 @@ using TensorGR
     include("test_invar_level3.jl")
     # PPN scalar-tensor validation (Hohmann 2021)
     include("test_ppn_scalar_tensor.jl")
+    # Moore-Penrose propagator (PSALTer)
+    include("test_moore_penrose.jl")
 end

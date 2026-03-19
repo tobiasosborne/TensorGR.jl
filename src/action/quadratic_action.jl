@@ -143,6 +143,100 @@ Compute the determinant of the quadratic form matrix.
 """
 determinant(qf::QuadraticForm) = sym_det(qf.matrix)
 
+# ─── Moore-Penrose pseudoinverse via spin projectors ──────────────────
+
+"""
+    SpinSectorDecomposition
+
+Decomposition of a kinetic kernel into spin-sector form factors:
+  K = a₂P₂ + a₁P₁ + a₀ₛP₀ₛ + a₀wP₀w
+
+Each `aᵢ` is a scalar function of k².
+"""
+struct SpinSectorDecomposition
+    spin2::Any    # a₂(k²)
+    spin1::Any    # a₁(k²)
+    spin0s::Any   # a₀ₛ(k²)
+    spin0w::Any   # a₀w(k²)
+end
+
+function Base.show(io::IO, s::SpinSectorDecomposition)
+    print(io, "SpinSectorDecomposition(spin2=$(s.spin2), spin1=$(s.spin1), ",
+          "spin0s=$(s.spin0s), spin0w=$(s.spin0w))")
+end
+
+"""
+    moore_penrose_propagator(decomp::SpinSectorDecomposition;
+                             atol::Real=0) -> SpinSectorDecomposition
+
+Compute the Moore-Penrose pseudoinverse of a kinetic kernel from its
+spin-sector decomposition.
+
+For K = Σᵢ aᵢ Pᵢ, the pseudoinverse is K⁺ = Σᵢ (1/aᵢ) Pᵢ
+where the sum runs only over sectors with aᵢ ≠ 0 (gauge-invariant sectors).
+
+Sectors with vanishing form factors (gauge zero modes) are set to zero
+in the propagator — this is the physical propagator on the
+gauge-invariant subspace.
+
+Ground truth: Barker (2024) arXiv:2406.09500, PSALTer Section 5.
+
+# Returns
+A `SpinSectorDecomposition` with inverted form factors (zero sectors stay zero).
+"""
+function moore_penrose_propagator(decomp::SpinSectorDecomposition;
+                                  atol::Real=0)
+    _mp_inv(x) = _mp_is_zero(x, atol) ? 0 : (x isa AbstractFloat ? 1.0 / x : _sym_div(1, x))
+
+    SpinSectorDecomposition(
+        _mp_inv(decomp.spin2),
+        _mp_inv(decomp.spin1),
+        _mp_inv(decomp.spin0s),
+        _mp_inv(decomp.spin0w),
+    )
+end
+
+"""Check if a value is zero (within tolerance for floats)."""
+function _mp_is_zero(x::Number, atol::Real=0)
+    atol > 0 ? abs(x) <= atol : x == 0
+end
+_mp_is_zero(x, ::Real=0) = x == 0  # symbolic: only exact zero
+
+"""
+    no_ghost(decomp::SpinSectorDecomposition) -> Bool
+
+Check the no-ghost condition: all non-zero spin-sector form factors
+must have the SAME SIGN as the spin-2 sector (conventionally positive).
+
+A negative form factor in any spin sector indicates a ghost (negative-norm
+state) which signals an instability.
+
+Ground truth: Barker (2024) arXiv:2406.09500, Sec 5.
+"""
+function no_ghost(decomp::SpinSectorDecomposition)
+    sectors = [decomp.spin2, decomp.spin1, decomp.spin0s, decomp.spin0w]
+    nonzero = filter(x -> x isa Number && x != 0, sectors)
+    isempty(nonzero) && return true
+    # All non-zero sectors should have the same sign
+    signs = [sign(x) for x in nonzero]
+    all(s -> s == signs[1], signs)
+end
+
+"""
+    no_tachyon(decomp::SpinSectorDecomposition, mass_sq::SpinSectorDecomposition) -> Bool
+
+Check the no-tachyon condition: all mass-squared values must be non-negative.
+A negative mass-squared indicates a tachyonic instability.
+
+`mass_sq` should contain the mass-squared values from the propagator poles.
+"""
+function no_tachyon(mass_sq::SpinSectorDecomposition)
+    for m2 in [mass_sq.spin2, mass_sq.spin1, mass_sq.spin0s, mass_sq.spin0w]
+        m2 isa Number && m2 < 0 && return false
+    end
+    true
+end
+
 # ─── Symbolic arithmetic helpers ─────────────────────────────────────
 # Operate on numbers (exact Rational) or Expr trees.
 
