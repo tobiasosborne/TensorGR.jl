@@ -258,4 +258,6 @@ using TensorGR
     include("test_maxwell_spectrum.jl")
     # PSALTer validation: Proca theory
     include("test_proca_spectrum.jl")
+    # PSALTer validation: Fierz-Pauli unitarity
+    include("test_fp_unitarity.jl")
 end
