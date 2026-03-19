@@ -21,8 +21,8 @@
 
 ## Current State
 
-- **182 of 362 issues closed** (51 closed last session)
-- **356,800+ tests, 0 failures**
+- **194 of 369 issues closed** (12 closed this session — xAct ground truth)
+- **357,000+ tests, 0 failures**
 - All pushed to `master`, repo cleaned (no stale branches/files)
 - `bd stats` for live counts, `bd ready` for available work
 
@@ -47,6 +47,8 @@ xAct (the Mathematica CAS for tensor algebra) has NO official test suite. We are
 
 ### What's Done
 
+**ALL 12 PAPERS COMPLETE.** Test file: `test/test_xact_ground_truth.jl` (234 tests, 13 sections).
+
 **12 papers downloaded** (PDF + TeX source) to `reference/papers/`:
 
 | Paper | arXiv | xAct Feature | TeX Source |
@@ -69,26 +71,13 @@ xAct (the Mathematica CAS for tensor algebra) has NO official test suite. We are
 - **Nutma (xTras)**: 13 computable equations cataloged. Key: Gauss-Bonnet E₄, Weyl decomposition, variational δR/δg, AllContractions counts (1 Riemann → 1 scalar, 2 Riemanns → 4 scalars), Euler densities d=2,4,6,8, linearized Einstein (10 terms).
 - **Brizuela (xPert)**: 14 equations cataloged. Key: inverse metric perturbation (Eq 6), Christoffel perturbation (Eq 7), Riemann perturbation (Eq 9/10), Ricci perturbation (Eq 11), Ricci scalar perturbation (Eq 12), linearized Einstein tensor (10 terms).
 
-### What's Next (for you to do)
+### What's Next
 
-1. **Extract equations from remaining 10 papers** — same protocol as Nutma/Brizuela. Read the TeX source, find equations computed by xAct, record equation number + LaTeX.
+**Side quest COMPLETE.** All 12 papers have tests in `test/test_xact_ground_truth.jl`.
+To go deeper: add more precise equation-level LaTeX matching for high-value identities,
+or connect to the symbolic component pipeline (Symbolics.jl) for numeric verification.
 
-2. **Write test file `test/test_xact_ground_truth.jl`** with sections per paper:
-   - Each test: set up registry, compute expression with TensorGR, compare output
-   - Use `to_latex()` or structural comparison, NOT println
-   - Group by xAct subpackage (xTensor, xPert, xCoba, xTras, Invar, Spinors, etc.)
-
-3. **Priority equations to implement first** (these TensorGR CAN compute today):
-   - Gauss-Bonnet: `euler_density(:g)` == R² - 4R_{ab}R^{ab} + R_{abcd}R^{abcd}
-   - Weyl decomposition: `riemann_to_weyl` matches Nutma formula
-   - δR/δg^{ab}: `variational_derivative` matches Nutma Eq (line 1512)
-   - δ¹g^{ab} = -h^{ab}: first-order inverse metric perturbation
-   - δ¹Ric_{ab}: first-order Ricci perturbation
-   - δ¹R: first-order Ricci scalar perturbation
-   - PPN: γ_GR=1, γ_BD=(1+ω)/(2+ω) (already tested but need paper citation)
-   - Spin projector completeness: P2+P1+P0s+P0w = identity
-
-4. **Beads issues created**: TGR-4y6 (Nutma), TGR-1rq (Brizuela), TGR-6b8 (Hohmann), TGR-rzi8 (Barker), TGR-gmot (Pitrou)
+**All beads issues for this side quest are CLOSED.**
 
 ### Key Gaps (TensorGR vs xAct — equations we CANNOT yet reproduce)
 
