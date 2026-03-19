@@ -172,4 +172,6 @@ using TensorGR
     include("test_algebra_forms.jl")
     # Feynman diagram contraction engine
     include("test_feynman_contraction.jl")
+    # PPN-to-component bridge
+    include("test_ppn_decompose.jl")
 end

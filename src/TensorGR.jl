@@ -140,6 +140,7 @@ include("feynman/contraction.jl")
 
 # Layer 5.5: PPN (Parametrized Post-Newtonian)
 include("ppn/metric_ansatz.jl")
+include("ppn/decompose.jl")
 
 # Layer 5.5: Covariant phase space (Noether charge, symplectic form)
 include("phase_space/divergence.jl")
@@ -425,6 +426,8 @@ export momentum_constraints, impose_momentum_conservation, MomentumConstraint
 export PPNParameters, ppn_gr, is_gr, is_fully_conservative, is_preferred_frame_free
 export is_semi_conservative, is_preferred_location_free
 export define_ppn_potentials!, ppn_metric_ansatz
+export ppn_foliation!, PPNMetricComponents, ppn_decompose, ppn_compose
+export PPNChristoffelComponents, ppn_christoffel_1pn, ppn_christoffel
 
 # Exports: Covariant phase space
 export is_divergence, extract_divergence, split_divergence
