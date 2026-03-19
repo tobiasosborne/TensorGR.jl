@@ -150,7 +150,18 @@ _sym_mul(a::Number, b::Number) = a * b
 _sym_mul(a, b) = a == 0 || b == 0 ? 0 : a == 1 ? b : b == 1 ? a : :($a * $b)
 
 _sym_add(a::Number, b::Number) = a + b
-_sym_add(a, b) = a == 0 ? b : b == 0 ? a : :($a + $b)
+function _sym_add(a, b)
+    a == 0 && return b
+    b == 0 && return a
+    # Cancellation: x + (-x) = 0
+    if b isa Expr && b.head == :call && b.args[1] == :- && length(b.args) == 2 && b.args[2] == a
+        return 0
+    end
+    if a isa Expr && a.head == :call && a.args[1] == :- && length(a.args) == 2 && a.args[2] == b
+        return 0
+    end
+    :($a + $b)
+end
 
 _sym_sub(a::Number, b::Number) = a - b
 _sym_sub(a, b) = b == 0 ? a : a == 0 ? _sym_neg(b) : :($a - $b)

@@ -45,14 +45,26 @@ the `_sym_*` arithmetic. Each is a polynomial in the a_i coefficient names.
 Ground truth: Langlois (2019) arXiv:1811.06271, Eqs 3.8-3.10 (with f_X=0).
 """
 function degeneracy_conditions(theory::DHOSTTheory;
-                               registry::TensorRegistry=current_registry())
+                               registry::TensorRegistry=current_registry(),
+                               use_stored_exprs::Bool=true)
     mul = _sym_mul
     add = _sym_add
 
-    # Return 0 for vanishing coefficients so conditions simplify algebraically
+    # Return the effective value for a DHOST coefficient:
+    #  - 0 if the tensor is set vanishing
+    #  - stored Horndeski expression if use_stored_exprs and available
+    #  - the raw Symbol name otherwise (generic DHOST)
     function _coeff(stf)
         name = g_tensor_name(stf)
-        (has_tensor(registry, name) && get_tensor(registry, name).vanishing) ? 0 : name
+        if has_tensor(registry, name)
+            tp = get_tensor(registry, name)
+            tp.vanishing && return 0
+            if use_stored_exprs
+                expr = get(tp.options, :dhost_coeff_expr, nothing)
+                expr !== nothing && return expr
+            end
+        end
+        name
     end
 
     a1 = _coeff(theory.a[1])
@@ -94,11 +106,13 @@ Ground truth: Langlois & Noui (2016) arXiv:1510.06930, Sec 3.
 function is_degenerate(theory::DHOSTTheory;
                        registry::TensorRegistry=current_registry(),
                        values::Dict{Symbol,<:Number}=Dict{Symbol,Int}())
-    conds = degeneracy_conditions(theory; registry=registry)
-
     if isempty(values)
+        # Structural check: use stored Horndeski expressions for simplification
+        conds = degeneracy_conditions(theory; registry=registry, use_stored_exprs=true)
         return all(c -> c == 0, conds)
     else
+        # Numeric check: use raw symbol names so values dict matches
+        conds = degeneracy_conditions(theory; registry=registry, use_stored_exprs=false)
         return all(c -> abs(sym_eval(c, values)) < 1e-12, conds)
     end
 end
@@ -189,6 +203,11 @@ end
 Check if a tensor has been set to vanish (via `set_vanishing!`).
 """
 function _is_vanishing(reg::TensorRegistry, name::Symbol)
+    # Check the vanishing field on TensorProperties (set by set_vanishing!)
+    if has_tensor(reg, name) && get_tensor(reg, name).vanishing
+        return true
+    end
+    # Fallback: check for a rewrite rule Tensor(name) => 0
     for rule in get_rules(reg)
         if rule isa RewriteRule &&
            rule.pattern isa Tensor && rule.pattern.name == name &&
@@ -224,6 +243,15 @@ function horndeski_as_dhost(ht::HorndeskiTheory;
     set_vanishing!(registry, g_tensor_name(dht.a[3]))
     set_vanishing!(registry, g_tensor_name(dht.a[4]))
     set_vanishing!(registry, g_tensor_name(dht.a[5]))
+
+    # Encode Horndeski constraint: a1 = G4_X, a2 = -G4_X
+    # So a1 + a2 = 0 identically, making C1 vanish.
+    # Langlois & Noui (2016) arXiv:1510.06930, Sec 4.1.
+    G4X_name = g_tensor_name(differentiate_G(ht.G_functions[3], :X))
+    a1_name = g_tensor_name(dht.a[1])
+    a2_name = g_tensor_name(dht.a[2])
+    get_tensor(registry, a1_name).options[:dhost_coeff_expr] = G4X_name
+    get_tensor(registry, a2_name).options[:dhost_coeff_expr] = _sym_neg(G4X_name)
 
     dht
 end

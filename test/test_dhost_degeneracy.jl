@@ -30,13 +30,13 @@
             # degeneracy_conditions should return all zeros
             conds = degeneracy_conditions(dht; registry=reg)
             @test length(conds) == 3
-            @test_broken all(c -> c == 0, conds)  # symbolic evaluation doesn't reduce to 0
+            @test all(c -> c == 0, conds)  # G4_X + (-G4_X) = 0 via _sym_add cancellation
 
             # is_degenerate should be true
-            @test_broken is_degenerate(dht; registry=reg)  # needs CAS simplification
+            @test is_degenerate(dht; registry=reg)
 
             # Should be classified as Class Ia
-            @test_broken dhost_class(dht; registry=reg) == :class_Ia  # depends on is_degenerate
+            @test dhost_class(dht; registry=reg) == :class_Ia
         end
     end
 
@@ -50,14 +50,11 @@
             dht = horndeski_as_dhost(ht; registry=reg)
 
             ht2 = reduce_to_horndeski(dht; registry=reg)
-            @test_broken ht2 !== nothing  # needs CAS simplification for class detection
-            @test_broken ht2 isa HorndeskiTheory
+            @test ht2 !== nothing
+            @test ht2 isa HorndeskiTheory
             if ht2 !== nothing
                 @test ht2.manifold == :M4
                 @test ht2.metric == :g
-            else
-                @test_broken false  # ht2.manifold
-                @test_broken false  # ht2.metric
             end
         end
     end
@@ -206,8 +203,8 @@
             dht = horndeski_as_dhost(ht; registry=reg)
 
             # horndeski_as_dhost sets a_3, a_4, a_5 to vanish
-            @test_broken dhost_class(dht; registry=reg) == :class_Ia  # needs CAS
-            @test_broken dhost_dof_count(dht; registry=reg) == 3  # needs CAS
+            @test dhost_class(dht; registry=reg) == :class_Ia
+            @test dhost_dof_count(dht; registry=reg) == 3
         end
     end
 
