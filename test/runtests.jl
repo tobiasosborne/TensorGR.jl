@@ -166,4 +166,6 @@ using TensorGR
     include("test_dual_rinv.jl")
     # Feynman diagram types
     include("test_feynman_types.jl")
+    # PPN metric ansatz
+    include("test_ppn_metric.jl")
 end

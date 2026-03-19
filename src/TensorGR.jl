@@ -136,6 +136,9 @@ include("feynman/vertices.jl")
 include("feynman/gauge_fixing.jl")
 include("feynman/matter_vertices.jl")
 
+# Layer 5.5: PPN (Parametrized Post-Newtonian)
+include("ppn/metric_ansatz.jl")
+
 # Layer 5.5: Covariant phase space (Noether charge, symplectic form)
 include("phase_space/divergence.jl")
 include("phase_space/eom.jl")
@@ -409,6 +412,11 @@ export fp_operator, ghost_propagator, ghost_graviton_vertex
 export gauge_fixed_kinetic_operator
 export build_diagram, tree_exchange_diagram, contract_diagram, DiagramAmplitude
 export vertex_from_perturbation
+
+# Exports: PPN
+export PPNParameters, ppn_gr, is_gr, is_fully_conservative, is_preferred_frame_free
+export is_semi_conservative, is_preferred_location_free
+export define_ppn_potentials!, ppn_metric_ansatz
 
 # Exports: Covariant phase space
 export is_divergence, extract_divergence, split_divergence
