@@ -256,4 +256,6 @@ using TensorGR
     include("test_source_constraints.jl")
     # PSALTer validation: Maxwell theory
     include("test_maxwell_spectrum.jl")
+    # PSALTer validation: Proca theory
+    include("test_proca_spectrum.jl")
 end
