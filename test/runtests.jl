@@ -142,4 +142,12 @@ using TensorGR
     include("test_eft_de.jl")
     include("test_fr_as_horndeski.jl")
     include("test_multi_horndeski.jl")
+    # Spherical harmonics
+    include("test_scalar_harmonics.jl")
+    include("test_vector_harmonics.jl")
+    include("test_tensor_harmonics.jl")
+    include("test_clebsch_gordan.jl")
+    include("test_harmonic_orthogonality.jl")
+    include("test_tensor_harmonic_orthogonality.jl")
+    include("test_ground_truth_harmonics.jl")
 end

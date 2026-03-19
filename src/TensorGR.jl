@@ -121,6 +121,18 @@ include("xideal/petrov_classify.jl")
 include("xideal/segre.jl")
 include("xideal/energy_conditions.jl")
 
+# Layer 5.5: Spherical harmonics (scalar, vector, tensor)
+include("harmonics/scalar_harmonics.jl")
+include("harmonics/clebsch_gordan.jl")
+include("harmonics/vector_harmonics.jl")
+include("harmonics/tensor_harmonics.jl")
+include("harmonics/orthogonality.jl")
+include("harmonics/angular_integrals.jl")
+include("harmonics/laplacian.jl")
+include("harmonics/decompose_scalar.jl")
+include("harmonics/decompose_vector.jl")
+include("harmonics/decompose_tensor.jl")
+
 # Layer 5.5: Scalar-tensor gravity (Horndeski, DHOST, EFT-DE)
 include("scalar_tensor/horndeski.jl")
 include("scalar_tensor/horndeski_eom.jl")
@@ -353,6 +365,20 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: Spherical harmonics
+export wigner3j, clebsch_gordan
+export ScalarHarmonic, harmonic_product, conjugate, inner_product
+export EvenVectorHarmonic, OddVectorHarmonic, vector_inner_product
+export divergence_eigenvalue, curl_eigenvalue, norm_squared
+export EvenTensorHarmonicY, EvenTensorHarmonicZ, OddTensorHarmonic, tensor_inner_product
+export angular_integral, gaunt_integral, angular_selection_rule
+export vector_gaunt, tensor_gaunt
+export angular_laplacian, simplify_laplacian
+export ScalarMode, HarmonicDecomposition, decompose_scalar, get_mode
+export VectorMode, VectorHarmonicDecomposition, decompose_vector
+export TensorMode, TensorHarmonicDecomposition, decompose_symmetric_tensor
+export Parity, EVEN, ODD
 
 # Exports: Scalar-tensor gravity
 export ScalarTensorFunction, g_tensor_name, differentiate_G
