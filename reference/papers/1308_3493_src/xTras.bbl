@@ -1,0 +1,453 @@
+% $ biblatex auxiliary file $
+% $ biblatex version 1.7 $
+% $ biber version 0.9.9 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber or bibtex as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \entry{MartinGarcia:2002xa}{online}{}
+    \name{labelname}{1}{}{%
+      {{hash=6b1a61adda6057c88bcb2bd2ced37dea}{Mart{\'i}n-Garc{\'i}a\bibnamedelima et.al.}{M\bibinithyphendelim G\bibinitperiod\bibinitdelim e\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=6b1a61adda6057c88bcb2bd2ced37dea}{Mart{\'i}n-Garc{\'i}a\bibnamedelima et.al.}{M\bibinithyphendelim G\bibinitperiod\bibinitdelim e\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{6b1a61adda6057c88bcb2bd2ced37dea}
+    \strng{fullhash}{6b1a61adda6057c88bcb2bd2ced37dea}
+    \field{sortinit}{0}
+    \field{title}{{xAct: Efficient tensor computer algebra for Mathematica}}
+    \field{year}{2002-2013}
+    \verb{url}
+    \verb http://xact.es/
+    \endverb
+  \endentry
+
+  \entry{MartinGarcia:2008}{article}{}
+    \name{labelname}{1}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{d4ca8f7448c1dd39f8b565b78b5307b7}
+    \strng{fullhash}{d4ca8f7448c1dd39f8b565b78b5307b7}
+    \field{sortinit}{0}
+    \field{eprintclass}{cs.SC}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Comput.Phys.Commun.}
+    \field{title}{{xPerm: fast index canonicalization for tensor computer algebra}}
+    \field{volume}{179}
+    \field{year}{2008}
+    \field{pages}{597\bibrangedash 603}
+    \verb{doi}
+    \verb 10.1016/j.cpc.2008.05.009
+    \endverb
+    \verb{eprint}
+    \verb 0803.0862
+    \endverb
+  \endentry
+
+  \entry{MartinGarcia:2002}{online}{}
+    \name{labelname}{1}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{d4ca8f7448c1dd39f8b565b78b5307b7}
+    \strng{fullhash}{d4ca8f7448c1dd39f8b565b78b5307b7}
+    \field{sortinit}{0}
+    \field{title}{{xTensor: Fast abstract tensor computer algebra}}
+    \field{year}{2002-2013}
+    \verb{url}
+    \verb http://xact.es/xTensor/
+    \endverb
+  \endentry
+
+  \entry{Portugal:1998qi}{article}{}
+    \name{labelname}{1}{}{%
+      {{hash=0e9c8563f1faecdc101eaa82ea0e32d9}{Portugal}{P\bibinitperiod}{R.}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=0e9c8563f1faecdc101eaa82ea0e32d9}{Portugal}{P\bibinitperiod}{R.}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{0e9c8563f1faecdc101eaa82ea0e32d9}
+    \strng{fullhash}{0e9c8563f1faecdc101eaa82ea0e32d9}
+    \field{sortinit}{0}
+    \field{eprintclass}{gr-qc}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Comput.Phys.Commun.}
+    \field{title}{{An algorithm to simplify tensor expressions}}
+    \field{volume}{115}
+    \field{year}{1998}
+    \field{pages}{215\bibrangedash 230}
+    \verb{doi}
+    \verb 10.1016/S0010-4655(98)00117-9
+    \endverb
+    \verb{eprint}
+    \verb gr-qc/9803023
+    \endverb
+  \endentry
+
+  \entry{Portugal:1999}{article}{}
+    \name{labelname}{1}{}{%
+      {{hash=0e9c8563f1faecdc101eaa82ea0e32d9}{Portugal}{P\bibinitperiod}{R.}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=0e9c8563f1faecdc101eaa82ea0e32d9}{Portugal}{P\bibinitperiod}{R.}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{0e9c8563f1faecdc101eaa82ea0e32d9}
+    \strng{fullhash}{0e9c8563f1faecdc101eaa82ea0e32d9}
+    \field{sortinit}{0}
+    \field{journaltitle}{J. Phys. A: Math. Gen.}
+    \field{title}{{Algorithmic simplification of tensor expressions}}
+    \field{volume}{32}
+    \field{year}{1999}
+    \field{pages}{7779\bibrangedash 7789}
+    \verb{doi}
+    \verb doi:10.1088/0305-4470/32/44/313
+    \endverb
+  \endentry
+
+  \entry{Manssur:2002}{article}{}
+    \name{labelname}{3}{}{%
+      {{hash=55b72d725858c3758f7760a8b6b072bf}{Manssur}{M\bibinitperiod}{Leon\bibnamedelima R.U.}{L\bibinitperiod\bibinitdelim R\bibinitperiod}{}{}{}{}}%
+      {{hash=86115df2cb850b949dd39ce43866b630}{Portugal}{P\bibinitperiod}{Renato}{R\bibinitperiod}{}{}{}{}}%
+      {{hash=167c7b348d31626e04b5cc114d2fc40b}{Svaiter}{S\bibinitperiod}{B.F.}{B\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{3}{}{%
+      {{hash=55b72d725858c3758f7760a8b6b072bf}{Manssur}{M\bibinitperiod}{Leon\bibnamedelima R.U.}{L\bibinitperiod\bibinitdelim R\bibinitperiod}{}{}{}{}}%
+      {{hash=86115df2cb850b949dd39ce43866b630}{Portugal}{P\bibinitperiod}{Renato}{R\bibinitperiod}{}{}{}{}}%
+      {{hash=167c7b348d31626e04b5cc114d2fc40b}{Svaiter}{S\bibinitperiod}{B.F.}{B\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{afa20c707e2d3a6fd67252766ae5abd6}
+    \strng{fullhash}{afa20c707e2d3a6fd67252766ae5abd6}
+    \field{sortinit}{0}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Int. J. Modern Phys. C}
+    \field{title}{{Group-theoretic Approach for Symbolic Tensor Manipulation}}
+    \field{volume}{13}
+    \field{year}{2002}
+    \field{pages}{859\bibrangedash 879}
+    \verb{doi}
+    \verb 10.1142/S0129183102004571
+    \endverb
+    \verb{eprint}
+    \verb math-ph/0107032
+    \endverb
+  \endentry
+
+  \entry{Brizuela:2008ra}{article}{}
+    \name{labelname}{3}{}{%
+      {{hash=6ffd8b8030fcf0a6ca999aebad2069dd}{Brizuela}{B\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=11c733ab5f8cec0bea77b7a85c147a48}{Mena\bibnamedelima Marug{\'a}n}{M\bibinitperiod\bibinitdelim M\bibinitperiod}{Guillermo\bibnamedelima A.}{G\bibinitperiod\bibinitdelim A\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{3}{}{%
+      {{hash=6ffd8b8030fcf0a6ca999aebad2069dd}{Brizuela}{B\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=11c733ab5f8cec0bea77b7a85c147a48}{Mena\bibnamedelima Marug{\'a}n}{M\bibinitperiod\bibinitdelim M\bibinitperiod}{Guillermo\bibnamedelima A.}{G\bibinitperiod\bibinitdelim A\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{06cbf19dd9240382b1616d095dc5fefb}
+    \strng{fullhash}{06cbf19dd9240382b1616d095dc5fefb}
+    \field{sortinit}{0}
+    \field{eprintclass}{gr-qc}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Gen.Rel.Grav.}
+    \field{title}{{xPert: Computer algebra for metric perturbation theory}}
+    \field{volume}{41}
+    \field{year}{2009}
+    \field{pages}{2415\bibrangedash 2431}
+    \verb{doi}
+    \verb 10.1007/s10714-009-0773-2
+    \endverb
+    \verb{eprint}
+    \verb 0807.0824
+    \endverb
+  \endentry
+
+  \entry{Brizuela:2006}{online}{}
+    \name{labelname}{3}{}{%
+      {{hash=6ffd8b8030fcf0a6ca999aebad2069dd}{Brizuela}{B\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=11c733ab5f8cec0bea77b7a85c147a48}{Mena\bibnamedelima Marug{\'a}n}{M\bibinitperiod\bibinitdelim M\bibinitperiod}{Guillermo\bibnamedelima A.}{G\bibinitperiod\bibinitdelim A\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{3}{}{%
+      {{hash=6ffd8b8030fcf0a6ca999aebad2069dd}{Brizuela}{B\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=11c733ab5f8cec0bea77b7a85c147a48}{Mena\bibnamedelima Marug{\'a}n}{M\bibinitperiod\bibinitdelim M\bibinitperiod}{Guillermo\bibnamedelima A.}{G\bibinitperiod\bibinitdelim A\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{06cbf19dd9240382b1616d095dc5fefb}
+    \strng{fullhash}{06cbf19dd9240382b1616d095dc5fefb}
+    \field{sortinit}{0}
+    \field{title}{{Harmonics: Tensor spherical harmonics in Mathematica.}}
+    \field{year}{2006-2013}
+    \verb{url}
+    \verb http://xact.es/Harmonics/
+    \endverb
+  \endentry
+
+  \entry{MartinGarcia:2007ab}{article}{}
+    \name{labelname}{3}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=55b72d725858c3758f7760a8b6b072bf}{Manssur}{M\bibinitperiod}{Leon\bibnamedelima R.U.}{L\bibinitperiod\bibinitdelim R\bibinitperiod}{}{}{}{}}%
+      {{hash=86115df2cb850b949dd39ce43866b630}{Portugal}{P\bibinitperiod}{Renato}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{3}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=55b72d725858c3758f7760a8b6b072bf}{Manssur}{M\bibinitperiod}{Leon\bibnamedelima R.U.}{L\bibinitperiod\bibinitdelim R\bibinitperiod}{}{}{}{}}%
+      {{hash=86115df2cb850b949dd39ce43866b630}{Portugal}{P\bibinitperiod}{Renato}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{8895ff9294973a0c34161e547926dd48}
+    \strng{fullhash}{8895ff9294973a0c34161e547926dd48}
+    \field{sortinit}{0}
+    \field{eprintclass}{cs.SC}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Comput.Phys.Commun.}
+    \field{title}{{The Invar tensor package}}
+    \field{volume}{176}
+    \field{year}{2007}
+    \field{pages}{640\bibrangedash 648}
+    \verb{doi}
+    \verb 10.1016/j.cpc.2007.05.015
+    \endverb
+    \verb{eprint}
+    \verb 0704.1756
+    \endverb
+  \endentry
+
+  \entry{MartinGarcia:2008qz}{article}{}
+    \name{labelname}{3}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=8b2217c7de476fb598bf2d56d5ed93dd}{Yllanes}{Y\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=86115df2cb850b949dd39ce43866b630}{Portugal}{P\bibinitperiod}{Renato}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{3}{}{%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+      {{hash=8b2217c7de476fb598bf2d56d5ed93dd}{Yllanes}{Y\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=86115df2cb850b949dd39ce43866b630}{Portugal}{P\bibinitperiod}{Renato}{R\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{06a0a83cc978e4451e460a2fa2a77fb1}
+    \strng{fullhash}{06a0a83cc978e4451e460a2fa2a77fb1}
+    \field{sortinit}{0}
+    \field{eprintclass}{cs.SC}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Comput.Phys.Commun.}
+    \field{title}{{The Invar tensor package: Differential invariants of Riemann}}
+    \field{volume}{179}
+    \field{year}{2008}
+    \field{pages}{586\bibrangedash 590}
+    \verb{doi}
+    \verb 10.1016/j.cpc.2008.04.018
+    \endverb
+    \verb{eprint}
+    \verb 0802.1274
+    \endverb
+  \endentry
+
+  \entry{GomezLobo:2011xv}{article}{}
+    \name{labelname}{2}{}{%
+      {{hash=5ad4af8753e5aa328b4ee0cf2f94a878}{Garc{\'i}a-Parrado}{G\bibinithyphendelim P\bibinitperiod}{Alfonso}{A\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{2}{}{%
+      {{hash=5ad4af8753e5aa328b4ee0cf2f94a878}{Garc{\'i}a-Parrado}{G\bibinithyphendelim P\bibinitperiod}{Alfonso}{A\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{f42d3c5191834a3103e8a6b752bc8e6e}
+    \strng{fullhash}{f42d3c5191834a3103e8a6b752bc8e6e}
+    \field{sortinit}{0}
+    \field{eprintclass}{gr-qc}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Comput.Phys.Commun.}
+    \field{title}{{Spinors: a Mathematica package for doing spinor calculus in General Relativity}}
+    \field{volume}{183}
+    \field{year}{2012}
+    \field{pages}{2214\bibrangedash 2225}
+    \verb{doi}
+    \verb 10.1016/j.cpc.2012.04.024
+    \endverb
+    \verb{eprint}
+    \verb 1110.2662
+    \endverb
+  \endentry
+
+  \entry{Backdahl:2013}{online}{}
+    \name{labelname}{1}{}{%
+      {{hash=178fa550305b190b08456e2d53b31199}{B{\"a}ckdahl}{B\bibinitperiod}{Thomas}{T\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=178fa550305b190b08456e2d53b31199}{B{\"a}ckdahl}{B\bibinitperiod}{Thomas}{T\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{178fa550305b190b08456e2d53b31199}
+    \strng{fullhash}{178fa550305b190b08456e2d53b31199}
+    \field{sortinit}{0}
+    \field{title}{{SymManipulator: Symmetrized tensor expressions}}
+    \field{year}{2011-2013}
+    \verb{url}
+    \verb http://xact.es/SymManipulator/
+    \endverb
+  \endentry
+
+  \entry{Pitrou:2013hga}{article}{}
+    \name{labelname}{3}{}{%
+      {{hash=fbf70ec8b88afa41c43992f8cfb10b66}{Pitrou}{P\bibinitperiod}{Cyril}{C\bibinitperiod}{}{}{}{}}%
+      {{hash=0d9249685801096700cee85486c73b4b}{Roy}{R\bibinitperiod}{Xavier}{X\bibinitperiod}{}{}{}{}}%
+      {{hash=2eba0b83034b6be4a6cf25561f1b4142}{Umeh}{U\bibinitperiod}{Obinna}{O\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{3}{}{%
+      {{hash=fbf70ec8b88afa41c43992f8cfb10b66}{Pitrou}{P\bibinitperiod}{Cyril}{C\bibinitperiod}{}{}{}{}}%
+      {{hash=0d9249685801096700cee85486c73b4b}{Roy}{R\bibinitperiod}{Xavier}{X\bibinitperiod}{}{}{}{}}%
+      {{hash=2eba0b83034b6be4a6cf25561f1b4142}{Umeh}{U\bibinitperiod}{Obinna}{O\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{dc45c087e1629570fa8cbc8467641d6e}
+    \strng{fullhash}{dc45c087e1629570fa8cbc8467641d6e}
+    \field{sortinit}{0}
+    \field{eprintclass}{astro-ph.CO}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{Class.Quant.Grav.}
+    \field{title}{{xPand: An algorithm for perturbing homogeneous cosmologies}}
+    \field{volume}{30}
+    \field{year}{2013}
+    \field{pages}{165002}
+    \verb{doi}
+    \verb 10.1088/0264-9381/30/16/165002
+    \endverb
+    \verb{eprint}
+    \verb 1302.6174
+    \endverb
+  \endentry
+
+  \entry{Peeters:2007wn}{article}{}
+    \name{labelname}{1}{}{%
+      {{hash=81f35a1e9a9b50a3bc9cd968b7bd4ccb}{Peeters}{P\bibinitperiod}{Kasper}{K\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=81f35a1e9a9b50a3bc9cd968b7bd4ccb}{Peeters}{P\bibinitperiod}{Kasper}{K\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{81f35a1e9a9b50a3bc9cd968b7bd4ccb}
+    \strng{fullhash}{81f35a1e9a9b50a3bc9cd968b7bd4ccb}
+    \field{sortinit}{0}
+    \field{eprintclass}{HEP-TH}
+    \field{eprinttype}{arXiv}
+    \field{title}{{Introducing Cadabra: A Symbolic computer algebra system for field theory problems}}
+    \field{year}{2007}
+    \verb{eprint}
+    \verb hep-th/0701238
+    \endverb
+  \endentry
+
+  \entry{Yllanes:2013}{online}{}
+    \name{labelname}{2}{}{%
+      {{hash=8b2217c7de476fb598bf2d56d5ed93dd}{Yllanes}{Y\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{2}{}{%
+      {{hash=8b2217c7de476fb598bf2d56d5ed93dd}{Yllanes}{Y\bibinitperiod}{David}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=d4ca8f7448c1dd39f8b565b78b5307b7}{Mart{\'i}n-Garc{\'i}a}{M\bibinithyphendelim G\bibinitperiod}{Jos{\'e}\bibnamedelima M.}{J\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{24c2bc08ec9d9cd564b6976661107015}
+    \strng{fullhash}{24c2bc08ec9d9cd564b6976661107015}
+    \field{sortinit}{0}
+    \field{title}{{xCoba: General component tensor computer algebra}}
+    \field{year}{2005-2013}
+    \verb{url}
+    \verb http://xact.es/xCoba/
+    \endverb
+  \endentry
+
+  \entry{Luks:1993}{article}{}
+    \name{labelname}{1}{}{%
+      {{hash=f5314a99b6986f41edd7eceff8f19311}{Luks}{L\bibinitperiod}{Eugene\bibnamedelima M.}{E\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{1}{}{%
+      {{hash=f5314a99b6986f41edd7eceff8f19311}{Luks}{L\bibinitperiod}{Eugene\bibnamedelima M.}{E\bibinitperiod\bibinitdelim M\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{f5314a99b6986f41edd7eceff8f19311}
+    \strng{fullhash}{f5314a99b6986f41edd7eceff8f19311}
+    \field{sortinit}{0}
+    \field{journaltitle}{Groups and Computations}
+    \field{series}{DIMACS series in Discrete Mathematics and Theoretical Computer Science}
+    \field{title}{Permutation groups and polynomial-time computation}
+    \field{volume}{11}
+    \field{year}{1993}
+    \field{pages}{139\bibrangedash 175}
+  \endentry
+
+  \entry{Green:2005qr}{article}{}
+    \name{labelname}{3}{}{%
+      {{hash=84110320cd0615c26e1fbf34b4aa7349}{Green}{G\bibinitperiod}{Michael\bibnamedelima B.}{M\bibinitperiod\bibinitdelim B\bibinitperiod}{}{}{}{}}%
+      {{hash=81f35a1e9a9b50a3bc9cd968b7bd4ccb}{Peeters}{P\bibinitperiod}{Kasper}{K\bibinitperiod}{}{}{}{}}%
+      {{hash=a17a3752d0752069670f62f1d63961de}{Stahn}{S\bibinitperiod}{Christian}{C\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{3}{}{%
+      {{hash=84110320cd0615c26e1fbf34b4aa7349}{Green}{G\bibinitperiod}{Michael\bibnamedelima B.}{M\bibinitperiod\bibinitdelim B\bibinitperiod}{}{}{}{}}%
+      {{hash=81f35a1e9a9b50a3bc9cd968b7bd4ccb}{Peeters}{P\bibinitperiod}{Kasper}{K\bibinitperiod}{}{}{}{}}%
+      {{hash=a17a3752d0752069670f62f1d63961de}{Stahn}{S\bibinitperiod}{Christian}{C\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{c7b9efebc6d58ee15cc7234602de0b66}
+    \strng{fullhash}{c7b9efebc6d58ee15cc7234602de0b66}
+    \field{sortinit}{0}
+    \field{eprintclass}{hep-th}
+    \field{eprinttype}{arXiv}
+    \field{journaltitle}{JHEP}
+    \field{title}{{Superfield integrals in high dimensions}}
+    \field{volume}{0508}
+    \field{year}{2005}
+    \field{pages}{093}
+    \verb{doi}
+    \verb 10.1088/1126-6708/2005/08/093
+    \endverb
+    \verb{eprint}
+    \verb hep-th/0506161
+    \endverb
+  \endentry
+
+  \entry{Etingof:2009ab}{article}{}
+    \name{labelname}{7}{}{%
+      {{hash=1f787d12157195b932f24ce1b32355dd}{{Etingof}}{E\bibinitperiod}{P.}{P\bibinitperiod}{}{}{}{}}%
+      {{hash=d75337cd5d9715345ca877c38bf65b56}{{Golberg}}{G\bibinitperiod}{O.}{O\bibinitperiod}{}{}{}{}}%
+      {{hash=74a3b67818d18e429337e5f6ee809654}{{Hensel}}{H\bibinitperiod}{S.}{S\bibinitperiod}{}{}{}{}}%
+      {{hash=f55c6ea18fa4c867185eb77ee5d6b830}{{Liu}}{L\bibinitperiod}{T.}{T\bibinitperiod}{}{}{}{}}%
+      {{hash=efa7d1e8863d27c95d59e290ec71dcfc}{{Schwendner}}{S\bibinitperiod}{A.}{A\bibinitperiod}{}{}{}{}}%
+      {{hash=38a5e1d2e37bd79369269ca0d4c9c626}{{Vaintrob}}{V\bibinitperiod}{D.}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=ab7d95af602cce9c6b22335b0dd3536a}{{Yudovina}}{Y\bibinitperiod}{E.}{E\bibinitperiod}{}{}{}{}}%
+    }
+    \name{author}{7}{}{%
+      {{hash=1f787d12157195b932f24ce1b32355dd}{{Etingof}}{E\bibinitperiod}{P.}{P\bibinitperiod}{}{}{}{}}%
+      {{hash=d75337cd5d9715345ca877c38bf65b56}{{Golberg}}{G\bibinitperiod}{O.}{O\bibinitperiod}{}{}{}{}}%
+      {{hash=74a3b67818d18e429337e5f6ee809654}{{Hensel}}{H\bibinitperiod}{S.}{S\bibinitperiod}{}{}{}{}}%
+      {{hash=f55c6ea18fa4c867185eb77ee5d6b830}{{Liu}}{L\bibinitperiod}{T.}{T\bibinitperiod}{}{}{}{}}%
+      {{hash=efa7d1e8863d27c95d59e290ec71dcfc}{{Schwendner}}{S\bibinitperiod}{A.}{A\bibinitperiod}{}{}{}{}}%
+      {{hash=38a5e1d2e37bd79369269ca0d4c9c626}{{Vaintrob}}{V\bibinitperiod}{D.}{D\bibinitperiod}{}{}{}{}}%
+      {{hash=ab7d95af602cce9c6b22335b0dd3536a}{{Yudovina}}{Y\bibinitperiod}{E.}{E\bibinitperiod}{}{}{}{}}%
+    }
+    \strng{namehash}{afebd4e885309c8cc7c16760c80e2b7a}
+    \strng{fullhash}{afebd4e885309c8cc7c16760c80e2b7a}
+    \field{sortinit}{0}
+    \field{eprintclass}{math.RT}
+    \field{eprinttype}{arXiv}
+    \field{title}{{Introduction to representation theory}}
+    \field{year}{2009}
+    \verb{eprint}
+    \verb 0901.0827
+    \endverb
+  \endentry
+
+\endrefsection
+\endinput
+

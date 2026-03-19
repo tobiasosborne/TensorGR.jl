@@ -1,0 +1,111 @@
+\begin{thebibliography}{10}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \def\href#1#2{#2} \def\path#1{#1}\fi
+
+\bibitem{PENROSE-SPINORS}
+R.~Penrose, A spinor approach to general relativity, Ann. of Phys. 10 (1960)
+  171--201.
+
+\bibitem{XACT}
+J.~M. Mart\'{\i}n-Garc\'{\i}a, x{A}ct: efficient tensor computer algebra,
+  \url{http://www.xact.es}.
+
+\bibitem{MS}
+D.~Ma{\^{\i}}tre, P.~Mastrolia, S@m, a {M}athematica implementation of the
+  spinor-helicity formalism, Comput. Phys. Comm. 179~(7) (2008) 501--534.
+
+\bibitem{CADABRA}
+K.~Peeters, Introducing {C}adabra: a symbolic computer algebra system for field
+  theory problems, \url{http://www.arxiv.org/abs/hep-th/0701238}.
+
+\bibitem{NPSPINOR}
+S.~R. Czapor, R.~G. McLenaghan, J.~Carminati, The automatic conversion of
+  spinor equations to dyad form in {MAPLE}, Gen. Relativity Gravitation 24~(9)
+  (1992) 911--928.
+
+\bibitem{PR-RINDLER-1}
+R.~Penrose, W.~Rindler, Spinors and space-time. {V}ol.\ 1, Cambridge Monographs
+  on Mathematical Physics, Cambridge University Press, Cambridge, 1987.
+
+\bibitem{ASHTEKAR}
+A.~Ashtekar, Lectures on non-perturbative canonical gravity, Advanced Series in
+  Astrophysics and Cosmology, World Scientific, Singapore, 1991.
+
+\bibitem{NAKAHARA}
+M.~Nakahara, Geometry, topology and physics, Graduate Student Series in
+  Physics, Adam Hilger Ltd., Bristol, 1990.
+
+\bibitem{ASHTEKAR-CALCULUS}
+A.~Ashtekar, G.~T. Horowitz, A.~Magnon-Ashtekar, A generalization of tensor
+  calculus and its applications to physics, Gen. Relativity Gravitation 14~(5)
+  (1982) 411--428.
+
+\bibitem{SCHOUTEN}
+J.~A. Schouten, Ricci Calculus, Die Grundlehren der Matematischen
+  Wissenschaften, Springer Verlag, Berlin, 1954.
+
+\bibitem{XPERM}
+J.~M. Mart\'{\i}n-Garc\'{\i}a, x{P}erm: fast index canonicalization for tensor
+  computer algebra, Computer Physics Communications 179 (2008) 597--603.
+
+\bibitem{INVAR1}
+J.~M. Mart{\'{\i}}n-Garc{\'{\i}}a, R.~Portugal, L.~Manssur, The {I}nvar tensor
+  package, Comp. Phys. Comm. 177~(8) (2007) 640--648.
+
+\bibitem{INVAR2}
+J.~M. Mart{\'{\i}}n-Garc{\'{\i}}a, D.~Yllanes, R.~Portugal, The {I}nvar tensor
+  package: Differential invariants of {R}iemann, Comp. Phys. Comm. 179~(8)
+  (2008) 586--590.
+
+\bibitem{XPERT}
+D.~Brizuela, J.~M. Mart{\'{\i}}n-Garc{\'{\i}}a, G.~A. Mena~Marug{\'a}n,
+  x{P}ert: computer algebra for metric perturbation theory, Gen. Relativity
+  Gravitation 41~(10) (2009) 2415--2431.
+
+\bibitem{KERR-INVARIANT-TJ}
+T.~B\"ackdahl, J.~A. Valiente~Kroon, On the construction of a geometric
+  invariant measuring the deviation from {K}err data, Ann. Henri Poincar\'e 11
+  (2010) 1225--1271.
+
+\bibitem{KERR-INVARIANT-PRL}
+T.~B\"ackdahl, J.~A. Valiente~Kroon, Geometric invariant measuring the
+  deviation from {K}err data, Phys. Rev. Lett. 104 (2010) 231102, 4.
+
+\bibitem{KERR-INVARIANT-PRS}
+T.~B\"ackdahl, J.~A. Valiente~Kroon, The 'non-{K}errness' of domains of outer
+  communication of black holes and exteriors of stars, Proc. Roy. Soc. A 467
+  (2011) 1701--1718.
+
+\bibitem{EDGAR-D}
+S.~B. Edgar, A.~Garc{\'{\i}}a-Parrado, J.~M. Mart{\'{\i}}n-Garc{\'{\i}}a,
+  Petrov {D} vacuum spaces revisited: identities and invariant classification,
+  Class. Quantum Grav. 26~(10) (2009) 105022, 13.
+
+\bibitem{WITTEN-MASS}
+E.~Witten, A new proof of the positive energy theorem, Comm. Math. Phys 80~(3)
+  (1981) 381--402.
+
+\bibitem{NESTER-FORM}
+J.~M. Nester, A new gravitational energy expression with a simple positivity
+  proof, Phys. Lett. A 83~(6) (1981) 241--242.
+
+\bibitem{FRAUENDIENER-PSEUDO}
+J.~Frauendiener, Geometric description of energy-momentum pseudotensors,
+  Classical Quantum Gravity 6~(12) (1989) L237--L241.
+
+\bibitem{SZABADOS-PSEUDO}
+L.~B. Szabados, On canonical pseudotensors, {S}parling's form and {N}oether
+  currents, Class. Quantum Gravity 9~(11) (1992) 2521--2541.
+
+\bibitem{STEWART}
+J.~Stewart, Advanced general relativity, Cambridge Monographs on Mathematical
+  Physics, Cambridge University Press, Cambridge, 1991.
+
+\bibitem{BERGQVIST-POSITIVITY}
+G.~Bergqvist, Simplified spinorial proof of the positive energy theorem, Phys.
+  Rev. D (3) 48~(2) (1993) 628--630.
+
+\end{thebibliography}

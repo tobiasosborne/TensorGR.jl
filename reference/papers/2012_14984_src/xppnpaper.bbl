@@ -1,0 +1,717 @@
+%merlin.mbs apsrev4-1.bst 2010-07-25 4.21a (PWD, AO, DPC) hacked
+%Control: key (0)
+%Control: author (0) dotless jnrlst
+%Control: editor formatted (1) identically to author
+%Control: production of article title (0) allowed
+%Control: page (1) range
+%Control: year (0) verbatim
+%Control: production of eprint (0) enabled
+\begin{thebibliography}{57}%
+\makeatletter
+\providecommand \@ifxundefined [1]{%
+ \@ifx{#1\undefined}
+}%
+\providecommand \@ifnum [1]{%
+ \ifnum #1\expandafter \@firstoftwo
+ \else \expandafter \@secondoftwo
+ \fi
+}%
+\providecommand \@ifx [1]{%
+ \ifx #1\expandafter \@firstoftwo
+ \else \expandafter \@secondoftwo
+ \fi
+}%
+\providecommand \natexlab [1]{#1}%
+\providecommand \enquote  [1]{``#1''}%
+\providecommand \bibnamefont  [1]{#1}%
+\providecommand \bibfnamefont [1]{#1}%
+\providecommand \citenamefont [1]{#1}%
+\providecommand \href@noop [0]{\@secondoftwo}%
+\providecommand \href [0]{\begingroup \@sanitize@url \@href}%
+\providecommand \@href[1]{\@@startlink{#1}\@@href}%
+\providecommand \@@href[1]{\endgroup#1\@@endlink}%
+\providecommand \@sanitize@url [0]{\catcode `\\12\catcode `\$12\catcode
+  `\&12\catcode `\#12\catcode `\^12\catcode `\_12\catcode `\%12\relax}%
+\providecommand \@@startlink[1]{}%
+\providecommand \@@endlink[0]{}%
+\providecommand \url  [0]{\begingroup\@sanitize@url \@url }%
+\providecommand \@url [1]{\endgroup\@href {#1}{\urlprefix }}%
+\providecommand \urlprefix  [0]{URL }%
+\providecommand \Eprint [0]{\href }%
+\providecommand \doibase [0]{http://dx.doi.org/}%
+\providecommand \selectlanguage [0]{\@gobble}%
+\providecommand \bibinfo  [0]{\@secondoftwo}%
+\providecommand \bibfield  [0]{\@secondoftwo}%
+\providecommand \translation [1]{[#1]}%
+\providecommand \BibitemOpen [0]{}%
+\providecommand \bibitemStop [0]{}%
+\providecommand \bibitemNoStop [0]{.\EOS\space}%
+\providecommand \EOS [0]{\spacefactor3000\relax}%
+\providecommand \BibitemShut  [1]{\csname bibitem#1\endcsname}%
+\let\auto@bib@innerbib\@empty
+%</preamble>
+\bibitem [{\citenamefont {Nordtvedt}(1968)}]{Nordtvedt:1968qs}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Kenneth}\ \bibnamefont
+  {Nordtvedt}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Equivalence
+  Principle for Massive Bodies. 2. Theory}},}\ }\href {\doibase
+  10.1103/PhysRev.169.1017} {\bibfield  {journal} {\bibinfo  {journal} {Phys.
+  Rev.}\ }\textbf {\bibinfo {volume} {169}},\ \bibinfo {pages} {1017--1025}
+  (\bibinfo {year} {1968})}\BibitemShut {NoStop}%
+%%CITATION = PHRVA,169,1017;%%
+\bibitem [{\citenamefont {Thorne}\ and\ \citenamefont
+  {Will}(1971)}]{Thorne:1970wv}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Kip~S.}\ \bibnamefont
+  {Thorne}}\ and\ \bibinfo {author} {\bibfnamefont {Clifford~M.}\ \bibnamefont
+  {Will}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Theoretical
+  Frameworks for Testing Relativistic Gravity. 1. Foundations}},}\ }\href
+  {\doibase 10.1086/150803} {\bibfield  {journal} {\bibinfo  {journal}
+  {Astrophys. J.}\ }\textbf {\bibinfo {volume} {163}},\ \bibinfo {pages}
+  {595--610} (\bibinfo {year} {1971})}\BibitemShut {NoStop}%
+%%CITATION = ASJOA,163,595;%%
+\bibitem [{\citenamefont {Will}(1971{\natexlab{a}})}]{Will:1971zzb}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Clifford~M.}\
+  \bibnamefont {Will}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Theoretical Frameworks for Testing Relativistic Gravity. 2. Parametrized
+  Post-Newtonian Hydrodynamics, and the Nordtvedt Effect}},}\ }\href {\doibase
+  10.1086/150804} {\bibfield  {journal} {\bibinfo  {journal} {Astrophys. J.}\
+  }\textbf {\bibinfo {volume} {163}},\ \bibinfo {pages} {611--627} (\bibinfo
+  {year} {1971}{\natexlab{a}})}\BibitemShut {NoStop}%
+%%CITATION = ASJOA,163,611;%%
+\bibitem [{\citenamefont {Will}(1971{\natexlab{b}})}]{Will:1971wt}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Clifford~M.}\
+  \bibnamefont {Will}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Theoretical Frameworks for Testing Relativistic Gravity. 3. Conservation
+  Laws, Lorentz Invariance and Values of the PPN Parameters}},}\ }\href
+  {\doibase 10.1086/151124} {\bibfield  {journal} {\bibinfo  {journal}
+  {Astrophys. J.}\ }\textbf {\bibinfo {volume} {169}},\ \bibinfo {pages}
+  {125--140} (\bibinfo {year} {1971}{\natexlab{b}})}\BibitemShut {NoStop}%
+%%CITATION = ASJOA,169,125;%%
+\bibitem [{\citenamefont {Will}(1993)}]{Will:1993ns}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Clifford.~M.}\
+  \bibnamefont {Will}},\ }\href {\doibase 10.1017/CBO9780511564246} {\emph
+  {\bibinfo {title} {{Theory and experiment in gravitational physics}}}}\
+  (\bibinfo  {publisher} {Cambridge University Press},\ \bibinfo {year}
+  {1993})\BibitemShut {NoStop}%
+%%CITATION = INSPIRE-357130;%%
+\bibitem [{\citenamefont {Will}(2014)}]{Will:2014kxa}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Clifford~M.}\
+  \bibnamefont {Will}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{The
+  Confrontation between General Relativity and Experiment}},}\ }\href {\doibase
+  10.12942/lrr-2014-4} {\bibfield  {journal} {\bibinfo  {journal} {Living Rev.
+  Rel.}\ }\textbf {\bibinfo {volume} {17}},\ \bibinfo {pages} {4} (\bibinfo
+  {year} {2014})},\ \Eprint {http://arxiv.org/abs/1403.7377} {arXiv:1403.7377
+  [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1403.7377;%%
+\bibitem [{\citenamefont {Will}(2018)}]{Will:2018bme}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Clifford~M.}\
+  \bibnamefont {Will}},\ }\href
+  {https://www.cambridge.org/academic/subjects/physics/cosmology-relativity-and-gravitation/theory-and-experiment-gravitational-physics-2nd-edition?format=AR&isbn=9781108679824}
+  {\emph {\bibinfo {title} {{Theory and Experiment in Gravitational
+  Physics}}}}\ (\bibinfo  {publisher} {Cambridge University Press},\ \bibinfo
+  {year} {2018})\BibitemShut {NoStop}%
+%%CITATION = INSPIRE-1700339;%%
+\bibitem [{\citenamefont {Puetzfeld}(2006)}]{Puetzfeld:2006qq}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Dirk}\ \bibnamefont
+  {Puetzfeld}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{PROCRUSTES:
+  A Computer algebra package for post-Newtonian calculations in general
+  relativity}},}\ }\href {\doibase 10.1016/J.CPC.2006.07.003} {\bibfield
+  {journal} {\bibinfo  {journal} {Comput. Phys. Commun.}\ }\textbf {\bibinfo
+  {volume} {175}},\ \bibinfo {pages} {497--508} (\bibinfo {year} {2006})},\
+  \Eprint {http://arxiv.org/abs/gr-qc/0610081} {arXiv:gr-qc/0610081 [gr-qc]}
+  \BibitemShut {NoStop}%
+%%CITATION = GR-QC/0610081;%%
+\bibitem [{\citenamefont {Hohmann}(2020{\natexlab{a}})}]{xppn}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Manuel}\ \bibnamefont
+  {Hohmann}},\ }\href {http://geomgrav.fi.ut.ee/software/xPPN.html} {\enquote
+  {\bibinfo {title} {{xPPN}},}\ } (\bibinfo {year}
+  {2020}{\natexlab{a}})\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Martín-García}(2002)}]{xact}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {José~M.}\
+  \bibnamefont {Martín-García}},\ }\href {http://www.xact.es/} {\enquote
+  {\bibinfo {title} {{xAct: Efficient tensor computer algebra for the Wolfram
+  Language}},}\ } (\bibinfo {year} {2002})\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Pitrou}\ \emph {et~al.}(2013)\citenamefont {Pitrou},
+  \citenamefont {Roy},\ and\ \citenamefont {Umeh}}]{Pitrou:2013hga}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Cyril}\ \bibnamefont
+  {Pitrou}}, \bibinfo {author} {\bibfnamefont {Xavier}\ \bibnamefont {Roy}}, \
+  and\ \bibinfo {author} {\bibfnamefont {Obinna}\ \bibnamefont {Umeh}},\
+  }\bibfield  {title} {\enquote {\bibinfo {title} {{xPand: An algorithm for
+  perturbing homogeneous cosmologies}},}\ }\href {\doibase
+  10.1088/0264-9381/30/16/165002} {\bibfield  {journal} {\bibinfo  {journal}
+  {Class. Quant. Grav.}\ }\textbf {\bibinfo {volume} {30}},\ \bibinfo {pages}
+  {165002} (\bibinfo {year} {2013})},\ \Eprint {http://arxiv.org/abs/1302.6174}
+  {arXiv:1302.6174 [astro-ph.CO]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1302.6174;%%
+\bibitem [{\citenamefont {Brizuela}\ \emph {et~al.}(2009)\citenamefont
+  {Brizuela}, \citenamefont {Martin-Garcia},\ and\ \citenamefont
+  {Mena~Marugan}}]{Brizuela:2008ra}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {David}\ \bibnamefont
+  {Brizuela}}, \bibinfo {author} {\bibfnamefont {Jose~M.}\ \bibnamefont
+  {Martin-Garcia}}, \ and\ \bibinfo {author} {\bibfnamefont {Guillermo~A.}\
+  \bibnamefont {Mena~Marugan}},\ }\bibfield  {title} {\enquote {\bibinfo
+  {title} {{xPert: Computer algebra for metric perturbation theory}},}\ }\href
+  {\doibase 10.1007/s10714-009-0773-2} {\bibfield  {journal} {\bibinfo
+  {journal} {Gen. Rel. Grav.}\ }\textbf {\bibinfo {volume} {41}},\ \bibinfo
+  {pages} {2415--2431} (\bibinfo {year} {2009})},\ \Eprint
+  {http://arxiv.org/abs/0807.0824} {arXiv:0807.0824 [gr-qc]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:0807.0824;%%
+\bibitem [{\citenamefont {Richter}\ and\ \citenamefont
+  {Matzner}(1982{\natexlab{a}})}]{Richter:1982zz}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Gary~W.}\ \bibnamefont
+  {Richter}}\ and\ \bibinfo {author} {\bibfnamefont {Richard~A.}\ \bibnamefont
+  {Matzner}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Second-order
+  contributions to gravitational deflection of light in the parametrized
+  post-Newtonian formalism}},}\ }\href {\doibase 10.1103/PhysRevD.26.1219}
+  {\bibfield  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo
+  {volume} {D26}},\ \bibinfo {pages} {1219--1224} (\bibinfo {year}
+  {1982}{\natexlab{a}})}\BibitemShut {NoStop}%
+%%CITATION = PHRVA,D26,1219;%%
+\bibitem [{\citenamefont {Richter}\ and\ \citenamefont
+  {Matzner}(1982{\natexlab{b}})}]{Richter:1982zza}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Gary~W.}\ \bibnamefont
+  {Richter}}\ and\ \bibinfo {author} {\bibfnamefont {Richard~A.}\ \bibnamefont
+  {Matzner}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Second-order
+  contributions to gravitational deflection of light in the parametrized
+  post-Newtonian formalism. II. Photon orbits and deflections in three
+  dimensions}},}\ }\href {\doibase 10.1103/PhysRevD.26.2549} {\bibfield
+  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo {volume}
+  {D26}},\ \bibinfo {pages} {2549--2556} (\bibinfo {year}
+  {1982}{\natexlab{b}})}\BibitemShut {NoStop}%
+%%CITATION = PHRVA,D26,2549;%%
+\bibitem [{\citenamefont {Nitsch}\ and\ \citenamefont
+  {Hehl}(1980)}]{Nitsch:1979qn}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Jurgen}\ \bibnamefont
+  {Nitsch}}\ and\ \bibinfo {author} {\bibfnamefont {Friedrich~W.}\ \bibnamefont
+  {Hehl}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Translational
+  Gauge Theory of Gravity: Postnewtonian Approximation and Spin Precession}},}\
+  }\href {\doibase 10.1016/0370-2693(80)90059-3} {\bibfield  {journal}
+  {\bibinfo  {journal} {Phys. Lett.}\ }\textbf {\bibinfo {volume} {90B}},\
+  \bibinfo {pages} {98--102} (\bibinfo {year} {1980})}\BibitemShut {NoStop}%
+%%CITATION = PHLTA,90B,98;%%
+\bibitem [{\citenamefont {Smalley}(1980)}]{Smalley:1980em}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {L.~L.}\ \bibnamefont
+  {Smalley}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Postnewtonian
+  approximation of the Poincare gauge theory of gravitation}},}\ }\href
+  {\doibase 10.1103/PhysRevD.21.328} {\bibfield  {journal} {\bibinfo  {journal}
+  {Phys. Rev.}\ }\textbf {\bibinfo {volume} {D21}},\ \bibinfo {pages}
+  {328--331} (\bibinfo {year} {1980})}\BibitemShut {NoStop}%
+%%CITATION = PHRVA,D21,328;%%
+\bibitem [{\citenamefont {Hayward}(1981)}]{Hayward:1981bk}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {J.}~\bibnamefont
+  {Hayward}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Scalar tetrad
+  theories of gravity}},}\ }\href {\doibase 10.1007/BF00766297} {\bibfield
+  {journal} {\bibinfo  {journal} {Gen. Rel. Grav.}\ }\textbf {\bibinfo {volume}
+  {13}},\ \bibinfo {pages} {43--55} (\bibinfo {year} {1981})}\BibitemShut
+  {NoStop}%
+%%CITATION = GRGVA,13,43;%%
+\bibitem [{\citenamefont {Ualikhanova}\ and\ \citenamefont
+  {Hohmann}(2019)}]{Ualikhanova:2019ygl}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Ulbossyn}\
+  \bibnamefont {Ualikhanova}}\ and\ \bibinfo {author} {\bibfnamefont {Manuel}\
+  \bibnamefont {Hohmann}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Parameterized post-Newtonian limit of general teleparallel gravity
+  theories}},}\ }\href {\doibase 10.1103/PhysRevD.100.104011} {\bibfield
+  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo {volume}
+  {D100}},\ \bibinfo {pages} {104011} (\bibinfo {year} {2019})},\ \Eprint
+  {http://arxiv.org/abs/1907.08178} {arXiv:1907.08178 [gr-qc]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:1907.08178;%%
+\bibitem [{\citenamefont {Hohmann}(2021)}]{Hohmann:2020vcv}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Manuel}\ \bibnamefont
+  {Hohmann}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{General
+  cosmological perturbations in teleparallel gravity}},}\ }\href {\doibase
+  10.1140/epjp/s13360-020-00969-6} {\bibfield  {journal} {\bibinfo  {journal}
+  {Eur. Phys. J. Plus}\ }\textbf {\bibinfo {volume} {136}},\ \bibinfo {pages}
+  {65} (\bibinfo {year} {2021})},\ \Eprint {http://arxiv.org/abs/2011.02491}
+  {arXiv:2011.02491 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:2011.02491;%%
+\bibitem [{\citenamefont {Aldrovandi}\ and\ \citenamefont
+  {Pereira}(2013)}]{Aldrovandi:2013wha}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Ruben}\ \bibnamefont
+  {Aldrovandi}}\ and\ \bibinfo {author} {\bibfnamefont {José~Geraldo}\
+  \bibnamefont {Pereira}},\ }\href {\doibase 10.1007/978-94-007-5143-9} {\emph
+  {\bibinfo {title} {{Teleparallel Gravity}}}},\ Vol.\ \bibinfo {volume} {173}\
+  (\bibinfo  {publisher} {Springer},\ \bibinfo {address} {Dordrecht},\ \bibinfo
+  {year} {2013})\BibitemShut {NoStop}%
+%%CITATION = FTPHD,173,;%%
+\bibitem [{\citenamefont {Krssak}\ \emph {et~al.}(2019)\citenamefont {Krssak},
+  \citenamefont {Van Den~Hoogen}, \citenamefont {Pereira}, \citenamefont
+  {Boehmer},\ and\ \citenamefont {Coley}}]{Krssak:2018ywd}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {M.}~\bibnamefont
+  {Krssak}}, \bibinfo {author} {\bibfnamefont {R.~J.}\ \bibnamefont {Van
+  Den~Hoogen}}, \bibinfo {author} {\bibfnamefont {J.~G.}\ \bibnamefont
+  {Pereira}}, \bibinfo {author} {\bibfnamefont {C.~G.}\ \bibnamefont
+  {Boehmer}}, \ and\ \bibinfo {author} {\bibfnamefont {A.~A.}\ \bibnamefont
+  {Coley}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Teleparallel
+  Theories of Gravity: Illuminating a Fully Invariant Approach}},}\ }\href
+  {\doibase 10.1088/1361-6382/ab2e1f} {\bibfield  {journal} {\bibinfo
+  {journal} {Class. Quant. Grav.}\ }\textbf {\bibinfo {volume} {36}},\ \bibinfo
+  {pages} {183001} (\bibinfo {year} {2019})},\ \Eprint
+  {http://arxiv.org/abs/1810.12932} {arXiv:1810.12932 [gr-qc]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:1810.12932;%%
+\bibitem [{\citenamefont {Golovnev}\ \emph {et~al.}(2017)\citenamefont
+  {Golovnev}, \citenamefont {Koivisto},\ and\ \citenamefont
+  {Sandstad}}]{Golovnev:2017dox}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Alexey}\ \bibnamefont
+  {Golovnev}}, \bibinfo {author} {\bibfnamefont {Tomi}\ \bibnamefont
+  {Koivisto}}, \ and\ \bibinfo {author} {\bibfnamefont {Marit}\ \bibnamefont
+  {Sandstad}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{On the
+  covariance of teleparallel gravity theories}},}\ }\href {\doibase
+  10.1088/1361-6382/aa7830} {\bibfield  {journal} {\bibinfo  {journal} {Class.
+  Quant. Grav.}\ }\textbf {\bibinfo {volume} {34}},\ \bibinfo {pages} {145013}
+  (\bibinfo {year} {2017})},\ \Eprint {http://arxiv.org/abs/1701.06271}
+  {arXiv:1701.06271 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1701.06271;%%
+\bibitem [{\citenamefont {Nester}\ and\ \citenamefont
+  {Yo}(1999)}]{Nester:1998mp}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {James~M.}\
+  \bibnamefont {Nester}}\ and\ \bibinfo {author} {\bibfnamefont {Hwei-Jang}\
+  \bibnamefont {Yo}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Symmetric teleparallel general relativity}},}\ }\href
+  {http://www.ps-taiwan.org/cjp/download.php?type=paper&vol=37&num=2&page=113}
+  {\bibfield  {journal} {\bibinfo  {journal} {Chin. J. Phys.}\ }\textbf
+  {\bibinfo {volume} {37}},\ \bibinfo {pages} {113} (\bibinfo {year} {1999})},\
+  \Eprint {http://arxiv.org/abs/gr-qc/9809049} {arXiv:gr-qc/9809049 [gr-qc]}
+  \BibitemShut {NoStop}%
+%%CITATION = GR-QC/9809049;%%
+\bibitem [{\citenamefont {Jiménez}\ \emph {et~al.}(2018)\citenamefont
+  {Jiménez}, \citenamefont {Heisenberg},\ and\ \citenamefont
+  {Koivisto}}]{BeltranJimenez:2017tkd}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Jose~Beltrán}\
+  \bibnamefont {Jiménez}}, \bibinfo {author} {\bibfnamefont {Lavinia}\
+  \bibnamefont {Heisenberg}}, \ and\ \bibinfo {author} {\bibfnamefont {Tomi}\
+  \bibnamefont {Koivisto}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Coincident General Relativity}},}\ }\href {\doibase
+  10.1103/PhysRevD.98.044048} {\bibfield  {journal} {\bibinfo  {journal} {Phys.
+  Rev.}\ }\textbf {\bibinfo {volume} {D98}},\ \bibinfo {pages} {044048}
+  (\bibinfo {year} {2018})},\ \Eprint {http://arxiv.org/abs/1710.03116}
+  {arXiv:1710.03116 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1710.03116;%%
+\bibitem [{\citenamefont {Flathmann}\ and\ \citenamefont
+  {Hohmann}(2021)}]{Flathmann:2020zyj}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Kai}\ \bibnamefont
+  {Flathmann}}\ and\ \bibinfo {author} {\bibfnamefont {Manuel}\ \bibnamefont
+  {Hohmann}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Post-Newtonian
+  limit of generalized symmetric teleparallel gravity}},}\ }\href {\doibase
+  10.1103/PhysRevD.103.044030} {\bibfield  {journal} {\bibinfo  {journal}
+  {Phys. Rev.}\ }\textbf {\bibinfo {volume} {D103}},\ \bibinfo {pages} {044030}
+  (\bibinfo {year} {2021})},\ \Eprint {http://arxiv.org/abs/2012.12875}
+  {arXiv:2012.12875 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:2012.12875;%%
+\bibitem [{\citenamefont {Jiménez}\ \emph {et~al.}(2019)\citenamefont
+  {Jiménez}, \citenamefont {Heisenberg},\ and\ \citenamefont
+  {Koivisto}}]{BeltranJimenez:2019tjy}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Jose~Beltrán}\
+  \bibnamefont {Jiménez}}, \bibinfo {author} {\bibfnamefont {Lavinia}\
+  \bibnamefont {Heisenberg}}, \ and\ \bibinfo {author} {\bibfnamefont
+  {Tomi~S.}\ \bibnamefont {Koivisto}},\ }\bibfield  {title} {\enquote {\bibinfo
+  {title} {{The Geometrical Trinity of Gravity}},}\ }\href {\doibase
+  10.3390/universe5070173} {\bibfield  {journal} {\bibinfo  {journal}
+  {Universe}\ }\textbf {\bibinfo {volume} {5}},\ \bibinfo {pages} {173}
+  (\bibinfo {year} {2019})},\ \Eprint {http://arxiv.org/abs/1903.06830}
+  {arXiv:1903.06830 [hep-th]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1903.06830;%%
+\bibitem [{\citenamefont {Zaglauer}(1990)}]{Zaglauer:1990yh}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Helmut~Walter}\
+  \bibnamefont {Zaglauer}},\ }\emph {\bibinfo {title} {{Phenomenological
+  aspects of scalar fields in astrophysics, cosmology and particle physics}}},\
+  \href {http://wwwlib.umi.com/dissertations/fullcit?p9103178} {Ph.D. thesis},\
+  \bibinfo  {school} {Washington U., St. Louis} (\bibinfo {year}
+  {1990})\BibitemShut {NoStop}%
+%%CITATION = UMI-91-03178;%%
+\bibitem [{\citenamefont {Helbig}(1991)}]{Helbig:1991pk}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Thomas}\ \bibnamefont
+  {Helbig}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Gravitational
+  effects of light scalar particles}},}\ }\href {\doibase 10.1086/170710}
+  {\bibfield  {journal} {\bibinfo  {journal} {Astrophys. J.}\ }\textbf
+  {\bibinfo {volume} {382}},\ \bibinfo {pages} {223--232} (\bibinfo {year}
+  {1991})}\BibitemShut {NoStop}%
+%%CITATION = DESY-91-002;%%
+\bibitem [{\citenamefont {Sanghai}\ and\ \citenamefont
+  {Clifton}(2017)}]{Sanghai:2016tbi}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Viraj A.~A.}\
+  \bibnamefont {Sanghai}}\ and\ \bibinfo {author} {\bibfnamefont {Timothy}\
+  \bibnamefont {Clifton}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Parameterized Post-Newtonian Cosmology}},}\ }\href {\doibase
+  10.1088/1361-6382/aa5d75} {\bibfield  {journal} {\bibinfo  {journal} {Class.
+  Quant. Grav.}\ }\textbf {\bibinfo {volume} {34}},\ \bibinfo {pages} {065003}
+  (\bibinfo {year} {2017})},\ \Eprint {http://arxiv.org/abs/1610.08039}
+  {arXiv:1610.08039 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1610.08039;%%
+\bibitem [{\citenamefont {Nutma}(2014)}]{Nutma:2013zea}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Teake}\ \bibnamefont
+  {Nutma}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{xTras : A
+  field-theory inspired xAct package for Mathematica}},}\ }\href {\doibase
+  10.1016/j.cpc.2014.02.006} {\bibfield  {journal} {\bibinfo  {journal}
+  {Comput. Phys. Commun.}\ }\textbf {\bibinfo {volume} {185}},\ \bibinfo
+  {pages} {1719--1738} (\bibinfo {year} {2014})},\ \Eprint
+  {http://arxiv.org/abs/1308.3493} {arXiv:1308.3493 [cs.SC]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:1308.3493;%%
+\bibitem [{\citenamefont {Nordtvedt}(1970)}]{Nordtvedt:1970uv}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Kenneth}\ \bibnamefont
+  {Nordtvedt}, \bibfnamefont {Jr.}},\ }\bibfield  {title} {\enquote {\bibinfo
+  {title} {{Post-Newtonian metric for a general class of scalar tensor
+  gravitational theories and observational consequences}},}\ }\href {\doibase
+  10.1086/150607} {\bibfield  {journal} {\bibinfo  {journal} {Astrophys. J.}\
+  }\textbf {\bibinfo {volume} {161}},\ \bibinfo {pages} {1059--1067} (\bibinfo
+  {year} {1970})}\BibitemShut {NoStop}%
+%%CITATION = ASJOA,161,1059;%%
+\bibitem [{\citenamefont {Hohmann}(2020{\natexlab{b}})}]{Hohmann:2019qgo}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Manuel}\ \bibnamefont
+  {Hohmann}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Gauge-invariant approach to the parametrized post-Newtonian formalism}},}\
+  }\href {\doibase 10.1103/PhysRevD.101.024061} {\bibfield  {journal} {\bibinfo
+   {journal} {Phys. Rev.}\ }\textbf {\bibinfo {volume} {D101}},\ \bibinfo
+  {pages} {024061} (\bibinfo {year} {2020}{\natexlab{b}})},\ \Eprint
+  {http://arxiv.org/abs/1910.09245} {arXiv:1910.09245 [gr-qc]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:1910.09245;%%
+\bibitem [{\citenamefont {Gladchenko}\ \emph {et~al.}(1990)\citenamefont
+  {Gladchenko}, \citenamefont {Ponomarev},\ and\ \citenamefont
+  {Zhytnikov}}]{Gladchenko:1990nw}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {M.~S.}\ \bibnamefont
+  {Gladchenko}}, \bibinfo {author} {\bibfnamefont {V.~N.}\ \bibnamefont
+  {Ponomarev}}, \ and\ \bibinfo {author} {\bibfnamefont {V.~V.}\ \bibnamefont
+  {Zhytnikov}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{PPN metric
+  and PPN torsion in the quadratic Poincare gauge theory of gravity}},}\ }\href
+  {\doibase 10.1016/0370-2693(90)91488-W} {\bibfield  {journal} {\bibinfo
+  {journal} {Phys. Lett.}\ }\textbf {\bibinfo {volume} {B241}},\ \bibinfo
+  {pages} {67--69} (\bibinfo {year} {1990})}\BibitemShut {NoStop}%
+%%CITATION = PHLTA,B241,67;%%
+\bibitem [{\citenamefont {Gladchenko}\ and\ \citenamefont
+  {Zhytnikov}(1994)}]{Gladchenko:1994wu}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {M.~S.}\ \bibnamefont
+  {Gladchenko}}\ and\ \bibinfo {author} {\bibfnamefont {V.~V.}\ \bibnamefont
+  {Zhytnikov}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{PostNewtonian effects in the quadratic Poincare gauge theory of
+  gravitation}},}\ }\href {\doibase 10.1103/PhysRevD.50.5060} {\bibfield
+  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo {volume}
+  {D50}},\ \bibinfo {pages} {5060--5071} (\bibinfo {year} {1994})}\BibitemShut
+  {NoStop}%
+%%CITATION = PHRVA,D50,5060;%%
+\bibitem [{\citenamefont {Alexander}\ and\ \citenamefont
+  {Yunes}(2007{\natexlab{a}})}]{Alexander:2007zg}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Stephon}\ \bibnamefont
+  {Alexander}}\ and\ \bibinfo {author} {\bibfnamefont {Nicolas}\ \bibnamefont
+  {Yunes}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{A New PPN
+  parameter to test Chern-Simons gravity}},}\ }\href {\doibase
+  10.1103/PhysRevLett.99.241101} {\bibfield  {journal} {\bibinfo  {journal}
+  {Phys. Rev. Lett.}\ }\textbf {\bibinfo {volume} {99}},\ \bibinfo {pages}
+  {241101} (\bibinfo {year} {2007}{\natexlab{a}})},\ \Eprint
+  {http://arxiv.org/abs/hep-th/0703265} {arXiv:hep-th/0703265 [hep-th]}
+  \BibitemShut {NoStop}%
+%%CITATION = HEP-TH/0703265;%%
+\bibitem [{\citenamefont {Alexander}\ and\ \citenamefont
+  {Yunes}(2007{\natexlab{b}})}]{Alexander:2007vt}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Stephon}\ \bibnamefont
+  {Alexander}}\ and\ \bibinfo {author} {\bibfnamefont {Nicolas}\ \bibnamefont
+  {Yunes}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Parametrized
+  post-Newtonian expansion of Chern-Simons gravity}},}\ }\href {\doibase
+  10.1103/PhysRevD.75.124022} {\bibfield  {journal} {\bibinfo  {journal} {Phys.
+  Rev.}\ }\textbf {\bibinfo {volume} {D75}},\ \bibinfo {pages} {124022}
+  (\bibinfo {year} {2007}{\natexlab{b}})},\ \Eprint
+  {http://arxiv.org/abs/0704.0299} {arXiv:0704.0299 [hep-th]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:0704.0299;%%
+\bibitem [{\citenamefont {Alexander}\ and\ \citenamefont
+  {Yunes}(2009)}]{Alexander:2009tp}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Stephon}\ \bibnamefont
+  {Alexander}}\ and\ \bibinfo {author} {\bibfnamefont {Nicolas}\ \bibnamefont
+  {Yunes}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Chern-Simons
+  Modified General Relativity}},}\ }\href {\doibase
+  10.1016/j.physrep.2009.07.002} {\bibfield  {journal} {\bibinfo  {journal}
+  {Phys. Rept.}\ }\textbf {\bibinfo {volume} {480}},\ \bibinfo {pages} {1--55}
+  (\bibinfo {year} {2009})},\ \Eprint {http://arxiv.org/abs/0907.2562}
+  {arXiv:0907.2562 [hep-th]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:0907.2562;%%
+\bibitem [{\citenamefont {Lin}\ \emph {et~al.}(2012)\citenamefont {Lin},
+  \citenamefont {Mukohyama},\ and\ \citenamefont {Wang}}]{Lin:2012bs}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Kai}\ \bibnamefont
+  {Lin}}, \bibinfo {author} {\bibfnamefont {Shinji}\ \bibnamefont {Mukohyama}},
+  \ and\ \bibinfo {author} {\bibfnamefont {Anzhong}\ \bibnamefont {Wang}},\
+  }\bibfield  {title} {\enquote {\bibinfo {title} {{Solar system tests and
+  interpretation of gauge field and Newtonian prepotential in general covariant
+  Ho\v{r}ava-Lifshitz gravity}},}\ }\href {\doibase 10.1103/PhysRevD.86.104024}
+  {\bibfield  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo
+  {volume} {D86}},\ \bibinfo {pages} {104024} (\bibinfo {year} {2012})},\
+  \Eprint {http://arxiv.org/abs/1206.1338} {arXiv:1206.1338 [hep-th]}
+  \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1206.1338;%%
+\bibitem [{\citenamefont {Lin}\ and\ \citenamefont {Wang}(2013)}]{Lin:2012ea}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Kai}\ \bibnamefont
+  {Lin}}\ and\ \bibinfo {author} {\bibfnamefont {Anzhong}\ \bibnamefont
+  {Wang}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Static
+  post-Newtonian limits in nonprojectable Hořava-Lifshitz gravity with an
+  extra U(1) symmetry}},}\ }\href {\doibase 10.1103/PhysRevD.87.084041}
+  {\bibfield  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo
+  {volume} {D87}},\ \bibinfo {pages} {084041} (\bibinfo {year} {2013})},\
+  \Eprint {http://arxiv.org/abs/1212.6794} {arXiv:1212.6794 [hep-th]}
+  \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1212.6794;%%
+\bibitem [{\citenamefont {Lin}\ \emph {et~al.}(2014)\citenamefont {Lin},
+  \citenamefont {Mukohyama}, \citenamefont {Wang},\ and\ \citenamefont
+  {Zhu}}]{Lin:2013tua}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Kai}\ \bibnamefont
+  {Lin}}, \bibinfo {author} {\bibfnamefont {Shinji}\ \bibnamefont {Mukohyama}},
+  \bibinfo {author} {\bibfnamefont {Anzhong}\ \bibnamefont {Wang}}, \ and\
+  \bibinfo {author} {\bibfnamefont {Tao}\ \bibnamefont {Zhu}},\ }\bibfield
+  {title} {\enquote {\bibinfo {title} {{Post-Newtonian approximations in the
+  Hořava-Lifshitz gravity with extra U(1) symmetry}},}\ }\href {\doibase
+  10.1103/PhysRevD.89.084022} {\bibfield  {journal} {\bibinfo  {journal} {Phys.
+  Rev.}\ }\textbf {\bibinfo {volume} {D89}},\ \bibinfo {pages} {084022}
+  (\bibinfo {year} {2014})},\ \Eprint {http://arxiv.org/abs/1310.6666}
+  {arXiv:1310.6666 [hep-ph]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1310.6666;%%
+\bibitem [{\citenamefont {Blanchet}(2014)}]{Blanchet:2013haa}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Luc}\ \bibnamefont
+  {Blanchet}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Gravitational
+  Radiation from Post-Newtonian Sources and Inspiralling Compact Binaries}},}\
+  }\href {\doibase 10.12942/lrr-2014-2} {\bibfield  {journal} {\bibinfo
+  {journal} {Living Rev. Rel.}\ }\textbf {\bibinfo {volume} {17}},\ \bibinfo
+  {pages} {2} (\bibinfo {year} {2014})},\ \Eprint
+  {http://arxiv.org/abs/1310.1528} {arXiv:1310.1528 [gr-qc]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:1310.1528;%%
+\bibitem [{\citenamefont {Avilez-Lopez}\ \emph {et~al.}(2015)\citenamefont
+  {Avilez-Lopez}, \citenamefont {Padilla}, \citenamefont {Saffin},\ and\
+  \citenamefont {Skordis}}]{Avilez-Lopez:2015dja}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Ana}\ \bibnamefont
+  {Avilez-Lopez}}, \bibinfo {author} {\bibfnamefont {Antonio}\ \bibnamefont
+  {Padilla}}, \bibinfo {author} {\bibfnamefont {Paul~M.}\ \bibnamefont
+  {Saffin}}, \ and\ \bibinfo {author} {\bibfnamefont {Constantinos}\
+  \bibnamefont {Skordis}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{The Parametrized Post-Newtonian-Vainshteinian Formalism}},}\ }\href
+  {\doibase 10.1088/1475-7516/2015/06/044} {\bibfield  {journal} {\bibinfo
+  {journal} {JCAP}\ }\textbf {\bibinfo {volume} {1506}},\ \bibinfo {pages}
+  {044} (\bibinfo {year} {2015})},\ \Eprint {http://arxiv.org/abs/1501.01985}
+  {arXiv:1501.01985 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1501.01985;%%
+\bibitem [{\citenamefont {Clifton}\ \emph {et~al.}(2010)\citenamefont
+  {Clifton}, \citenamefont {Banados},\ and\ \citenamefont
+  {Skordis}}]{Clifton:2010hz}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Timothy}\ \bibnamefont
+  {Clifton}}, \bibinfo {author} {\bibfnamefont {Maximo}\ \bibnamefont
+  {Banados}}, \ and\ \bibinfo {author} {\bibfnamefont {Constantinos}\
+  \bibnamefont {Skordis}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{The Parameterised Post-Newtonian Limit of Bimetric Theories of Gravity}},}\
+  }\href {\doibase 10.1088/0264-9381/27/23/235020} {\bibfield  {journal}
+  {\bibinfo  {journal} {Class. Quant. Grav.}\ }\textbf {\bibinfo {volume}
+  {27}},\ \bibinfo {pages} {235020} (\bibinfo {year} {2010})},\ \Eprint
+  {http://arxiv.org/abs/1006.5619} {arXiv:1006.5619 [gr-qc]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:1006.5619;%%
+\bibitem [{\citenamefont {Hohmann}\ and\ \citenamefont
+  {Wohlfarth}(2010)}]{Hohmann:2010ni}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Manuel}\ \bibnamefont
+  {Hohmann}}\ and\ \bibinfo {author} {\bibfnamefont {Mattias N.~R.}\
+  \bibnamefont {Wohlfarth}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Multimetric extension of the PPN formalism: experimental consistency of
+  repulsive gravity}},}\ }\href {\doibase 10.1103/PhysRevD.82.084028}
+  {\bibfield  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo
+  {volume} {D82}},\ \bibinfo {pages} {084028} (\bibinfo {year} {2010})},\
+  \Eprint {http://arxiv.org/abs/1007.4945} {arXiv:1007.4945 [gr-qc]}
+  \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1007.4945;%%
+\bibitem [{\citenamefont {Hohmann}(2014)}]{Hohmann:2013oca}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Manuel}\ \bibnamefont
+  {Hohmann}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Parameterized
+  post-Newtonian formalism for multimetric gravity}},}\ }\href {\doibase
+  10.1088/0264-9381/31/13/135003} {\bibfield  {journal} {\bibinfo  {journal}
+  {Class. Quant. Grav.}\ }\textbf {\bibinfo {volume} {31}},\ \bibinfo {pages}
+  {135003} (\bibinfo {year} {2014})},\ \Eprint {http://arxiv.org/abs/1309.7787}
+  {arXiv:1309.7787 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1309.7787;%%
+\bibitem [{\citenamefont {Beltrán~Jiménez}\ \emph {et~al.}(2020)\citenamefont
+  {Beltrán~Jiménez}, \citenamefont {Heisenberg}, \citenamefont {Iosifidis},
+  \citenamefont {Jiménez-Cano},\ and\ \citenamefont
+  {Koivisto}}]{Jimenez:2019ghw}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Jose}\ \bibnamefont
+  {Beltrán~Jiménez}}, \bibinfo {author} {\bibfnamefont {Lavinia}\
+  \bibnamefont {Heisenberg}}, \bibinfo {author} {\bibfnamefont {Damianos}\
+  \bibnamefont {Iosifidis}}, \bibinfo {author} {\bibfnamefont {Alejandro}\
+  \bibnamefont {Jiménez-Cano}}, \ and\ \bibinfo {author} {\bibfnamefont
+  {Tomi~S.}\ \bibnamefont {Koivisto}},\ }\bibfield  {title} {\enquote {\bibinfo
+  {title} {{General teleparallel quadratic gravity}},}\ }\href {\doibase
+  10.1016/j.physletb.2020.135422} {\bibfield  {journal} {\bibinfo  {journal}
+  {Phys. Lett.}\ }\textbf {\bibinfo {volume} {B805}},\ \bibinfo {pages}
+  {135422} (\bibinfo {year} {2020})},\ \Eprint
+  {http://arxiv.org/abs/1909.09045} {arXiv:1909.09045 [gr-qc]} \BibitemShut
+  {NoStop}%
+%%CITATION = ARXIV:1909.09045;%%
+\bibitem [{\citenamefont {Castagnino}\ \emph {et~al.}(1985)\citenamefont
+  {Castagnino}, \citenamefont {Levinas},\ and\ \citenamefont
+  {Umerez}}]{Castagnino:1985}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Mario}\ \bibnamefont
+  {Castagnino}}, \bibinfo {author} {\bibfnamefont {Marcelo~L.}\ \bibnamefont
+  {Levinas}}, \ and\ \bibinfo {author} {\bibfnamefont {Norberto}\ \bibnamefont
+  {Umerez}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{On the
+  post-Newtonian approximation of the Einstein-Cartan-Sciama-Kibble theory}},}\
+  }\href {\doibase 10.1007/BF00763029} {\bibfield  {journal} {\bibinfo
+  {journal} {Gen. Rel. Grav.}\ }\textbf {\bibinfo {volume} {17}},\ \bibinfo
+  {pages} {683} (\bibinfo {year} {1985})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Castagnino}\ and\ \citenamefont
+  {Levinas}(1987)}]{Castagnino:1987}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Mario}\ \bibnamefont
+  {Castagnino}}\ and\ \bibinfo {author} {\bibfnamefont {Marcelo~L.}\
+  \bibnamefont {Levinas}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{On the post-Newtonian approximation of the ECSK theory II}},}\ }\href
+  {\doibase 10.1007/BF00762553} {\bibfield  {journal} {\bibinfo  {journal}
+  {Gen. Rel. Grav.}\ }\textbf {\bibinfo {volume} {19}},\ \bibinfo {pages} {545}
+  (\bibinfo {year} {1987})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Hehl}\ \emph {et~al.}(1995)\citenamefont {Hehl},
+  \citenamefont {McCrea}, \citenamefont {Mielke},\ and\ \citenamefont
+  {Ne'eman}}]{Hehl:1994ue}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Friedrich~W.}\
+  \bibnamefont {Hehl}}, \bibinfo {author} {\bibfnamefont {J.~Dermott}\
+  \bibnamefont {McCrea}}, \bibinfo {author} {\bibfnamefont {Eckehard~W.}\
+  \bibnamefont {Mielke}}, \ and\ \bibinfo {author} {\bibfnamefont {Yuval}\
+  \bibnamefont {Ne'eman}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Metric affine gauge theory of gravity: Field equations, Noether identities,
+  world spinors, and breaking of dilation invariance}},}\ }\href {\doibase
+  10.1016/0370-1573(94)00111-F} {\bibfield  {journal} {\bibinfo  {journal}
+  {Phys. Rept.}\ }\textbf {\bibinfo {volume} {258}},\ \bibinfo {pages} {1--171}
+  (\bibinfo {year} {1995})},\ \Eprint {http://arxiv.org/abs/gr-qc/9402012}
+  {arXiv:gr-qc/9402012 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = GR-QC/9402012;%%
+\bibitem [{\citenamefont {Weyssenhoff}\ and\ \citenamefont
+  {Raabe}(1947)}]{Weyssenhoff:1947iua}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Jan}\ \bibnamefont
+  {Weyssenhoff}}\ and\ \bibinfo {author} {\bibfnamefont {A.}~\bibnamefont
+  {Raabe}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Relativistic
+  dynamics of spin-fluids and spin-particles}},}\ }\href@noop {} {\bibfield
+  {journal} {\bibinfo  {journal} {Acta Phys. Polon.}\ }\textbf {\bibinfo
+  {volume} {9}},\ \bibinfo {pages} {7--18} (\bibinfo {year}
+  {1947})}\BibitemShut {NoStop}%
+%%CITATION = APPOA,9,7;%%
+\bibitem [{\citenamefont {Ray}\ and\ \citenamefont
+  {Smalley}(1983)}]{Ray:1982qr}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {John~R.}\ \bibnamefont
+  {Ray}}\ and\ \bibinfo {author} {\bibfnamefont {Larry~L.}\ \bibnamefont
+  {Smalley}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Spinning
+  Fluids in the Einstein-cartan Theory}},}\ }\href {\doibase
+  10.1103/PhysRevD.27.1383} {\bibfield  {journal} {\bibinfo  {journal} {Phys.
+  Rev.}\ }\textbf {\bibinfo {volume} {D27}},\ \bibinfo {pages} {1383} (\bibinfo
+  {year} {1983})}\BibitemShut {NoStop}%
+%%CITATION = PHRVA,D27,1383;%%
+\bibitem [{\citenamefont {Kopczynski}(1986)}]{Kopczynski:1986ep}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {W.}~\bibnamefont
+  {Kopczynski}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Lagrangian
+  Dynamics of Particles and Fluids With Intrinsic Spin in Einstein-cartan
+  Space-time}},}\ }\href {\doibase 10.1103/PhysRevD.34.352} {\bibfield
+  {journal} {\bibinfo  {journal} {Phys. Rev.}\ }\textbf {\bibinfo {volume}
+  {D34}},\ \bibinfo {pages} {352--356} (\bibinfo {year} {1986})}\BibitemShut
+  {NoStop}%
+%%CITATION = PHRVA,D34,352;%%
+\bibitem [{\citenamefont {Obukhov}\ and\ \citenamefont
+  {Korotkii}(1987)}]{Obukhov:1987yu}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Y.~N.}\ \bibnamefont
+  {Obukhov}}\ and\ \bibinfo {author} {\bibfnamefont {V.~A.}\ \bibnamefont
+  {Korotkii}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{The
+  Weyssenhoff fluid in Einstein-Cartan theory}},}\ }\href {\doibase
+  10.1088/0264-9381/4/6/021} {\bibfield  {journal} {\bibinfo  {journal} {Class.
+  Quant. Grav.}\ }\textbf {\bibinfo {volume} {4}},\ \bibinfo {pages}
+  {1633--1657} (\bibinfo {year} {1987})}\BibitemShut {NoStop}%
+%%CITATION = CQGRD,4,1633;%%
+\bibitem [{\citenamefont {Obukhov}\ and\ \citenamefont
+  {Tresguerres}(1993)}]{Obukhov:1993pt}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Yuri~N.}\ \bibnamefont
+  {Obukhov}}\ and\ \bibinfo {author} {\bibfnamefont {Romualdo}\ \bibnamefont
+  {Tresguerres}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Hyperfluid: A Model of classical matter with hypermomentum}},}\ }\href
+  {\doibase 10.1016/0375-9601(93)90339-2} {\bibfield  {journal} {\bibinfo
+  {journal} {Phys. Lett.}\ }\textbf {\bibinfo {volume} {A184}},\ \bibinfo
+  {pages} {17--22} (\bibinfo {year} {1993})},\ \Eprint
+  {http://arxiv.org/abs/gr-qc/0008013} {arXiv:gr-qc/0008013 [gr-qc]}
+  \BibitemShut {NoStop}%
+%%CITATION = GR-QC/0008013;%%
+\bibitem [{\citenamefont {Obukhov}(1996)}]{Obukhov:1996mg}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Yuri~N.}\ \bibnamefont
+  {Obukhov}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{On a model of
+  an unconstrained hyperfluid}},}\ }\href {\doibase
+  10.1016/S0375-9601(96)80004-1} {\bibfield  {journal} {\bibinfo  {journal}
+  {Phys. Lett.}\ }\textbf {\bibinfo {volume} {A210}},\ \bibinfo {pages}
+  {163--167} (\bibinfo {year} {1996})},\ \Eprint
+  {http://arxiv.org/abs/gr-qc/0008014} {arXiv:gr-qc/0008014 [gr-qc]}
+  \BibitemShut {NoStop}%
+%%CITATION = GR-QC/0008014;%%
+\bibitem [{\citenamefont {Puetzfeld}\ and\ \citenamefont
+  {Obukhov}(2014)}]{Puetzfeld:2014qba}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Dirk}\ \bibnamefont
+  {Puetzfeld}}\ and\ \bibinfo {author} {\bibfnamefont {Yuri~N.}\ \bibnamefont
+  {Obukhov}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {{Equations of
+  motion in metric-affine gravity: A covariant unified framework}},}\ }\href
+  {\doibase 10.1103/PhysRevD.90.084034} {\bibfield  {journal} {\bibinfo
+  {journal} {Phys. Rev.}\ }\textbf {\bibinfo {volume} {D90}},\ \bibinfo {pages}
+  {084034} (\bibinfo {year} {2014})},\ \Eprint {http://arxiv.org/abs/1408.5669}
+  {arXiv:1408.5669 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:1408.5669;%%
+\bibitem [{\citenamefont {Iosifidis}(2020)}]{Iosifidis:2020gth}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Damianos}\
+  \bibnamefont {Iosifidis}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {{Cosmological Hyperfluids, Torsion and Non-metricity}},}\ }\href {\doibase
+  10.1140/epjc/s10052-020-08634-z} {\bibfield  {journal} {\bibinfo  {journal}
+  {Eur. Phys. J.}\ }\textbf {\bibinfo {volume} {C80}},\ \bibinfo {pages} {1042}
+  (\bibinfo {year} {2020})},\ \Eprint {http://arxiv.org/abs/2003.07384}
+  {arXiv:2003.07384 [gr-qc]} \BibitemShut {NoStop}%
+%%CITATION = ARXIV:2003.07384;%%
+\end{thebibliography}%
