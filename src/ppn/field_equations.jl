@@ -106,6 +106,14 @@ function ppn_solve(theory::Symbol, reg::TensorRegistry;
     elseif theory == :BransDicke
         haskey(kwargs, :omega) || error("BransDicke requires omega keyword")
         return ppn_solve_scalar_tensor(reg, kwargs[:omega]; order=order)
+    elseif theory == :ScalarTensor
+        haskey(kwargs, :omega) || error("ScalarTensor requires omega keyword")
+        haskey(kwargs, :omega_prime) || error("ScalarTensor requires omega_prime keyword")
+        haskey(kwargs, :Psi) || error("ScalarTensor requires Psi keyword")
+        params = PPNParameters(:ScalarTensor; kwargs...)
+        define_ppn_potentials!(reg; manifold=:M4)
+        mc = ppn_decompose(params, reg; order=order)
+        return PPNFieldEquationResult(order, mc, params, Dict{Symbol,TensorExpr}())
     elseif theory == :Nordtvedt
         haskey(kwargs, :omega) || error("Nordtvedt requires omega keyword")
         params = PPNParameters(:Nordtvedt; kwargs...)

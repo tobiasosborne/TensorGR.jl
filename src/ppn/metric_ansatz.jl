@@ -136,11 +136,14 @@ Named constructor for common gravitational theories.
 - `:GR` — General Relativity (γ=1, β=1, all others 0)
 - `:BransDicke` — Brans-Dicke theory (requires `omega` kwarg)
   γ = (1+ω)/(2+ω), β = 1, all others 0
+- `:ScalarTensor` — General scalar-tensor (requires `omega`, `omega_prime`, `Psi` kwargs)
+  γ = (1+ω)/(2+ω), β = 1 + Ψ·ω'/(4(2ω+3)(ω+2)²), all others 0
+  Ground truth: Hohmann (2021) arXiv:2012.14984, Eq (exppnpar).
 - `:Nordtvedt` — Nordtvedt's "general" scalar-tensor:
   γ = (1+ω)/(2+ω), β given by kwarg `beta`, all others 0
 - `:Rosen` — Rosen's bimetric (γ=1, β=1, α₁=-2, α₂=-2)
 
-Ground truth: Will (2018), Table 4.1.
+Ground truth: Will (2018), Table 4.1; Hohmann (2021), arXiv:2012.14984.
 """
 function PPNParameters(theory::Symbol; kwargs...)
     if theory == :GR
@@ -150,6 +153,16 @@ function PPNParameters(theory::Symbol; kwargs...)
         omega = kwargs[:omega]
         gamma = (1 + omega) / (2 + omega)
         return PPNParameters(gamma, 1, 0, 0, 0, 0, 0, 0, 0, 0)
+    elseif theory == :ScalarTensor
+        haskey(kwargs, :omega) || error("ScalarTensor requires omega keyword argument")
+        haskey(kwargs, :omega_prime) || error("ScalarTensor requires omega_prime keyword argument")
+        haskey(kwargs, :Psi) || error("ScalarTensor requires Psi (background scalar field) keyword argument")
+        omega = kwargs[:omega]
+        omega_prime = kwargs[:omega_prime]
+        Psi = kwargs[:Psi]
+        gamma = (1 + omega) / (2 + omega)
+        beta = 1 + Psi * omega_prime / (4 * (2 * omega + 3) * (omega + 2)^2)
+        return PPNParameters(gamma, beta, 0, 0, 0, 0, 0, 0, 0, 0)
     elseif theory == :Nordtvedt
         haskey(kwargs, :omega) || error("Nordtvedt requires omega keyword argument")
         omega = kwargs[:omega]
@@ -159,7 +172,7 @@ function PPNParameters(theory::Symbol; kwargs...)
     elseif theory == :Rosen
         return PPNParameters(1, 1, 0, -2, -2, 0, 0, 0, 0, 0)
     else
-        error("Unknown theory: $theory. Supported: :GR, :BransDicke, :Nordtvedt, :Rosen")
+        error("Unknown theory: $theory. Supported: :GR, :BransDicke, :ScalarTensor, :Nordtvedt, :Rosen")
     end
 end
 
