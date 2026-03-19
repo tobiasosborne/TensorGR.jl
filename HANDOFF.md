@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-19
+# HANDOFF — 2026-03-19 (Session 5)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -21,73 +21,92 @@
 
 ## Current State
 
-- **194 of 369 issues closed** (12 closed this session — xAct ground truth)
-- **357,000+ tests, 0 failures**
-- All pushed to `master`, repo cleaned (no stale branches/files)
+- **235 of 369 issues closed** (41 closed this session: 194 → 235)
+- **Full test suite: ALL PASS** (verified this session)
+- All pushed to `master`, no uncommitted work
 - `bd stats` for live counts, `bd ready` for available work
 
 ---
 
-## ACTIVE SIDE QUEST: xAct Ground Truth Test Suite
+## What Was Done This Session (41 issues)
 
-**Priority**: Finish this before returning to feature work.
+### Spinor / NP / GHP Infrastructure (19 issues)
+- Weyl spinor Psi_{ABCD}, Ricci spinor Phi_{ABA'B'}
+- NP null tetrad with function-based contraction rules
+- 5 Weyl scalars, 10 Ricci scalars, Lambda
+- 12 NP spin coefficients (kappa through beta)
+- Spin covariant derivative, irreducible decomposition
+- Spinor Ricci identity (commutator), curvature decomposition
+- GHP weights, derivative operators (thorn/edth), commutator relations
+- NP directional derivatives, commutator table
+- Spinor pipeline integration verified
+- 5 duplicates closed (already implemented)
 
-### What It Is
+### PSALTer Particle Spectrum Chain (7 issues, epic completed)
+- Moore-Penrose propagator via spin-sector decomposition
+- Unitarity analysis (no-ghost, no-tachyon per sector)
+- Source constraints from gauge invariance
+- Maxwell validation: 1 massless spin-1, unitary, ∂_μJ^μ=0
+- Proca validation: 3 massive spin-1 DOF, no ghost
+- Fierz-Pauli unitarity: spin-2 healthy, spin-0s ghost (Boulware-Deser)
+- Multi-field kernel extraction
+- **TGR-4zw epic auto-closed** (all children complete)
 
-xAct (the Mathematica CAS for tensor algebra) has NO official test suite. We are building one using published physics papers that used xAct. Each test reproduces a specific equation from a paper using TensorGR.jl and string-matches the output.
+### Physics Validations Against Local Papers
+- PPN scalar-tensor: Hohmann (2021) arXiv:2012.14984 Eq (exppnpar)
+  gamma=(omega+1)/(omega+2), beta=1+Psi*omega'/(4(2omega+3)(omega+2)^2)
+- **TGR-bgl xPPN epic auto-closed** (all children complete)
 
-### Protocol (Tobias's orders)
+### Metric-Affine Gravity Chain (3 issues)
+- Non-metricity irreducible decomposition (Weyl vector, traces, traceless)
+- Distortion tensor N = K + L (contortion + disformation)
+- Metric-affine Riemann tensor (asymmetric Ricci, no pair symmetry)
 
-1. Deep-research all xAct API features and document them
-2. Find canonical published physics papers that used each feature
-3. Papers MUST be downloaded locally (all are in `reference/papers/`)
-4. Equations that xAct produced MUST be extracted from LOCAL TeX sources — no hallucination
-5. A TensorGR.jl program MUST compute the same thing — NO PRINTLN CHEATING
-6. The test passes if string match occurs between TensorGR output and paper equation
+### Clifford Algebra Chain (3 issues)
+- Gamma^5 chirality (Gamma5 AST node, trace identities, slash notation)
+- Fierz identities (5×5 rearrangement matrix, Nishi Table I)
+- Charge conjugation matrix C
 
-### What's Done
+### Bimetric Gravity (1 issue)
+- Linearized Hassan-Rosen: mass eigenstates, FP mass formula, rank-1 mass matrix
 
-**ALL 12 PAPERS COMPLETE.** Test file: `test/test_xact_ground_truth.jl` (234 tests, 13 sections).
+### Invar (1 issue)
+- Level 3: Second Bianchi identity for differential invariants
 
-**12 papers downloaded** (PDF + TeX source) to `reference/papers/`:
+### Deferred
+- **TGR-avk** (trace-free enforcement): deferred. Already enforced via Weyl
+  decomposition rules. Core pipeline change is high risk, low reward, no paper
+  ground truth. Revisit only if a real computation fails.
 
-| Paper | arXiv | xAct Feature | TeX Source |
-|-------|-------|-------------|------------|
-| Nutma 2014 | 1308.3493 | xTras (contractions, invariants, Euler density) | `1308_3493_src/xTras.tex` |
-| Brizuela 2009 | 0807.0824 | xPert (perturbation formulas) | `brizuela_src/xPert.tex` |
-| Barker 2024 | 2406.09500 | PSALTer (spin projections) | already local |
-| Bueno Cano 2016 | 1607.06463 | Higher-derivative gravity | `buenocano_src/` |
-| Buoninfante 2020 | 2012.11829 | Higher-derivative gravity | `buoninfante_src/` |
-| Hohmann 2021 | 2012.14984 | xPPN (PPN parameters) | `2012_14984_src/xppnpaper.tex` |
-| Pitrou 2013 | 1302.6174 | xPand (cosmological perturbations) | `1302_6174_src/xPand_-_arXiv2.tex` |
-| Garcia-Parrado 2012 | 1110.2662 | Spinors package | `1110_2662_src/SpinorsCPC.tex` |
-| Levi & Steinhoff 2017 | 1705.06309 | EFTofPNG | `1705_06309_src/revised3.tex` |
-| Tattersall 2018 | 1711.01992 | BH perturbations in modified gravity | `1711_01992_src/final_jan18.tex` |
-| Agullo 2020 | 2006.03397 | Bianchi I perturbations | `2006_03397_src/main.tex` |
-| Casalino 2020 | 2003.07068 | Regularized Lovelock | `2003_07068_src/main.tex` |
+---
 
-**Equations extracted** from 2 papers so far:
+## Key Decisions / Lessons
 
-- **Nutma (xTras)**: 13 computable equations cataloged. Key: Gauss-Bonnet E₄, Weyl decomposition, variational δR/δg, AllContractions counts (1 Riemann → 1 scalar, 2 Riemanns → 4 scalars), Euler densities d=2,4,6,8, linearized Einstein (10 terms).
-- **Brizuela (xPert)**: 14 equations cataloged. Key: inverse metric perturbation (Eq 6), Christoffel perturbation (Eq 7), Riemann perturbation (Eq 9/10), Ricci perturbation (Eq 11), Ricci scalar perturbation (Eq 12), linearized Einstein tensor (10 terms).
+- **FullySymmetric(n)** takes slot numbers as varargs: `FullySymmetric(1,2,3,4)` NOT `FullySymmetric(4)`
+- **make_rule** RETURNS rules but does NOT register them. Use `register_rule!(reg, rule)` for function-based rules
+- **NP tetrad rules**: use function-based RewriteRule (like soldering_form.jl), not pattern matching on products with dummy pairs
+- **symmetrize** takes `Vector{Symbol}` not `Vector{TIndex}`
+- **_is_zero name collision**: renamed to `_mp_is_zero` to avoid clash with petrov_classify.jl
 
-### What's Next
+---
 
-**Side quest COMPLETE.** All 12 papers have tests in `test/test_xact_ground_truth.jl`.
-To go deeper: add more precise equation-level LaTeX matching for high-value identities,
-or connect to the symbolic component pipeline (Symbolics.jl) for numeric verification.
+## Ready Queue Highlights
 
-**All beads issues for this side quest are CLOSED.**
+```bash
+bd ready -n 10   # see top priorities
+```
 
-### Key Gaps (TensorGR vs xAct — equations we CANNOT yet reproduce)
+**High-value P2 tasks:**
+- TGR-6s5: Bimetric mass eigenstates diagonalization (just unblocked by cp7)
+- TGR-v8u: EFTofPNG 1PN EIH potential (needs local paper research)
+- TGR-ulo.2: SortCovDsToDiv (core pipeline — needs full workflow)
+- TGR-xlu.5: DDI simplification pass (core pipeline — needs full workflow)
+- TGR-jvn: NP Bianchi identities in NP form
+- TGR-900: NP 18 field equations (Ricci identities)
 
-- **ConstructDDIs**: dimensional dependent identity enumeration (not implemented)
-- **FullSimplification**: Invar-level multi-term Bianchi scalar monomial reduction
-- **delta_einstein**: no dedicated function (compose from delta_ricci + delta_ricci_scalar)
-- **Multi-order h^{(n)}**: TensorGR locked to background field method (single h)
-- **Higher-d Euler densities**: d≥6 not verified (d=4 works)
-- **RiemannYoungProject**: automated Riemann Young tableau projection
-- **Determinant perturbation**: δⁿ(det g) not implemented
+**Deferred:**
+- TGR-avk: trace-free enforcement (deferred, see above)
+- TGR-e04: _avoid removal (P4, deferred from earlier)
 
 ---
 
@@ -96,9 +115,8 @@ or connect to the symbolic component pipeline (Symbolics.jl) for numeric verific
 See CLAUDE.md for full details. Key points:
 
 - **Core pipeline**: expand_products → contract_metrics → contract_curvature → canonicalize → collect_terms → apply_rules
-- **xperm.c FFI**: Butler-Portugal canonicalization via C library at `deps/libxperm.so`
-- **Registry**: thread-safe via `task_local_storage`, `with_registry(reg) do ... end`
 - **DO NOT** sort TSum terms, sort deriv chains in canonicalize, or simplify bilinear products before kernel extraction
+- **Registry**: thread-safe via `task_local_storage`, `with_registry(reg) do ... end`
 
 ## Physics Ground Truth
 
@@ -106,26 +124,14 @@ See CLAUDE.md for full details. Key points:
 - K_R²: spin2=0, spin0s=3k⁴, spin1=0, spin0w=0
 - K_Ric²: spin2=1.25k⁴, spin0s=k⁴, spin1=0, spin0w=0
 - Spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
-- Horndeski DHOST: a1 = G4_X, a2 = -G4_X, a3=a4=a5=0
-- RInv canonicalization is CONJUGATION, not left-action
-- _avoid in perturbation engine is correct (deferred to P4, not a bug)
+- PPN scalar-tensor: gamma=(omega+1)/(omega+2), beta=1+Psi*omega'/(4(2omega+3)(omega+2)^2)
+- Bimetric FP mass: m²_FP = m²(β₁+2cβ₂+c²β₃)/(1+c²)
 
 ## Quick Commands
 
 ```bash
 bd ready                    # see available work
 bd stats                    # project health
-bd show <id>                # issue details
-julia --project -e 'using Pkg; Pkg.test()'  # full test suite (~7min)
+julia --project -e 'using Pkg; Pkg.test()'  # full test suite
 git log --oneline -10       # recent commits
-```
-
-## Session Close Protocol
-
-```
-[ ] git status
-[ ] git add <files>
-[ ] git commit -m "..."
-[ ] git push
-[ ] bd close <completed issues>
 ```
