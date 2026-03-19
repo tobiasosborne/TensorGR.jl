@@ -110,4 +110,8 @@ using TensorGR
     include("test_spinor_dummy_pairs.jl")
     # Spin metric epsilon
     include("test_spin_metric.jl")
+    # Spinor display (dotted/primed notation)
+    include("test_spinor_display.jl")
+    # Spinor contraction (see-saw rule)
+    include("test_spinor_contraction.jl")
 end

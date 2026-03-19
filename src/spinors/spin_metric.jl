@@ -74,3 +74,28 @@ function define_spin_metric!(reg::TensorRegistry; manifold::Symbol=:M4)
 
     nothing
 end
+
+"""
+    spin_metric(vbundle::Symbol; registry::TensorRegistry=current_registry()) -> Tensor
+
+Return the spin metric tensor for the given spinor vbundle (`:SL2C` or `:SL2C_dot`)
+with two abstract down indices.
+
+# Examples
+```julia
+spin_metric(:SL2C)       # eps_{AB}   with fresh A, B indices
+spin_metric(:SL2C_dot)   # eps_{A'B'} with fresh Ap, Bp indices
+```
+"""
+function spin_metric(vbundle::Symbol; registry::TensorRegistry=current_registry())
+    metric_name = get(registry.metric_cache, vbundle, nothing)
+    metric_name === nothing && error("No spin metric registered for vbundle $vbundle")
+    has_tensor(registry, metric_name) || error("Spin metric $metric_name not in registry")
+
+    used = Set{Symbol}()
+    i1 = fresh_index(used; vbundle=vbundle)
+    push!(used, i1)
+    i2 = fresh_index(used; vbundle=vbundle)
+
+    Tensor(metric_name, [TIndex(i1, Down, vbundle), TIndex(i2, Down, vbundle)])
+end

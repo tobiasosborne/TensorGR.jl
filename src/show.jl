@@ -1,8 +1,37 @@
+# ── Spinor display helpers ──────────────────────────────────────────
+# Dotted spinor indices are stored as :Ap, :Bp, ... in the AST.
+# Display strips trailing 'p' and appends a prime (show/unicode) or
+# wraps in \dot{} (LaTeX).  Penrose & Rindler Vol 1, Section 2.5.
+
+"""
+    _spinor_base_name(name::Symbol) -> String
+
+For dotted spinor index names (:Ap, :Bp, ...), strip the trailing 'p' suffix
+to recover the base letter.  Returns the full name as-is for names that do
+not end in 'p' or are single-character (e.g. :A -> "A", :Ap -> "A").
+"""
+function _spinor_base_name(name::Symbol)
+    s = string(name)
+    if length(s) >= 2 && s[end] == 'p'
+        return s[1:end-1]
+    end
+    return s
+end
+
 function Base.show(io::IO, idx::TIndex)
-    if idx.position == Down
-        print(io, "-", idx.name)
+    if idx.vbundle === :SL2C_dot
+        base = _spinor_base_name(idx.name)
+        if idx.position == Down
+            print(io, "-", base, "'")
+        else
+            print(io, base, "'")
+        end
     else
-        print(io, idx.name)
+        if idx.position == Down
+            print(io, "-", idx.name)
+        else
+            print(io, idx.name)
+        end
     end
 end
 
@@ -68,12 +97,16 @@ Return a LaTeX string representation of a tensor expression.
 function to_latex end
 
 function to_latex(idx::TIndex)
-    s = string(idx.name)
+    s = idx.vbundle === :SL2C_dot ? "\\dot{$(_spinor_base_name(idx.name))}" : string(idx.name)
     if idx.position == Down
         return "_{$s}"
     else
         return "^{$s}"
     end
+end
+
+function _latex_index_name(idx::TIndex)
+    idx.vbundle === :SL2C_dot ? "\\dot{$(_spinor_base_name(idx.name))}" : string(idx.name)
 end
 
 function to_latex(t::Tensor)
@@ -84,10 +117,10 @@ function to_latex(t::Tensor)
     up_indices = filter(i -> i.position == Up, t.indices)
     dn_indices = filter(i -> i.position == Down, t.indices)
     if !isempty(up_indices)
-        s *= "^{" * join([string(i.name) for i in up_indices], " ") * "}"
+        s *= "^{" * join([_latex_index_name(i) for i in up_indices], " ") * "}"
     end
     if !isempty(dn_indices)
-        s *= "_{" * join([string(i.name) for i in dn_indices], " ") * "}"
+        s *= "_{" * join([_latex_index_name(i) for i in dn_indices], " ") * "}"
     end
     return s
 end
@@ -144,7 +177,7 @@ function to_latex(sm::TSum)
 end
 
 function to_latex(d::TDeriv)
-    idx_str = string(d.index.name)
+    idx_str = _latex_index_name(d.index)
     return "\\partial_{$idx_str} " * to_latex(d.arg)
 end
 
@@ -191,6 +224,11 @@ function _unicode_sub(s::AbstractString)
 end
 
 function to_unicode(idx::TIndex)
+    if idx.vbundle === :SL2C_dot
+        base = _spinor_base_name(idx.name)
+        s = base * "'"
+        return idx.position == Down ? _unicode_sub(s) : _unicode_super(s)
+    end
     s = string(idx.name)
     if idx.position == Down
         return _unicode_sub(s)

@@ -142,7 +142,7 @@ export define_vbundle!, conjugate_vbundle
 export define_spinor_bundles!
 export spin_up, spin_down, spin_dot_up, spin_dot_down
 export is_spinor_index, is_dotted, conjugate_index
-export define_spin_metric!
+export define_spin_metric!, spin_metric
 export set_vanishing!
 export current_registry, with_registry
 
