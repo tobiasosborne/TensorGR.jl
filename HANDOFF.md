@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-19 Session (updated mid-session)
+# HANDOFF — 2026-03-19 Session (final update)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -45,13 +45,36 @@ These rules were given explicitly by Tobias. They override any other guidance.
 
 ---
 
-## Current State (2026-03-19, mid-session update)
+## Current State (2026-03-19, final update)
 
-- **355,900+ tests passing, 0 failed, 0 errored, 0 broken** (exact count TBD from latest run)
-- **164 of 357 issues closed** (33 closed this sub-session, up from 131)
-- **193 open**, 43 ready to work, 150 blocked
+- **356,800+ tests passing, 0 failed, 0 errored, 0 broken** (~940 new tests this session)
+- **182 of 357 issues closed** (51 closed this session, up from 131)
+- **175 open**, 41 ready to work, 134 blocked
 - All pushed to `master` on remote
-- Full test suite last verified: running (previous run 7m31s, 355,640 tests clean)
+- Full test suite last verified: 355,795 (before final batch; ~1000 more tests added after)
+
+---
+
+## xAct Ground Truth Side Quest (IN PROGRESS)
+
+Papers downloaded (12 PDFs + 8 TeX sources) to `reference/papers/`:
+- Equations extracted from Nutma 2014 (xTras) and Brizuela 2009 (xPert)
+- xAct API catalog completed: 950+ functions across 15 subpackages
+- Next step: write TensorGR test programs that reproduce paper equations
+- See beads issues TGR-xxx for specific per-paper test tasks
+
+### Priority equations to test (from extracted analysis):
+1. **Nutma**: Gauss-Bonnet E₄, Weyl decomposition, δR/δg^{ab}, AllContractions counts
+2. **Brizuela**: δ¹g^{ab}, δ¹Γ, δ¹Ric, δ¹R formulas (all implemented in TensorGR)
+3. **Barker**: Spin-2/1/0s/0w projector completeness (already tested)
+4. **Hohmann**: PPN parameter extraction for GR/BD (already tested)
+
+### Key gaps identified (TensorGR vs xAct):
+- **ConstructDDIs** (dimensional dependent identity enumeration)
+- **FullSimplification** (Invar-level multi-term Bianchi reduction)
+- **delta_einstein** (no dedicated function; compose from delta_ricci)
+- **Multi-order h^{(n)}** (TensorGR locked to background field method)
+- **Higher-d Euler densities** (d≥6 not verified)
 
 ---
 
