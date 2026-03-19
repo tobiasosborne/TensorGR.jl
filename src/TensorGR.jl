@@ -81,6 +81,7 @@ include("perturbation/isaacson.jl")
 include("svt/fourier.jl")
 include("svt/decompose.jl")
 include("svt/projectors.jl")
+include("svt/gauge_choices.jl")
 
 # Layer 4: 3+1 foliation
 include("foliation/foliation.jl")
@@ -97,6 +98,7 @@ include("action/extract_quadratic.jl")
 include("action/spin_projectors.jl")
 include("action/vector_spin_projectors.jl")
 include("action/antisym2_spin_projectors.jl")
+include("action/rank3_spin_projectors.jl")
 include("action/kernel_extraction.jl")
 include("action/svt_quadratic.jl")
 
@@ -133,6 +135,7 @@ include("algebra/ddi_rules.jl")
 # Layer 5.5: Invar (RInv/DualRInv canonical forms)
 include("invariants/rinv.jl")
 include("invariants/dual_rinv.jl")
+include("invariants/simplify_levels.jl")
 
 # Layer 5.5: Feynman rules (graviton vertices, propagators)
 include("feynman/types.jl")
@@ -337,6 +340,8 @@ export svt_rules_bardeen, svt_rules_full, apply_svt, SVTSubstitution
 export svt_constraint_rules, lorentzian_contract
 export collect_sectors
 export foliate_and_decompose
+export GaugeChoice, gauge_choice, apply_gauge!
+export synchronous_gauge, newtonian_gauge, flat_slicing_gauge, comoving_gauge, uniform_density_gauge
 export BianchiIBackground, define_bianchi_I!, is_isotropic, mean_hubble, shear_tensor_name
 export BianchiStructureConstants, bianchi_type, structure_constant, verify_jacobi, is_class_A
 export bianchi_I, bianchi_II, bianchi_VI0, bianchi_VII0, bianchi_VIII, bianchi_IX
@@ -354,6 +359,7 @@ export bc_RRiem2, bc_RicRiem2, bc_Riem3
 export svt_quadratic_forms_6deriv
 export vector_spin1_projector, vector_spin0_projector, vector_spin_project
 export antisym2_spin1_projector, antisym2_spin0_projector, antisym2_identity
+export antisym3_spin1_projector, antisym3_spin0_projector, antisym3_identity
 
 # Exports: PN matching
 export FourierEntry, FOURIER_TABLE, fourier_transform_potential
@@ -424,6 +430,7 @@ export generate_riemann_ddi, riemann_ddi_expr, simplify_with_ddis
 export RInv, canonicalize_rinv, are_equivalent, rinv_symmetry_group
 export DualRInv, left_dual, right_dual, double_dual, pontryagin_rinv
 export to_tensor_expr, from_tensor_expr
+export simplify_level1, is_riemann_monomial, count_riemann_degree
 
 # Exports: Feynman rules
 export TensorVertex, TensorPropagator, FeynmanDiagram

@@ -186,4 +186,10 @@ using TensorGR
     include("test_antisym2_spin.jl")
     # Bianchi cosmology
     include("test_bianchi.jl")
+    # Cosmological gauge choices
+    include("test_gauge_choices.jl")
+    # Invar Level 1: Permutation symmetries
+    include("test_simplify_levels.jl")
+    # Rank-3 spin projectors
+    include("test_rank3_spin.jl")
 end
