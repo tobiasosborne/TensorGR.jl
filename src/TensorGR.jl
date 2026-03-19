@@ -121,6 +121,14 @@ include("xideal/petrov_classify.jl")
 include("xideal/segre.jl")
 include("xideal/energy_conditions.jl")
 
+# Layer 5.5: Covariant phase space (Noether charge, symplectic form)
+include("phase_space/divergence.jl")
+include("phase_space/eom.jl")
+include("phase_space/symplectic.jl")
+include("phase_space/noether.jl")
+include("phase_space/potential.jl")
+include("phase_space/first_law.jl")
+
 # Layer 5.5: Spherical harmonics (scalar, vector, tensor)
 include("harmonics/scalar_harmonics.jl")
 include("harmonics/clebsch_gordan.jl")
@@ -365,6 +373,16 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: Covariant phase space
+export is_divergence, extract_divergence, split_divergence
+export LagrangianDensity, EOMResult, eom_extract, extract_eom_and_theta
+export SymplecticPotential, symplectic_potential, theta_eh, add_boundary_ambiguity
+export NoetherCurrent, noether_current, noether_current_eh, verify_noether_conservation
+export NoetherCharge, noether_charge, noether_charge_eh
+export SymplecticCurrent, symplectic_current, symplectic_current_eh
+export HamiltonianVariation, hamiltonian_variation, hamiltonian_variation_eh
+export WaldEntropyIntegrand, wald_entropy_integrand, wald_entropy_integrand_eh
 
 # Exports: Spherical harmonics
 export wigner3j, clebsch_gordan

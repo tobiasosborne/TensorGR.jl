@@ -150,4 +150,10 @@ using TensorGR
     include("test_harmonic_orthogonality.jl")
     include("test_tensor_harmonic_orthogonality.jl")
     include("test_ground_truth_harmonics.jl")
+    # Covariant phase space
+    include("test_phase_space_eom.jl")
+    include("test_noether_current.jl")
+    include("test_noether_charge.jl")
+    include("test_symplectic_potential.jl")
+    include("test_symplectic_current.jl")
 end
