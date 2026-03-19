@@ -121,6 +121,21 @@ include("xideal/petrov_classify.jl")
 include("xideal/segre.jl")
 include("xideal/energy_conditions.jl")
 
+# Layer 5.5: DDI (dimensionally dependent identities)
+include("algebra/generalized_delta.jl")
+include("algebra/ddi_rules.jl")
+
+# Layer 5.5: Invar (RInv/DualRInv canonical forms)
+include("invariants/rinv.jl")
+include("invariants/dual_rinv.jl")
+
+# Layer 5.5: Feynman rules (graviton vertices, propagators)
+include("feynman/types.jl")
+include("feynman/propagator.jl")
+include("feynman/vertices.jl")
+include("feynman/gauge_fixing.jl")
+include("feynman/matter_vertices.jl")
+
 # Layer 5.5: Covariant phase space (Noether charge, symplectic form)
 include("phase_space/divergence.jl")
 include("phase_space/eom.jl")
@@ -373,6 +388,27 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: DDI
+export generalized_delta, is_zero_by_dimension
+export generate_ddi_rules, gauss_bonnet_ddi, register_ddi_rules!, has_ddi_rules
+export generate_riemann_ddi, riemann_ddi_expr, simplify_with_ddis
+
+# Exports: Invar (RInv/DualRInv)
+export RInv, canonicalize_rinv, are_equivalent, rinv_symmetry_group
+export DualRInv, left_dual, right_dual, double_dual, pontryagin_rinv
+export to_tensor_expr, from_tensor_expr
+
+# Exports: Feynman rules
+export TensorVertex, TensorPropagator, FeynmanDiagram
+export n_point, n_indices, n_loops
+export graviton_propagator, propagator_numerator
+export matter_graviton_vertex, scalar_matter_vertex, graviton_vertex_n
+export gauge_fixing_condition, gauge_fixing_action
+export fp_operator, ghost_propagator, ghost_graviton_vertex
+export gauge_fixed_kinetic_operator
+export build_diagram, tree_exchange_diagram, contract_diagram, DiagramAmplitude
+export vertex_from_perturbation
 
 # Exports: Covariant phase space
 export is_divergence, extract_divergence, split_divergence

@@ -156,4 +156,14 @@ using TensorGR
     include("test_noether_charge.jl")
     include("test_symplectic_potential.jl")
     include("test_symplectic_current.jl")
+    # DDI (dimensionally dependent identities)
+    include("test_ddi_rules.jl")
+    include("test_ddi_simplify.jl")
+    include("test_riemann_ddi.jl")
+    # Invar (RInv/DualRInv)
+    include("test_rinv.jl")
+    include("test_rinv_canonicalize.jl")
+    include("test_dual_rinv.jl")
+    # Feynman diagram types
+    include("test_feynman_types.jl")
 end
