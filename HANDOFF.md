@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-18 Session Recovery
+# HANDOFF — 2026-03-19 Session
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -32,91 +32,119 @@ These rules were given explicitly by Tobias. They override any other guidance.
 - Document regularly / checkpoint in case of premature termination.
 - Move slowly and carefully via cleanroom testing and auditing of subagent proposals.
 
+**The Extended 9 Rules (from memory/feedback_session_rules.md):**
+1. **SKEPTICISM**: All subagent work, handoffs — verify everything twice.
+2. **DEEP BUGS**: Deep, complex, interlocked. Do not underestimate.
+3. **NO BANDAIDS**: Best-practices full solutions only.
+4. **WORKFLOW**: 3 subagents before any core code change (xAct research + 2 solutions).
+5. **REVIEW**: Rigorous reviewer agent after every core change. No exceptions.
+6. **GROUND TRUTH**: Physics is ground truth, not pinned numbers.
+7. **TESTING**: Targeted only, or full suite in background.
+8. **REPEAT RULES**: Repeat occasionally to maintain focus.
+9. **DO NOT UNDERESTIMATE**: This is deeply nontrivial.
+
 ---
 
-## Current Bug Status
+## Current State (2026-03-19)
 
-### The bugs being fixed (Rule 2 scope)
+- **355,558 tests passing, 0 failed, 0 errored, 0 broken**
+- **131 of 357 issues closed** (81 closed this session, up from 50)
+- **226 open**, 45 ready to work, 181 blocked
+- All pushed to `master` on remote
+- Full test suite last verified: 7m11s, clean
 
-1. **bench_12 regression**: R³ simplified term count inflated (was 324, currently ~229-362 depending on pipeline state). Root cause: `_avoid` set in perturbation engine producing 35 unique dummy names instead of 9, preventing `_normalize_dummies` from merging same-position pairs.
+---
 
-2. **Spin projection failures**: Kernel extraction gives spin1≠0, spin0w≠0 for Fierz-Pauli kernel (physics requires both = 0 for gauge invariance). Root cause: perturbation engine's δR_{ab} is not manifestly symmetric; inner sum merging corrupts coefficient ratios.
+## What Was Done This Session (2026-03-19)
 
-### What the crashed session achieved (uncommitted, in working tree)
+### All march15-preserve Subsystems Ported
 
-Three files modified but NOT committed:
+TGR-t28 (the meta-merge issue) is **CLOSED**. All 10 subsystems ported:
 
-**`src/algebra/canonicalize.jl`** (+85 lines):
-- Moved `_sort_partial_chains` here from simplify.jl
-- Excluded derivative indices from xperm domain (only tensor indices enter xperm). This prevents xperm from swapping names between derivative and tensor slots.
-- Removed partial-derivative symmetry generators from xperm (sorting handled by `_sort_partial_chains` instead)
+| Subsystem | Directory | Issues | Tests | Source Lines |
+|-----------|-----------|:---:|:---:|:---:|
+| Spinors (display, see-saw, canon, soldering, macro) | `src/spinors/` | 5 | 165 | 576 |
+| Frame bundle (tetrads) | `src/tetrads/` | 1 | 49 | 100 |
+| xIdeal (Petrov/Segre/energy conditions) | `src/xideal/` | 10 | 228 | 873 |
+| Scalar-tensor (Horndeski/DHOST/EFT-DE) | `src/scalar_tensor/` | 12 | ~400 | 2,995 |
+| Harmonics (scalar/vector/tensor) | `src/harmonics/` | 8 | ~16,000 | 1,821 |
+| Phase space (Noether/symplectic/Wald) | `src/phase_space/` | 10 | 134 | 1,458 |
+| DDI (dimensionally dependent identities) | `src/algebra/ddi_rules.jl` | 4 | 92 | 789 |
+| RInv/DualRInv (Invar canonical forms) | `src/invariants/` | 6 | 324 | 965 |
+| Feynman (vertices/propagators/diagrams) | `src/feynman/` | 6 | 59 | 1,556 |
+| PPN (metric ansatz) | `src/ppn/` | 4 | 133 | 611 |
 
-**`src/algebra/simplify.jl`** (-35 lines):
-- Removed `_sort_partial_chains` definition (moved to canonicalize.jl)
+### Bug Fixes (14 broken -> 0 broken)
 
-**`src/action/kernel_extraction.jl`** (+283 lines):
-- `_lower_h_indices_to_down`: Lower all Up h-indices to Down via metric connectors
-- `_contract_via_tagged_tensors`: Replace h factors with synthetic `_KL_field`/`_KR_field` tensors, run contract_metrics on full expression, then re-extract bilinear structure
-- `_safe_surviving_name!`: Prevent index name collisions during metric contraction in bilinear terms
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| TGR-55f (9 broken) | DHOST degeneracy: `horndeski_as_dhost` didn't encode a1=-a2 constraint | Store G4_X on a1/a2 via `options[:dhost_coeff_expr]`, add `_sym_add` x+(-x)=0 cancellation, fix `_is_vanishing` to check `.vanishing` field |
+| TGR-4aw (5 broken) | RInv xperm canonicalization: xperm solves LEFT-ACTION, RInv needs CONJUGATION | Delegate `canonicalize_rinv` to BFS orbit enumeration (`canonicalize(::RInv)`) |
 
-### Earlier committed work (from 2026-03-17 sessions)
+### Key Technical Findings
 
-- `11f8ff8`: `canonical_perm_ext` + inner sum collection + `_apply_position_fixes`
-- `f51146f`: `flatten_metric_derivs` + `distribute_derivs` improvements
-- `5c49566`: Kernel extraction bug identification
-- `612a60a`: Kernel metric contraction in coefficients
-- `f3444ed`: `δricci_flat`, kernel metric contraction, worklog
+1. **xperm already works for spinor indices** — symmetry generators operate on slot numbers within a single tensor, so no `canonicalize.jl` changes needed
+2. **xperm CANNOT solve RInv conjugation canonicalization** — fundamentally different group-theoretic problem (left-action vs conjugation orbit). BFS is correct for degree <= 6
+3. **`_sym_add` x+(-x)=0 cancellation** — reviewer-approved, safe, only fires on unary-minus Expr nodes
+4. **`_is_vanishing` was dead code** — old rule-scanning path never matched because `set_vanishing!` creates Function-pattern rules, not Tensor-pattern rules
+5. **Include ordering matters** — phase space has circular struct refs, scalar-tensor has forward refs. Document the correct orders in TensorGR.jl
 
-### Key findings from xAct research
+---
 
-- xAct does NOT have built-in kernel extraction or spin projections
-- Users extract kernels manually via `IndexCoefficient` + `CollectTensors`
-- Key enabler: `UseMetricOnVBundle->All` in `ToCanonical` allows Butler-Portugal to merge via metric-aware dummy relabeling
-- TensorGR now has this via `canonical_perm_ext`
+## What Remains
 
-### Test results as of last run (WORKLOG-canonicalize-fix.md)
+### Ready Issues by Category
 
-| Test | Result | Status |
-|------|--------|--------|
-| spin2 (with δricci_flat) | 2.5 = FP | PASS |
-| spin1 (with δricci_flat) | 0.0 = FP | PASS |
-| spin0s (with δricci_flat) | 0.5 ≠ -1.0 | FAIL |
-| spin0w (with δricci_flat) | -1.5 ≠ 0.0 | FAIL |
-| R³ terms | 229 (was 362) | improved |
+#### Self-contained new functionality (low risk)
+- **TGR-bgl.13** [P2] xPPN: PPN-to-component bridge
+- **TGR-d42** [P2] EFTofPNG: tensor contraction engine for Feynman diagrams
+- Various research/design tasks
 
-### Physics ground truth (the ONLY trustworthy reference)
+#### Pipeline-touching issues (REQUIRE 3-AGENT PROTOCOL)
+- **TGR-e04** [P2] Investigate removing `_avoid` to recover 303-term R³ simplification
+  - `_avoid::Set{Symbol}` in perturbation engine prevents dummy collisions but breaks memoization
+  - Kernel extraction depends on `_avoid` — removing it breaks 19 numerical tests
+  - This is the MOST DANGEROUS remaining issue
+- **TGR-avk** [P2] Constraints: automatic trace-free enforcement in simplify pipeline
+- **TGR-ulo.2** [P2] SortCovDsToDiv enhancement (CLAUDE.md says stub is intentional)
+- **TGR-xlu.5** [P2] DDI simplification pass in simplify pipeline
+
+### The march15-preserve Branch — Exhausted for Safe Ports
+
+Remaining diffs require **struct-level changes** to core types:
+- `VBundleProperties`: `options::Dict` -> `conjugate_bundle::Union{Nothing,Symbol}`
+- `TensorProperties`: add `tracefree_pairs`, `divfree_indices` fields
+- `TensorRegistry`: add `tetrads::Dict` field
+
+These are needed for the full tetrad engine but require the 3-agent protocol.
+
+---
+
+## Physics Ground Truth (ONLY trustworthy reference)
 
 - K_FP: spin2=2.5k², spin0s=-k², spin1=0, spin0w=0
 - K_R²: spin2=0, spin0s=3k⁴, spin1=0, spin0w=0
 - K_Ric²: spin2=1.25k⁴, spin0s=k⁴, spin1=0, spin0w=0
 - spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
 - On MSS: R₀ = 4Λ, Ric₀_{ab} = Λg_{ab}, Riem₀_{abcd} = (Λ/3)(g_{ac}g_{bd} - g_{ad}g_{bc})
+- Horndeski DHOST: a1 = G4_X, a2 = -G4_X, a3=a4=a5=0 (Langlois & Noui 2016)
+- RInv canonicalization is a CONJUGATION problem, not a left-action problem
 
-### Immediate next step identified by crashed session
+## Quick Commands
 
-Fix `δricci_scalar_flat`: instead of a separate 3-term formula, TRACE the δricci_flat result:
-```julia
-d1R = simplify(Tensor(:g, [up(:a), up(:b)]) * δricci_flat(mp, down(:a), down(:b)); registry=reg)
+```bash
+bd ready                    # see available work
+bd stats                    # project health (131 closed / 357 total)
+julia --project -e 'using Pkg; Pkg.test()'  # full test suite (~7min)
+git log --oneline -10       # recent commits
 ```
 
----
+## Session Close Protocol
 
-## Other handoff files (read with Rule 1 skepticism)
-
-- `HANDOFF-canonicalize-investigation.md` — 2026-03-17 root cause analysis
-- `HANDOFF-6deriv-crosscheck.md` — Covariant pipeline / √g perturbation approaches
-- `HANDOFF-6deriv-spectrum.md` — Full spectrum mission specs
-- `HANDOFF-next-session.md` — TOV solver + remaining issues (OUT OF SCOPE per Rule 2)
-- `WORKLOG-canonicalize-fix.md` — Detailed change log from 2026-03-17 session
-
-## Key source files
-
-| File | Role |
-|------|------|
-| `src/algebra/canonicalize.jl` | xperm canonicalization (modified, uncommitted) |
-| `src/algebra/simplify.jl` | Simplify pipeline (modified, uncommitted) |
-| `src/action/kernel_extraction.jl` | Kernel extraction + spin projection (modified, uncommitted) |
-| `src/ast/indices.jl` | `_analyze_indices` — same-position pair recognition (committed) |
-| `src/perturbation/expand.jl` | Perturbation engine with `_avoid` set |
-| `src/xperm/wrapper.jl` | xperm.c FFI + `canonical_perm_ext` |
-| `reference/xAct/` | Local xAct source for research |
+```
+[ ] git status
+[ ] git add <files>
+[ ] git commit -m "..."
+[ ] git push
+[ ] bd close <completed issues>
+```
