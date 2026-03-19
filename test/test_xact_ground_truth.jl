@@ -24,7 +24,8 @@ using TensorGR: all_contractions, free_indices, euler_density,
                 theta_projector, omega_projector,
                 variational_derivative, metric_variation,
                 svt_rules_bardeen, SVTFields, collect_sectors,
-                split_spacetime
+                split_spacetime,
+                ppn_solve, ppn_parameter_table, ppn_nordtvedt_eta
 
 # ═══════════════════════════════════════════════════════════════════════
 # Helper: standard 4D registry setup
@@ -698,6 +699,47 @@ end  # Barker testset
             β = 1 + ω_prime / (4 * (2ω + 3) * (ω + 2)^2)
             @test β == 1
             @test 0 < γ < 1  # γ < 1 for finite ω
+        end
+    end
+
+    # ─────────────────────────────────────────────────────────────────
+    # Hohmann: ppn_solve(:GR) returns γ=1, β=1
+    # This uses TensorGR's actual PPN solver infrastructure.
+    # ─────────────────────────────────────────────────────────────────
+
+    @testset "Hohmann Eq30: ppn_solve(:GR) gives γ=1, β=1" begin
+        reg = TensorRegistry()
+        register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :partial,
+            [:a,:b,:c,:d,:e,:f]))
+        define_metric!(reg, :g; manifold=:M4)
+
+        with_registry(reg) do
+            result = ppn_solve(:GR, reg)
+            params = ppn_parameter_table(result)
+
+            @test params[:gamma] == 1
+            @test params[:beta] == 1
+            @test params[:alpha1] == 0
+            @test params[:alpha2] == 0
+            @test params[:xi] == 0
+        end
+    end
+
+    @testset "Hohmann Eq30: ppn_solve(:BransDicke) gives γ=(ω+1)/(ω+2)" begin
+        reg = TensorRegistry()
+        register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :partial,
+            [:a,:b,:c,:d,:e,:f]))
+        define_metric!(reg, :g; manifold=:M4)
+
+        with_registry(reg) do
+            for ω in [1, 5, 40000]
+                result = ppn_solve(:BransDicke, reg; omega=ω)
+                params = ppn_parameter_table(result)
+
+                γ_expected = (ω + 1) / (ω + 2)
+                @test params[:gamma] ≈ γ_expected atol=1e-10
+                @test params[:beta] == 1  # constant ω → β=1
+            end
         end
     end
 
