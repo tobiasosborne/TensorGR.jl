@@ -122,4 +122,15 @@ using TensorGR
     include("test_spinor_setup.jl")
     # Frame bundle (Lorentz VBundle for tetrads)
     include("test_frame_bundle.jl")
+    # xIdeal: Petrov classification
+    include("test_petrov_invariants.jl")
+    include("test_petrov_classify.jl")
+    # xIdeal: Segre classification
+    include("test_segre.jl")
+    # xIdeal: Energy conditions
+    include("test_energy_conditions.jl")
+    # xIdeal: Validation (Schwarzschild, FRW, pp-wave)
+    include("test_xideal_schwarzschild.jl")
+    include("test_xideal_frw.jl")
+    include("test_petrov_ppwave.jl")
 end

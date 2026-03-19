@@ -114,6 +114,13 @@ include("components/values.jl")
 include("components/to_basis.jl")
 include("components/symbolic_metric.jl")
 
+# Layer 5.5: xIdeal — spacetime classification (Petrov, Segre, energy conditions)
+include("xideal/weyl_scalars.jl")
+include("xideal/petrov_invariants.jl")
+include("xideal/petrov_classify.jl")
+include("xideal/segre.jl")
+include("xideal/energy_conditions.jl")
+
 # Layer 5.5: Worldline / PN
 include("worldline/worldline.jl")
 
@@ -335,6 +342,14 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: xIdeal — Petrov/Segre classification, energy conditions
+export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
+export petrov_invariants, weyl_contraction_invariants, is_algebraically_special
+export PetrovType, TypeI, TypeII, TypeIII, TypeD, TypeN, TypeO
+export petrov_classify
+export SegreType, segre_classify
+export EnergyConditionResult, check_energy_conditions
 
 # Extension stubs (implemented in ext/)
 function to_symbolics end
