@@ -88,12 +88,15 @@ include("foliation/decompose.jl")
 include("foliation/svt_rules.jl")
 include("foliation/constraints.jl")
 include("foliation/sectors.jl")
+include("foliation/bianchi.jl")
+include("foliation/bianchi_structure.jl")
 
 # Layer 4: Quadratic action
 include("action/quadratic_action.jl")
 include("action/extract_quadratic.jl")
 include("action/spin_projectors.jl")
 include("action/vector_spin_projectors.jl")
+include("action/antisym2_spin_projectors.jl")
 include("action/kernel_extraction.jl")
 include("action/svt_quadratic.jl")
 
@@ -334,6 +337,9 @@ export svt_rules_bardeen, svt_rules_full, apply_svt, SVTSubstitution
 export svt_constraint_rules, lorentzian_contract
 export collect_sectors
 export foliate_and_decompose
+export BianchiIBackground, define_bianchi_I!, is_isotropic, mean_hubble, shear_tensor_name
+export BianchiStructureConstants, bianchi_type, structure_constant, verify_jacobi, is_class_A
+export bianchi_I, bianchi_II, bianchi_VI0, bianchi_VII0, bianchi_VIII, bianchi_IX
 
 # Exports: Quadratic action
 export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic_form
@@ -347,6 +353,7 @@ export bc_EH, bc_R2, bc_RicSq, bc_R3, bc_RRicSq, bc_Ric3
 export bc_RRiem2, bc_RicRiem2, bc_Riem3
 export svt_quadratic_forms_6deriv
 export vector_spin1_projector, vector_spin0_projector, vector_spin_project
+export antisym2_spin1_projector, antisym2_spin0_projector, antisym2_identity
 
 # Exports: PN matching
 export FourierEntry, FOURIER_TABLE, fourier_transform_potential

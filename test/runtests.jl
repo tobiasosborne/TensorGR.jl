@@ -182,4 +182,8 @@ using TensorGR
     include("test_vector_spin_projectors.jl")
     # PN potential extraction
     include("test_pn_matching.jl")
+    # Antisymmetric rank-2 spin projectors
+    include("test_antisym2_spin.jl")
+    # Bianchi cosmology
+    include("test_bianchi.jl")
 end
