@@ -278,4 +278,10 @@ using TensorGR
     include("test_bimetric_eigenstates.jl")
     # Gamma trace identities to order 6
     include("test_gamma_traces.jl")
+    # Bimetric Higuchi bound validation
+    include("test_bimetric_higuchi.jl")
+    # GHP field equations (12 gauge-covariant equations)
+    include("test_ghp_field_equations.jl")
+    # Brauer algebra 11-piece decomposition
+    include("test_brauer.jl")
 end

@@ -305,3 +305,50 @@ function bimetric_inverse_transform(bp::BimetricPerturbation)
 
     (delta_g = delta_g, delta_f = delta_f)
 end
+
+"""
+    higuchi_bound(Lambda) -> Any
+
+The Higuchi bound for massive spin-2 on de Sitter: m² >= 2Lambda/3.
+Returns 2Lambda/3 (the minimum mass squared for a healthy massive graviton).
+
+Below this bound, the helicity-0 mode of the massive graviton becomes a ghost
+(negative kinetic energy). At the exact bound m² = 2Lambda/3, the theory has
+a partially massless gauge symmetry.
+
+Ground truth: Higuchi, Nucl. Phys. B 282, 397 (1987);
+             Hassan, Schmidt-May & von Strauss, PLB 715, 335 (2012).
+"""
+function higuchi_bound(Lambda)
+    if Lambda isa Number
+        return 2 * Lambda // 3
+    end
+    :(2 * $Lambda / 3)
+end
+
+"""
+    higuchi_coefficient(m2_FP, Lambda) -> Any
+
+The helicity-0 kinetic coefficient, proportional to (m² - 2Lambda/3).
+Positive = healthy, zero = partially massless, negative = ghost.
+
+Ground truth: Higuchi (1987); Hassan, Schmidt-May & von Strauss (2012).
+"""
+function higuchi_coefficient(m2_FP, Lambda)
+    if m2_FP isa Number && Lambda isa Number
+        return m2_FP - 2 * Lambda // 3
+    end
+    :($m2_FP - 2 * $Lambda / 3)
+end
+
+"""
+    is_higuchi_healthy(m2_FP, Lambda) -> Bool
+
+Check whether the Fierz-Pauli mass satisfies the Higuchi bound (m² >= 2Lambda/3).
+
+Ground truth: Higuchi (1987); Hassan, Schmidt-May & von Strauss (2012).
+"""
+function is_higuchi_healthy(m2_FP, Lambda)
+    m2_FP isa Number && Lambda isa Number || error("Both arguments must be numeric")
+    return m2_FP >= 2 * Lambda // 3
+end

@@ -175,6 +175,7 @@ include("metric_affine/torsion.jl")
 include("metric_affine/nonmetricity.jl")
 include("metric_affine/distortion.jl")
 include("metric_affine/curvature.jl")
+include("metric_affine/brauer.jl")
 
 # Layer 5.5: Hamiltonian analysis
 include("hamiltonian/adm.jl")
@@ -489,6 +490,8 @@ export NP_RICCI_SYMBOLS, NP_WEYL_SYMBOLS
 export NPBianchiIdentity, np_bianchi_identities, vacuum_np_bianchi_identities
 export np_bianchi_identity, NP_CURVATURE_SYMBOLS
 export GHPCommutatorRelation, ghp_commutator_table, ghp_commutator_weight_consistency
+export GHPFieldEquation, ghp_field_equations, vacuum_ghp_field_equations, ghp_field_equation
+export ghp_field_equation_weight_consistent
 
 # Exports: Feynman rules
 export TensorVertex, TensorPropagator, FeynmanDiagram
@@ -531,6 +534,8 @@ export weyl_vector_expr, second_trace_expr
 export DistortionDecomposition, decompose_distortion!
 export contortion_from_torsion, disformation_from_nonmetricity
 export MAFieldStrength, define_ma_curvature!, ma_riemann_decomposition
+export BrauerDecomposition, brauer_piece_names, brauer_piece_dimensions
+export brauer_symmetric_split, brauer_decompose
 export ChargeConjugation, charge_conjugation_properties, majorana_condition
 export CliffordBasis, CB_S, CB_V, CB_T, CB_A, CB_P
 export CLIFFORD_NAMES, CLIFFORD_DIM
@@ -547,6 +552,7 @@ export HassanRosenParams, elementary_symmetric, hassan_rosen_potential
 export BimetricPerturbation, define_bimetric_perturbation!
 export fierz_pauli_mass_squared, bimetric_mass_matrix, bimetric_mass_eigenvalues
 export bimetric_mass_eigenstates, bimetric_inverse_transform
+export higuchi_bound, higuchi_coefficient, is_higuchi_healthy
 
 # Exports: Loop integrals
 export PropagatorDenom, MomentumIntegral, ScalarIntegral
