@@ -121,3 +121,106 @@ function is_proper_ghp(name::Symbol)
     (startswith(s, "Psi_") || startswith(s, "Phi_") || name == :Lambda) && return true
     false
 end
+
+# ── GHP derivative operators ─────────────────────────────────────────────
+#
+# The 4 GHP covariant derivatives are gauge-covariant versions of the
+# NP directional derivatives:
+#   thorn  (þ)  = D     - p*epsilon - q*epsilon_bar    -> shifts weight by {1, 1}
+#   thorn' (þ') = Delta - p*gamma   - q*gamma_bar      -> shifts weight by {-1,-1}
+#   edth   (ð)  = delta - p*beta    - q*alpha_bar       -> shifts weight by {1, -1}
+#   edth'  (ð') = deltabar - p*alpha - q*beta_bar       -> shifts weight by {-1, 1}
+#
+# Reference: GHP (1973), Eqs 2.9-2.12.
+
+"""
+    GHPDerivative
+
+Represents one of the 4 GHP covariant derivative operators.
+
+Fields:
+- `name`: `:thorn`, `:thorn_prime`, `:edth`, `:edth_prime`
+- `tetrad_vec`: the NP directional derivative direction
+- `weight_shift`: the GHPWeight shift when acting on a {p,q} quantity
+- `conn1`, `conn2`: the two spin coefficients subtracted (connection terms)
+"""
+struct GHPDerivative
+    name::Symbol
+    tetrad_vec::Symbol
+    weight_shift::GHPWeight
+    conn1::Symbol   # multiplied by p
+    conn2::Symbol   # multiplied by q (conjugate of conn1)
+end
+
+"""Table of the 4 GHP derivative operators."""
+const GHP_DERIVATIVES = Dict{Symbol, GHPDerivative}(
+    :thorn       => GHPDerivative(:thorn,       :np_l,    GHPWeight(1, 1),   :epsilon_np, :epsilon_np),
+    :thorn_prime => GHPDerivative(:thorn_prime,  :np_n,    GHPWeight(-1, -1), :gamma_np,   :gamma_np),
+    :edth        => GHPDerivative(:edth,         :np_m,    GHPWeight(1, -1),  :beta_np,    :alpha_np),
+    :edth_prime  => GHPDerivative(:edth_prime,   :np_mbar, GHPWeight(-1, 1),  :alpha_np,   :beta_np),
+)
+
+"""
+    ghp_derivative(op::Symbol, expr::TensorExpr, weight::GHPWeight;
+                   covd_name::Symbol=:D,
+                   registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Apply GHP derivative operator `op` to `expr` with known GHP weight.
+
+The GHP derivative is:
+  þ(eta) = D(eta) - p*epsilon*eta - q*epsilon_bar*eta
+
+where eta has weight {p,q}.
+
+Returns a TensorExpr representing the result (which has shifted weight).
+
+# Arguments
+- `op`: one of `:thorn`, `:thorn_prime`, `:edth`, `:edth_prime`
+- `expr`: the expression to differentiate
+- `weight`: the GHP weight {p,q} of `expr`
+- `covd_name`: name of the registered covariant derivative
+"""
+function ghp_derivative(op::Symbol, expr::TensorExpr, weight::GHPWeight;
+                        covd_name::Symbol=:D,
+                        registry::TensorRegistry=current_registry())
+    haskey(GHP_DERIVATIVES, op) || error("Unknown GHP operator: $op. " *
+        "Valid: thorn, thorn_prime, edth, edth_prime")
+
+    ghpd = GHP_DERIVATIVES[op]
+    p, q = weight.p, weight.q
+
+    # Term 1: directional derivative v^a nabla_a(expr)
+    dir_deriv = np_directional_derivative(ghpd.tetrad_vec, expr; covd_name=covd_name)
+
+    # Term 2: -p * conn1 * expr
+    sc1 = spin_coefficient(ghpd.conn1; covd_name=covd_name, registry=registry)
+
+    # Term 3: -q * conn2_bar * expr  (conn2 is already the "bar" coefficient)
+    sc2 = spin_coefficient(ghpd.conn2; covd_name=covd_name, registry=registry)
+
+    terms = TensorExpr[dir_deriv]
+
+    if p != 0
+        push!(terms, tproduct(Rational{Int}(-p), TensorExpr[sc1, expr]))
+    end
+
+    if q != 0
+        push!(terms, tproduct(Rational{Int}(-q), TensorExpr[sc2, expr]))
+    end
+
+    length(terms) == 1 ? terms[1] : tsum(terms)
+end
+
+"""
+    ghp_weight_shift(op::Symbol) -> GHPWeight
+
+Return the weight shift produced by GHP operator `op`.
+- thorn:       {+1, +1}
+- thorn_prime: {-1, -1}
+- edth:        {+1, -1}
+- edth_prime:  {-1, +1}
+"""
+function ghp_weight_shift(op::Symbol)
+    haskey(GHP_DERIVATIVES, op) || error("Unknown GHP operator: $op")
+    GHP_DERIVATIVES[op].weight_shift
+end

@@ -469,6 +469,7 @@ export weyl_spinor_expr, weyl_spinor_bar_expr, ricci_spinor_expr, riemann_spinor
 export spinor_ricci_identity
 export GHPWeight, ghp_weight, spin_weight, boost_weight, is_proper_ghp
 export WEYL_SCALAR_WEIGHTS, RICCI_SCALAR_WEIGHTS, SPIN_COEFF_WEIGHTS
+export GHPDerivative, GHP_DERIVATIVES, ghp_derivative, ghp_weight_shift
 export np_directional_derivative, NPCommutatorRelation, np_commutator_table
 
 # Exports: Feynman rules

@@ -234,4 +234,6 @@ using TensorGR
     include("test_ghp_weights.jl")
     # NP commutator relations
     include("test_np_commutators.jl")
+    # GHP derivative operators
+    include("test_ghp_derivatives.jl")
 end
