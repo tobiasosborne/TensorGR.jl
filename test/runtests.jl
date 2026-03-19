@@ -268,4 +268,6 @@ using TensorGR
     include("test_ma_curvature.jl")
     # Charge conjugation matrix
     include("test_charge_conjugation.jl")
+    # Bimetric linearized perturbation
+    include("test_bimetric_linearize.jl")
 end

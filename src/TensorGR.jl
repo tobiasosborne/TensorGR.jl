@@ -183,6 +183,7 @@ include("hamiltonian/poisson.jl")
 # Layer 5.5: Bimetric gravity
 include("bimetric/registration.jl")
 include("bimetric/potential.jl")
+include("bimetric/linearize.jl")
 
 # Layer 5.5: Covariant phase space (Noether charge, symplectic form)
 include("phase_space/divergence.jl")
@@ -539,6 +540,8 @@ export CanonicalPair, adm_canonical_pair, fundamental_bracket, PoissonBracketRes
 # Exports: Bimetric gravity
 export BimetricSetup, define_bimetric!, bimetric_field_equations
 export HassanRosenParams, elementary_symmetric, hassan_rosen_potential
+export BimetricPerturbation, define_bimetric_perturbation!
+export fierz_pauli_mass_squared, bimetric_mass_matrix, bimetric_mass_eigenvalues
 
 # Exports: Loop integrals
 export PropagatorDenom, MomentumIntegral, ScalarIntegral
