@@ -1227,16 +1227,27 @@ end  # Garcia-Parrado testset
         @test all(s -> abs(s) < 1e-14, σ)  # zero shear = isotropic
     end
 
-    @testset "Agullo: foliation supports anisotropic background" begin
-        # TensorGR's foliation infrastructure can represent Bianchi I
-        # via a 3+1 split with general spatial metric
+    @testset "Agullo: define_bianchi_I! creates 3+1 foliation" begin
+        # TensorGR has dedicated Bianchi I infrastructure
         reg = TensorRegistry()
         register_manifold!(reg, ManifoldProperties(:M4, 4, :g, :partial,
             [:a,:b,:c,:d,:e,:f]))
 
-        fol = define_foliation!(reg, :bianchi; manifold=:M4)
-        @test fol.spatial_dim == 3
-        @test fol.temporal_component == 0
+        with_registry(reg) do
+            b = define_bianchi_I!(reg, :BI)
+            @test b isa BianchiIBackground
+            @test b.scale_factors == (:a1, :a2, :a3)
+
+            # 3 independent Hubble rates
+            @test has_tensor(reg, :H_a1)
+            @test has_tensor(reg, :H_a2)
+            @test has_tensor(reg, :H_a3)
+
+            # Foliation created
+            @test has_foliation(reg, b.foliation)
+            fol = get_foliation(reg, b.foliation)
+            @test fol.spatial_dim == 3
+        end
     end
 
 end  # Agullo testset
