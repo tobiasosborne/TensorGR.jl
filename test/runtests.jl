@@ -116,4 +116,6 @@ using TensorGR
     include("test_spinor_contraction.jl")
     # Spinor canonicalization (xperm with spinor index symmetries)
     include("test_spinor_canonicalize.jl")
+    # Soldering form sigma^a_{AA'} and tensor-spinor conversion
+    include("test_soldering_form.jl")
 end
