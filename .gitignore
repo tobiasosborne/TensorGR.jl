@@ -23,3 +23,11 @@ reports/*.toc
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# Agent worktrees (ephemeral, never commit)
+.claude/worktrees/
+
+# Reference textbooks (copyright, too large)
+reference/ground_truth/*.djvu
+reference/ground_truth/*.pdf
+!reference/ground_truth/xact_papers/
