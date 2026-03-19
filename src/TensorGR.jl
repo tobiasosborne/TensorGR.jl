@@ -41,6 +41,9 @@ include("spinors/spin_metric.jl")
 include("spinors/soldering_form.jl")
 include("spinors/setup.jl")
 
+# Layer 2.6: Tetrad/frame bundle
+include("tetrads/frame_bundle.jl")
+
 # Layer 2.6: Scalar algebra
 include("scalar/algebra.jl")
 include("scalar/functions.jl")
@@ -147,6 +150,7 @@ export is_spinor_index, is_dotted, conjugate_index
 export define_spin_metric!, spin_metric
 export define_soldering_form!, to_spinor_indices, to_tensor_indices
 export define_spinor_structure!, @spinor_manifold
+export define_frame_bundle!, frame_up, frame_down, is_frame_index
 export set_vanishing!
 export current_registry, with_registry
 

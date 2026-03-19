@@ -120,4 +120,6 @@ using TensorGR
     include("test_soldering_form.jl")
     # Spinor structure one-liner setup
     include("test_spinor_setup.jl")
+    # Frame bundle (Lorentz VBundle for tetrads)
+    include("test_frame_bundle.jl")
 end
