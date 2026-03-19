@@ -192,4 +192,8 @@ using TensorGR
     include("test_simplify_levels.jl")
     # Rank-3 spin projectors
     include("test_rank3_spin.jl")
+    # Scalar curvature spinor Lambda
+    include("test_lambda_spinor.jl")
+    # Invar Level 2: Bianchi identity
+    include("test_invar_level2.jl")
 end

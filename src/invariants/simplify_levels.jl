@@ -104,3 +104,108 @@ function count_riemann_degree(s::TSum)
 end
 
 count_riemann_degree(d::TDeriv) = count_riemann_degree(d.arg)
+
+# ────────────────────────────────────────────────────────────────────
+# Level 2: Cyclic symmetry (first Bianchi identity)
+# ────────────────────────────────────────────────────────────────────
+
+#= The first Bianchi identity: R_{a[bcd]} = 0, equivalently:
+#    R_{abcd} + R_{acdb} + R_{adbc} = 0
+#
+# For a product of n Riemann tensors, applying this identity to any
+# factor generates a linear relation among monomials. Collecting all
+# such relations and reducing yields the independent basis.
+#
+# At degree 2 in d=4: 6 naive contractions reduce to 3 independent
+# invariants (R², R_{ab}R^{ab}, R_{abcd}R^{abcd}).
+#
+# Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4.1.
+=#
+
+"""
+    apply_bianchi_cyclic(expr::TensorExpr, factor_idx::Int;
+                          registry::TensorRegistry=current_registry())
+        -> TensorExpr
+
+Apply the first Bianchi identity R_{abcd} + R_{acdb} + R_{adbc} = 0
+to the `factor_idx`-th Riemann factor in a product.
+
+Returns the expression with the cycled terms subtracted:
+    expr |_{R_{abcd}} -> -expr|_{R_{acdb}} - expr|_{R_{adbc}}
+
+The result is then Level-1 canonicalized.
+"""
+function apply_bianchi_cyclic(expr::TensorExpr, factor_idx::Int;
+                               registry::TensorRegistry=current_registry())
+    expr isa TProduct || return expr
+
+    factors = collect(expr.factors)
+    (1 <= factor_idx <= length(factors)) ||
+        error("factor_idx $factor_idx out of range [1, $(length(factors))]")
+
+    riem = factors[factor_idx]
+    riem isa Tensor && riem.name == :Riem || return expr
+
+    idxs = riem.indices
+    length(idxs) == 4 || return expr
+
+    a, b, c, d = idxs
+
+    # Original: R_{abcd}
+    # Bianchi: R_{abcd} = -R_{acdb} - R_{adbc}
+    riem_cycled1 = Tensor(:Riem, [a, c, d, b])
+    riem_cycled2 = Tensor(:Riem, [a, d, b, c])
+
+    other_factors = TensorExpr[factors[i] for i in 1:length(factors) if i != factor_idx]
+
+    term1 = tproduct(-expr.scalar, TensorExpr[vcat(other_factors, [riem_cycled1])...])
+    term2 = tproduct(-expr.scalar, TensorExpr[vcat(other_factors, [riem_cycled2])...])
+
+    result = tsum(TensorExpr[term1, term2])
+
+    # Level-1 canonicalize
+    with_registry(registry) do
+        canonicalize(result)
+    end
+end
+
+"""
+    simplify_level2(expr::TensorExpr;
+                     registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Apply Level 2 (cyclic symmetry / first Bianchi identity) of the Invar
+simplification algorithm.
+
+For each Riemann factor in each term, applies the Bianchi identity
+and collects terms. This may reduce the number of independent invariants.
+
+At degree 2 in d=4: reduces from 6 naive to 3 independent invariants.
+
+Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4.1, Level 2.
+"""
+function simplify_level2(expr::TensorExpr;
+                          registry::TensorRegistry=current_registry())
+    # First apply Level 1
+    expr1 = simplify_level1(expr; registry=registry)
+
+    # Then simplify via the full pipeline which includes Bianchi rules
+    with_registry(registry) do
+        simplify(expr1; registry=registry)
+    end
+end
+
+"""
+    bianchi_relation(a::TIndex, b::TIndex, c::TIndex, d::TIndex) -> TensorExpr
+
+Construct the first Bianchi identity as an expression:
+
+    R_{abcd} + R_{acdb} + R_{adbc} = 0
+
+Returns the LHS (which should simplify to zero).
+"""
+function bianchi_relation(a::TIndex, b::TIndex, c::TIndex, d::TIndex)
+    R1 = Tensor(:Riem, [a, b, c, d])
+    R2 = Tensor(:Riem, [a, c, d, b])
+    R3 = Tensor(:Riem, [a, d, b, c])
+    tsum(TensorExpr[R1, R2, R3])
+end

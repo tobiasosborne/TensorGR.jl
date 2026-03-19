@@ -40,6 +40,7 @@ include("spinors/spinor_bundles.jl")
 include("spinors/spin_metric.jl")
 include("spinors/soldering_form.jl")
 include("spinors/setup.jl")
+include("spinors/curvature_spinors.jl")
 
 # Layer 2.6: Tetrad/frame bundle
 include("tetrads/frame_bundle.jl")
@@ -430,7 +431,9 @@ export generate_riemann_ddi, riemann_ddi_expr, simplify_with_ddis
 export RInv, canonicalize_rinv, are_equivalent, rinv_symmetry_group
 export DualRInv, left_dual, right_dual, double_dual, pontryagin_rinv
 export to_tensor_expr, from_tensor_expr
-export simplify_level1, is_riemann_monomial, count_riemann_degree
+export simplify_level1, simplify_level2, is_riemann_monomial, count_riemann_degree
+export apply_bianchi_cyclic, bianchi_relation
+export define_lambda_spinor!, lambda_spinor_expr
 
 # Exports: Feynman rules
 export TensorVertex, TensorPropagator, FeynmanDiagram
