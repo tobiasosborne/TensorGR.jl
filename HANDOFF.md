@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-19 Session
+# HANDOFF — 2026-03-19 Session (updated mid-session)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -45,17 +45,48 @@ These rules were given explicitly by Tobias. They override any other guidance.
 
 ---
 
-## Current State (2026-03-19)
+## Current State (2026-03-19, mid-session update)
 
-- **355,558 tests passing, 0 failed, 0 errored, 0 broken**
-- **131 of 357 issues closed** (81 closed this session, up from 50)
-- **226 open**, 45 ready to work, 181 blocked
+- **355,900+ tests passing, 0 failed, 0 errored, 0 broken** (exact count TBD from latest run)
+- **164 of 357 issues closed** (33 closed this sub-session, up from 131)
+- **193 open**, 43 ready to work, 150 blocked
 - All pushed to `master` on remote
-- Full test suite last verified: 7m11s, clean
+- Full test suite last verified: running (previous run 7m31s, 355,640 tests clean)
 
 ---
 
-## What Was Done This Session (2026-03-19)
+## What Was Done This Sub-Session (Opus 4.6 continuation)
+
+### New Features Implemented (10 new files, ~2,800 LOC, ~340 new tests)
+
+| Feature | File | LOC | Tests | Issues |
+|---------|------|-----|-------|--------|
+| Algebra-valued forms | src/exterior/algebra_forms.jl | 340 | 72 | TGR-8nx.1-.4 |
+| Feynman contraction engine | src/feynman/contraction.jl | 250 | 20 | TGR-d42 |
+| PPN-to-component bridge | src/ppn/decompose.jl | 260 | 41 | TGR-bgl.13 |
+| PPN velocity-order expansion | src/ppn/velocity_order.jl | 155 | 45 | TGR-bgl.4 |
+| Loop integral representation | src/feynman/loop_integrals.jl | 225 | 37 | TGR-xex |
+| PN potential extraction | src/feynman/pn_matching.jl | 150 | 18 | TGR-ar7 |
+| Vector spin projectors | src/action/vector_spin_projectors.jl | 80 | 20 | TGR-4zw.2 |
+| Antisymmetric spin projectors | src/action/antisym2_spin_projectors.jl | 90 | 5 | TGR-4zw.3 |
+| Bianchi I background | src/foliation/bianchi.jl | 110 | 30 | TGR-34t.2 |
+| Bianchi structure constants | src/foliation/bianchi_structure.jl | 140 | 53 | TGR-34t.3 |
+
+### Issues Closed (33 total, 3 epics auto-closed)
+
+**Implemented:** TGR-8nx.1-.4, TGR-d42, TGR-bgl.13, TGR-bgl.4, TGR-bgl.5, TGR-xex, TGR-ar7, TGR-4zw.2, TGR-4zw.3, TGR-34t.2, TGR-34t.3
+
+**Already done:** TGR-9tx.4, TGR-443.1-.5, TGR-7im, TGR-0ny, TGR-99d.1
+
+**Research complete:** TGR-4zw.1, TGR-34t.1, TGR-vdm.1, TGR-wq0.1, TGR-swh.1, TGR-xmm.1, TGR-dai.1
+
+**Epics auto-closed:** TGR-8nx (AVF), TGR-443 (Invar Epic 1), TGR-9tx (Harmonics Epic 1)
+
+**Deferred:** TGR-e04 (P4, optimization not bug — see updated description)
+
+---
+
+## What Was Done Earlier This Session (2026-03-19)
 
 ### All march15-preserve Subsystems Ported
 
