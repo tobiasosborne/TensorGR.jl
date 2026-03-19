@@ -1142,3 +1142,33 @@
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T09:41:53Z","event_type":"closed","id":1166,"issue_id":"TGR-1t9.8","new_value":"FRW = Type O","old_value":""}
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T09:41:54Z","event_type":"closed","id":1167,"issue_id":"TGR-1t9.9","new_value":"pp-wave = Type N","old_value":""}
 {"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T09:41:55Z","event_type":"closed","id":1168,"issue_id":"TGR-1t9","new_value":"all steps complete","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:33Z","event_type":"closed","id":1169,"issue_id":"TGR-ble.1","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:34Z","event_type":"closed","id":1170,"issue_id":"TGR-ble.2","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:35Z","event_type":"closed","id":1171,"issue_id":"TGR-ble.3","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:37Z","event_type":"closed","id":1172,"issue_id":"TGR-ble.4","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:38Z","event_type":"closed","id":1173,"issue_id":"TGR-ble.5","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:39Z","event_type":"closed","id":1174,"issue_id":"TGR-ble.6","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:40Z","event_type":"closed","id":1175,"issue_id":"TGR-ble.7","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:41Z","event_type":"closed","id":1176,"issue_id":"TGR-ble","new_value":"all steps complete","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:42Z","event_type":"closed","id":1177,"issue_id":"TGR-ada","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:42Z","event_type":"closed","id":1178,"issue_id":"TGR-2wf","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:36:43Z","event_type":"closed","id":1179,"issue_id":"TGR-5f2","new_value":"Implemented in scalar-tensor subsystem. ~400 tests pass.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:40:49Z","event_type":"closed","id":1180,"issue_id":"TGR-9tx.1","new_value":"Harmonics: scalar/vector/tensor, CG, Gaunt, decomposition. ~16K tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:40:59Z","event_type":"closed","id":1181,"issue_id":"TGR-bqf.1","new_value":"Harmonics subsystem ported. ~16K tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:41:00Z","event_type":"closed","id":1182,"issue_id":"TGR-bqf.2","new_value":"Harmonics subsystem ported. ~16K tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:41:01Z","event_type":"closed","id":1183,"issue_id":"TGR-bqf.3","new_value":"Harmonics subsystem ported. ~16K tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:41:28Z","event_type":"closed","id":1184,"issue_id":"TGR-jc7.1","new_value":"Tensor harmonics ported.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:41:29Z","event_type":"closed","id":1185,"issue_id":"TGR-jc7.2","new_value":"Tensor harmonics ported.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:41:30Z","event_type":"closed","id":1186,"issue_id":"TGR-jc7.3","new_value":"Tensor harmonics ported.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:24Z","event_type":"closed","id":1187,"issue_id":"TGR-s50.1","new_value":"Covariant phase space ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:25Z","event_type":"closed","id":1188,"issue_id":"TGR-s50.2","new_value":"Covariant phase space ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:27Z","event_type":"closed","id":1189,"issue_id":"TGR-s50.3","new_value":"Covariant phase space ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:28Z","event_type":"closed","id":1190,"issue_id":"TGR-s50.4","new_value":"Covariant phase space ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:29Z","event_type":"closed","id":1191,"issue_id":"TGR-s50.5","new_value":"Covariant phase space ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:32Z","event_type":"closed","id":1192,"issue_id":"TGR-s50.7","new_value":"Covariant phase space ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:33Z","event_type":"closed","id":1193,"issue_id":"TGR-s50.8","new_value":"Covariant phase space ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:45Z","event_type":"closed","id":1194,"issue_id":"TGR-s50.6","new_value":"Noether charge ported. 134 tests.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:46Z","event_type":"closed","id":1195,"issue_id":"TGR-s50.9","new_value":"Hamiltonian variation ported.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:48Z","event_type":"closed","id":1196,"issue_id":"TGR-s50.10","new_value":"Wald entropy ported.","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:44:49Z","event_type":"closed","id":1197,"issue_id":"TGR-s50","new_value":"all steps complete","old_value":""}
+{"actor":"tobiasosborne","comment":null,"created_at":"2026-03-19T10:53:16Z","event_type":"closed","id":1198,"issue_id":"TGR-xlu.1","new_value":"DDI pipeline: generalized delta, DDI rules, Riemann DDI, simplify_with_ddis. 92 tests.","old_value":""}
