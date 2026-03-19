@@ -137,10 +137,12 @@ include("feynman/vertices.jl")
 include("feynman/gauge_fixing.jl")
 include("feynman/matter_vertices.jl")
 include("feynman/contraction.jl")
+include("feynman/loop_integrals.jl")
 
 # Layer 5.5: PPN (Parametrized Post-Newtonian)
 include("ppn/metric_ansatz.jl")
 include("ppn/decompose.jl")
+include("ppn/velocity_order.jl")
 
 # Layer 5.5: Covariant phase space (Noether charge, symplectic form)
 include("phase_space/divergence.jl")
@@ -428,6 +430,14 @@ export is_semi_conservative, is_preferred_location_free
 export define_ppn_potentials!, ppn_metric_ansatz
 export ppn_foliation!, PPNMetricComponents, ppn_decompose, ppn_compose
 export PPNChristoffelComponents, ppn_christoffel_1pn, ppn_christoffel
+export ppn_order, ppn_max_order, truncate_ppn, ppn_truncate_metric
+export PPN_ORDER_TABLE, PPN_METRIC_ORDERS
+
+# Exports: Loop integrals
+export PropagatorDenom, MomentumIntegral, ScalarIntegral
+export integral_topology, pv_topology, to_momentum_integral
+export massless_bubble, massless_triangle
+export dimreg_trace, total_propagator_power, superficial_divergence
 
 # Exports: Covariant phase space
 export is_divergence, extract_divergence, split_divergence

@@ -174,4 +174,8 @@ using TensorGR
     include("test_feynman_contraction.jl")
     # PPN-to-component bridge
     include("test_ppn_decompose.jl")
+    # PPN velocity-order expansion
+    include("test_ppn_velocity_order.jl")
+    # Loop integral representation
+    include("test_loop_integrals.jl")
 end
