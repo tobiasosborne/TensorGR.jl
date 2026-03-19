@@ -344,6 +344,77 @@ function unitarity_conditions(kernel::SpinSectorDecomposition;
                       all_ghost_free && all_tachyon_free)
 end
 
+# ─── Source constraints from gauge invariance ─────────────────────────
+
+"""
+    SourceConstraint
+
+A constraint on the source current arising from gauge invariance.
+
+# Fields
+- `sector::Symbol`       -- gauge sector (:spin1, :spin0w, etc.)
+- `constraint::Symbol`   -- type of constraint (:transverse, :traceless, etc.)
+- `description::String`  -- human-readable description
+"""
+struct SourceConstraint
+    sector::Symbol
+    constraint::Symbol
+    description::String
+end
+
+function Base.show(io::IO, sc::SourceConstraint)
+    print(io, "SourceConstraint(:$(sc.sector), :$(sc.constraint), \"$(sc.description)\")")
+end
+
+"""
+    source_constraints(kernel::SpinSectorDecomposition;
+                       atol::Real=0) -> Vector{SourceConstraint}
+
+Extract source constraints from the gauge zero modes of the kinetic matrix.
+
+Gauge invariance (vanishing spin-sector form factor) implies constraints
+on the source tensor that couples to the field:
+
+- **Spin-1 gauge** (a₁ = 0): source must be transverse (∂_μ J^μ = 0)
+  Examples: Maxwell (∂_μ J^μ = 0), linearized GR (∂_μ T^{μν} = 0)
+
+- **Spin-0w gauge** (a₀w = 0): source must be traceless (T^μ_μ = 0)
+  Example: conformal gravity requires traceless stress-energy
+
+- **Spin-2 gauge** (a₂ = 0): source has no spin-2 coupling
+  (unusual — only topological theories)
+
+- **Spin-0s gauge** (a₀ₛ = 0): source has no scalar coupling
+
+Ground truth: Barker (2024) arXiv:2406.09500, Sec 7.
+
+# Returns
+A vector of [`SourceConstraint`](@ref) for each gauge sector.
+"""
+function source_constraints(kernel::SpinSectorDecomposition;
+                            atol::Real=0)
+    constraints = SourceConstraint[]
+
+    sector_info = [
+        (:spin2,  kernel.spin2,  :no_spin2_coupling,
+         "Source has no spin-2 (TT tensor) coupling"),
+        (:spin1,  kernel.spin1,  :transverse,
+         "Source must be transverse: ∂_μ J^μ = 0 (conservation law)"),
+        (:spin0s, kernel.spin0s, :no_scalar_coupling,
+         "Source has no scalar coupling"),
+        (:spin0w, kernel.spin0w, :traceless,
+         "Source must be traceless: T^μ_μ = 0 (Weyl invariance)"),
+    ]
+
+    for (sector, ff, ctype, desc) in sector_info
+        if _mp_is_zero(ff, atol)
+            push!(constraints, SourceConstraint(sector, ctype, desc))
+        end
+    end
+
+    constraints
+end
+
 # ─── Symbolic arithmetic helpers ─────────────────────────────────────
 # Operate on numbers (exact Rational) or Expr trees.
 

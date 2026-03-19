@@ -252,4 +252,6 @@ using TensorGR
     include("test_nonmetricity.jl")
     # GHP commutator relations
     include("test_ghp_commutators.jl")
+    # Source constraints from gauge invariance
+    include("test_source_constraints.jl")
 end

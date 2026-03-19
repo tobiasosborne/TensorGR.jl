@@ -379,6 +379,7 @@ export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic
 export sym_det, sym_inv, sym_eval
 export SpinSectorDecomposition, moore_penrose_propagator, no_ghost, no_tachyon
 export SpinSectorResult, UnitarityAnalysis, unitarity_conditions
+export SourceConstraint, source_constraints
 export KineticKernel, extract_kernel, extract_kernel_direct, spin_project, contract_momenta
 export MultiFieldKernels, extract_kernel_multi
 export build_FP_momentum_kernel, build_R2_momentum_kernel, build_Ric2_momentum_kernel
