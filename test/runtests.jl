@@ -196,4 +196,10 @@ using TensorGR
     include("test_lambda_spinor.jl")
     # Invar Level 2: Bianchi identity
     include("test_invar_level2.jl")
+    # ADM decomposition
+    include("test_adm.jl")
+    # Bimetric gravity
+    include("test_bimetric.jl")
+    # PPN field equations
+    include("test_ppn_field_equations.jl")
 end

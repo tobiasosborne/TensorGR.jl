@@ -152,6 +152,13 @@ include("feynman/pn_matching.jl")
 include("ppn/metric_ansatz.jl")
 include("ppn/decompose.jl")
 include("ppn/velocity_order.jl")
+include("ppn/field_equations.jl")
+
+# Layer 5.5: Hamiltonian analysis
+include("hamiltonian/adm.jl")
+
+# Layer 5.5: Bimetric gravity
+include("bimetric/registration.jl")
 
 # Layer 5.5: Covariant phase space (Noether charge, symplectic form)
 include("phase_space/divergence.jl")
@@ -456,6 +463,15 @@ export ppn_foliation!, PPNMetricComponents, ppn_decompose, ppn_compose
 export PPNChristoffelComponents, ppn_christoffel_1pn, ppn_christoffel
 export ppn_order, ppn_max_order, truncate_ppn, ppn_truncate_metric
 export PPN_ORDER_TABLE, PPN_METRIC_ORDERS
+export PPNFieldEquationResult, ppn_solve_gr, ppn_solve_scalar_tensor, ppn_solve
+export extract_ppn_parameters, ppn_parameter_table
+
+# Exports: ADM decomposition
+export ADMDecomposition, define_adm!
+export hamiltonian_constraint, momentum_constraint
+
+# Exports: Bimetric gravity
+export BimetricSetup, define_bimetric!, bimetric_field_equations
 
 # Exports: Loop integrals
 export PropagatorDenom, MomentumIntegral, ScalarIntegral
