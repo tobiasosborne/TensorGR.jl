@@ -209,3 +209,94 @@ function bianchi_relation(a::TIndex, b::TIndex, c::TIndex, d::TIndex)
     R3 = Tensor(:Riem, [a, d, b, c])
     tsum(TensorExpr[R1, R2, R3])
 end
+
+# ────────────────────────────────────────────────────────────────────
+# Level 3: Second (differential) Bianchi identity
+# ────────────────────────────────────────────────────────────────────
+
+#= The second Bianchi identity: nabla_{[a} R_{bc]de} = 0
+#
+#   nabla_a R_{bcde} + nabla_b R_{cade} + nabla_c R_{abde} = 0
+#
+# Contracted form:
+#   nabla_a R^{abcd} = nabla^b R^{cd} - nabla^c R^{bd}
+#
+# Or equivalently (contracted once more):
+#   nabla^a R_{ab} = (1/2) nabla_b R
+#   nabla^a G_{ab} = 0
+#
+# Level 3 applies this to differential invariants (those containing
+# covariant derivatives of curvature tensors).
+#
+# Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4.2.
+=#
+
+"""
+    differential_bianchi(a::TIndex, b::TIndex, c::TIndex, d::TIndex, e::TIndex;
+                         covd::Symbol=:D) -> TensorExpr
+
+Construct the second Bianchi identity as an expression:
+
+    nabla_a R_{bcde} + nabla_b R_{cade} + nabla_c R_{abde} = 0
+
+Returns the LHS (which should simplify to zero).
+"""
+function differential_bianchi(a::TIndex, b::TIndex, c::TIndex, d::TIndex, e::TIndex;
+                              covd::Symbol=:D)
+    R1 = TDeriv(a, Tensor(:Riem, [b, c, d, e]), covd)
+    R2 = TDeriv(b, Tensor(:Riem, [c, a, d, e]), covd)
+    R3 = TDeriv(c, Tensor(:Riem, [a, b, d, e]), covd)
+    tsum(TensorExpr[R1, R2, R3])
+end
+
+"""
+    contracted_bianchi(; covd::Symbol=:D) -> TensorExpr
+
+Construct the contracted second Bianchi identity:
+
+    nabla_a R^{abcd} - nabla^b R^{cd} + nabla^c R^{bd} = 0
+
+Returns the LHS (which should simplify to zero).
+Uses fresh indices to avoid collisions.
+"""
+function contracted_bianchi(; covd::Symbol=:D)
+    # nabla_a R^{abcd} - nabla^b R^{cd} + nabla^c R^{bd} = 0
+    term1 = TDeriv(down(:a), Tensor(:Riem, [up(:a), up(:b), up(:c), up(:d)]), covd)
+    term2 = tproduct(-1 // 1, TensorExpr[
+        TDeriv(up(:b), Tensor(:Ric, [up(:c), up(:d)]), covd)
+    ])
+    term3 = TDeriv(up(:c), Tensor(:Ric, [up(:b), up(:d)]), covd)
+
+    tsum(TensorExpr[term1, term2, term3])
+end
+
+"""
+    simplify_level3(expr::TensorExpr;
+                     covd::Symbol=:D,
+                     registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Apply Level 3 (second Bianchi identity) of the Invar simplification algorithm.
+
+For differential invariants (expressions containing nabla_a R_{bcde} terms),
+applies the contracted second Bianchi identity to replace divergences of
+the Riemann tensor with derivatives of the Ricci tensor.
+
+Specifically, the rule nabla^a R_{abcd} = nabla_b R_{cd} - nabla_c R_{bd}
+is applied via `commute_covds` and the existing Bianchi rules in the registry.
+
+This includes Level 1 and Level 2 as prerequisites.
+
+Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4.2, Level 3.
+"""
+function simplify_level3(expr::TensorExpr;
+                          covd::Symbol=:D,
+                          registry::TensorRegistry=current_registry())
+    # First apply Level 2
+    expr2 = simplify_level2(expr; registry=registry)
+
+    # Then apply the full simplify pipeline with covd commutation
+    # which integrates the second Bianchi identity via existing rules
+    with_registry(registry) do
+        simplify(expr2; registry=registry, commute_covds_name=covd)
+    end
+end

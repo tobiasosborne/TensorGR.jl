@@ -238,4 +238,6 @@ using TensorGR
     include("test_ghp_derivatives.jl")
     # Multi-field kernel extraction
     include("test_multi_field_kernel.jl")
+    # Invar Level 3: Second Bianchi identity
+    include("test_invar_level3.jl")
 end
