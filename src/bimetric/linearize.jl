@@ -169,11 +169,139 @@ Returns (massless=0, massive=m²_FP) where m²_FP is the Fierz-Pauli mass.
 
 The eigenvectors are:
 - Massless: γ = (1/(1+c²))(δg + c² δf)  — standard graviton
-- Massive:  χ = (1/(1+c²))(c² δg - δf)  — massive spin-2
+- Massive:  χ = (1/(1+c²))(δg - δf)  — massive spin-2
 
 Ground truth: Hassan & Rosen (2012) Sec 3.
 """
 function bimetric_mass_eigenvalues(params::HassanRosenParams, c)
     m2_FP = fierz_pauli_mass_squared(params, c)
     (massless = 0, massive = m2_FP)
+end
+
+"""
+    bimetric_mass_eigenstates(bp::BimetricPerturbation) -> NamedTuple
+
+Compute the mass eigenstates (massless and massive modes) as linear combinations
+of the bimetric perturbation fields δg and δf.
+
+For proportional backgrounds f̄ = c² ḡ:
+- Massless: γ_{ab} = (1/(1+c²))(δg_{ab} + c² δf_{ab})  — standard graviton
+- Massive:  χ_{ab} = (1/(1+c²))(δg_{ab} - δf_{ab})   — Fierz-Pauli massive spin-2
+
+Returns `(massless=TensorExpr, massive=TensorExpr, m2_FP=value)`.
+
+Ground truth: Hassan & Rosen (2012) Sec 3; Torsello et al (2020) Sec 4.
+
+The inverse transformation is: δg = γ + c²χ, δf = γ - χ.
+"""
+function bimetric_mass_eigenstates(bp::BimetricPerturbation)
+    c = bp.background_ratio
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used)
+
+    dg = Tensor(bp.delta_g, [down(a), down(b)])
+    df = Tensor(bp.delta_f, [down(a), down(b)])
+
+    # Normalization: 1/(1+c²)
+    if c isa Number
+        norm = 1 // (1 + c^2)
+        c2 = c isa Integer ? c^2 // 1 : c^2
+    else
+        # Symbolic c: embed as TScalar factors
+        norm = 1 // 1
+        c2 = c
+    end
+
+    if c isa Number
+        # Massless: (1/(1+c²)) * (δg + c² δf)
+        #   = norm * δg + norm*c² * δf
+        massless = tsum(TensorExpr[
+            tproduct(norm, TensorExpr[dg]),
+            tproduct(norm * c2, TensorExpr[df])
+        ])
+
+        # Massive: (1/(1+c²)) * (δg - δf)
+        #   = norm * δg - norm * δf
+        massive = tsum(TensorExpr[
+            tproduct(norm, TensorExpr[dg]),
+            tproduct(-norm, TensorExpr[df])
+        ])
+    else
+        # Symbolic c: use TScalar wrappers
+        c_sq = TScalar(:($c^2))
+        one_plus_c2 = TScalar(:(1 + $c^2))
+        inv_norm = TScalar(:(1 / (1 + $c^2)))
+
+        massless = tsum(TensorExpr[
+            tproduct(1 // 1, TensorExpr[inv_norm, dg]),
+            tproduct(1 // 1, TensorExpr[inv_norm, c_sq, df])
+        ])
+
+        massive = tsum(TensorExpr[
+            tproduct(1 // 1, TensorExpr[inv_norm, dg]),
+            tproduct(-1 // 1, TensorExpr[inv_norm, df])
+        ])
+    end
+
+    m2_FP = fierz_pauli_mass_squared(bp.params, c)
+
+    (massless = massless, massive = massive, m2_FP = m2_FP)
+end
+
+"""
+    bimetric_inverse_transform(bp::BimetricPerturbation) -> NamedTuple
+
+Compute the inverse transformation from mass eigenstates back to metric perturbations.
+
+Given eigenstates γ (massless) and χ (massive):
+- δg_{ab} = γ_{ab} + c² χ_{ab}
+- δf_{ab} = γ_{ab} - χ_{ab}
+
+This is the exact inverse of `bimetric_mass_eigenstates`.
+
+Returns `(delta_g=TensorExpr, delta_f=TensorExpr)`.
+
+Ground truth: Hassan & Rosen (2012) Sec 3.
+"""
+function bimetric_inverse_transform(bp::BimetricPerturbation)
+    c = bp.background_ratio
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used)
+
+    gamma = Tensor(bp.massless_mode, [down(a), down(b)])
+    chi = Tensor(bp.massive_mode, [down(a), down(b)])
+
+    if c isa Number
+        c2 = c isa Integer ? c^2 // 1 : c^2
+
+        # δg = γ + c² χ
+        delta_g = tsum(TensorExpr[
+            tproduct(1 // 1, TensorExpr[gamma]),
+            tproduct(c2, TensorExpr[chi])
+        ])
+
+        # δf = γ - χ
+        delta_f = tsum(TensorExpr[
+            tproduct(1 // 1, TensorExpr[gamma]),
+            tproduct(-1 // 1, TensorExpr[chi])
+        ])
+    else
+        c_sq = TScalar(:($c^2))
+
+        delta_g = tsum(TensorExpr[
+            tproduct(1 // 1, TensorExpr[gamma]),
+            tproduct(1 // 1, TensorExpr[c_sq, chi])
+        ])
+
+        delta_f = tsum(TensorExpr[
+            tproduct(1 // 1, TensorExpr[gamma]),
+            tproduct(-1 // 1, TensorExpr[chi])
+        ])
+    end
+
+    (delta_g = delta_g, delta_f = delta_f)
 end

@@ -486,6 +486,8 @@ export GHPDerivative, GHP_DERIVATIVES, ghp_derivative, ghp_weight_shift
 export np_directional_derivative, NPCommutatorRelation, np_commutator_table
 export NPFieldEquation, np_field_equations, vacuum_np_field_equations, np_field_equation
 export NP_RICCI_SYMBOLS, NP_WEYL_SYMBOLS
+export NPBianchiIdentity, np_bianchi_identities, vacuum_np_bianchi_identities
+export np_bianchi_identity, NP_CURVATURE_SYMBOLS
 export GHPCommutatorRelation, ghp_commutator_table, ghp_commutator_weight_consistency
 
 # Exports: Feynman rules
@@ -544,6 +546,7 @@ export BimetricSetup, define_bimetric!, bimetric_field_equations
 export HassanRosenParams, elementary_symmetric, hassan_rosen_potential
 export BimetricPerturbation, define_bimetric_perturbation!
 export fierz_pauli_mass_squared, bimetric_mass_matrix, bimetric_mass_eigenvalues
+export bimetric_mass_eigenstates, bimetric_inverse_transform
 
 # Exports: Loop integrals
 export PropagatorDenom, MomentumIntegral, ScalarIntegral

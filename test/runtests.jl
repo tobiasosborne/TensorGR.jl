@@ -236,6 +236,8 @@ using TensorGR
     include("test_np_commutators.jl")
     # NP field equations (18 Ricci identities)
     include("test_np_field_equations.jl")
+    # NP Bianchi identities (11 equations)
+    include("test_np_bianchi.jl")
     # GHP derivative operators
     include("test_ghp_derivatives.jl")
     # Multi-field kernel extraction
@@ -272,4 +274,8 @@ using TensorGR
     include("test_charge_conjugation.jl")
     # Bimetric linearized perturbation
     include("test_bimetric_linearize.jl")
+    # Bimetric mass eigenstates diagonalization
+    include("test_bimetric_eigenstates.jl")
+    # Gamma trace identities to order 6
+    include("test_gamma_traces.jl")
 end
