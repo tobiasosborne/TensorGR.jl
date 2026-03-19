@@ -359,55 +359,21 @@ TensorExpr canonicalization pipeline, but is not currently used
 function canonicalize_rinv(rinv::RInv, reg::TensorRegistry)
     rinv.canonical && return rinv
 
-    k = rinv.degree
-    nslots = 4k
-    n = nslots + 2
-
-    # Build xperm slot-space generators
-    slot_gens = rinv_symmetry_group(k)
-    isempty(slot_gens) && return RInv(k, rinv.contraction, true)
-
-    # Convert contraction to xperm permutation: identity mapping (name = slot)
-    perm, _free, _dummy = _contraction_to_xperm(rinv.contraction)
-
-    # Since perm is the identity, conjugation is trivial: conj_gens = slot_gens.
-    # The generators already act on the 4k+2 points with sign encoding.
-    conj_gens = slot_gens
-
-    # All-free mode: treat all index slots as free.
-    # The contraction structure is maintained through the name assignment
-    # and recovered after canonicalization via conjugation.
-    # This avoids the dummy-pair mechanism which can incorrectly flag
-    # invariants as zero when combined with antisymmetry generators.
-    freeps = Int32.(1:nslots)
-    dummyps = Int32[]
-
-    # Base: all slot points
-    base = Int32.(1:nslots)
-
-    # Call xperm canonical_perm
-    cperm = xperm_canonical_perm(perm, base, conj_gens, freeps, dummyps, n)
-
-    # Zero check: xperm returns all zeros for vanishing expressions
-    if all(==(Int32(0)), cperm.data)
-        return RInv(k, zeros(Int, nslots), true)
+    # RInv canonicalization requires finding the lex-smallest contraction
+    # under CONJUGATION: sigma -> g.sigma.g^{-1}. This is fundamentally
+    # different from xperm's LEFT-ACTION canonicalization (g.perm).
+    # The BFS orbit enumeration in canonicalize(::RInv) correctly solves
+    # the conjugation problem and is efficient for degree <= 6 (orbit
+    # sizes < 250K, sub-second for all practical invariants).
+    #
+    # The xperm Butler-Portugal algorithm cannot be directly applied to
+    # conjugation canonicalization without a non-trivial reformulation.
+    # See Garcia-Parrado & Martin-Garcia (2007) for the double-coset
+    # framework; the RInv conjugation problem is a different quotient.
+    if rinv.degree >= 7
+        @warn "canonicalize_rinv: degree $(rinv.degree) may be slow (BFS orbit enumeration)" maxlog=1
     end
-
-    # Sign check: sign encoded in last two points
-    # n-1 -> n-1, n -> n means positive
-    # n-1 -> n, n -> n-1 means negative (expression is odd under symmetry)
-    # For scalar invariants (all contracted), a negative sign means the
-    # invariant vanishes (it equals its own negative).
-    if cperm.data[n-1] != Int32(n - 1)
-        # Negative sign -> vanishing invariant
-        return RInv(k, zeros(Int, nslots), true)
-    end
-
-    # cperm gives the canonical slot permutation pi: cperm[slot] = name.
-    # The canonical contraction is sigma' = pi . sigma . pi^{-1}.
-    canon_contraction = _xperm_to_contraction(cperm, nslots, rinv.contraction)
-
-    RInv(k, canon_contraction, true)
+    canonicalize(rinv)
 end
 
 """

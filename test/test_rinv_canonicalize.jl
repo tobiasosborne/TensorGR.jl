@@ -65,7 +65,7 @@
 
             @test ckr1.canonical == true
             @test ckr2.canonical == true
-            @test_broken ckr1.contraction == ckr2.contraction
+            @test ckr1.contraction == ckr2.contraction
         end
     end
 
@@ -118,7 +118,7 @@
             # (5,11)(6,12)(7,1)(8,2)(3,9)(4,10)
             gs2 = RInv(3, [7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6])
             cgs2 = canonicalize_rinv(gs2, reg)
-            @test_broken cgs.contraction == cgs2.contraction
+            @test cgs.contraction == cgs2.contraction
         end
     end
 
@@ -138,7 +138,7 @@
             @test cr2.canonical == true
 
             # Both should canonicalize to the same form
-            @test_broken cr1.contraction == cr2.contraction
+            @test cr1.contraction == cr2.contraction
         end
     end
 
@@ -149,7 +149,7 @@
             kr1 = RInv(2, [5, 6, 7, 8, 1, 2, 3, 4])
             kr2 = RInv(2, [6, 5, 8, 7, 2, 1, 4, 3])
 
-            @test_broken are_equivalent(kr1, kr2, reg) == true
+            @test are_equivalent(kr1, kr2, reg) == true
 
             # Different invariant
             ric_sq = RInv(2, [3, 6, 1, 8, 7, 2, 5, 4])
@@ -194,7 +194,7 @@
             @test kretschmann != ric_sq  # BFS
 
             # xperm should agree
-            @test_broken are_equivalent(kretschmann, kr2, reg) == true
+            @test are_equivalent(kretschmann, kr2, reg) == true
             @test are_equivalent(kretschmann, ric_sq, reg) == false
             @test are_equivalent(r_sq, ric_sq, reg) == false
             @test are_equivalent(r_sq, kretschmann, reg) == false
