@@ -1851,3 +1851,156 @@ function mss_form_factors(K::KineticKernel;
     f0w = spin_project_mss(K, :spin0w; kw...)
     (f_spin2=f2, f_spin1=f1, f_spin0s=f0s, f_spin0w=f0w)
 end
+
+# ── Multi-field kernel extraction ─────────────────────────────────────────
+
+"""
+    MultiFieldKernels
+
+Container for kinetic kernels extracted from a multi-field action.
+Stores a matrix of `KineticKernel` objects indexed by field pairs.
+
+For an action `S[h, A, φ]`, the kernel matrix has entries:
+- `kernels[:h]`  — self-coupling of h
+- `kernels[:A]`  — self-coupling of A
+- `cross[(:h, :A)]` — cross-coupling h-A mixing
+
+Fields:
+- `fields`: ordered list of field names
+- `diagonal`: Dict mapping field => KineticKernel (self-coupling)
+- `cross`: Dict mapping (field1, field2) => KineticKernel (cross-coupling)
+"""
+struct MultiFieldKernels
+    fields::Vector{Symbol}
+    diagonal::Dict{Symbol, KineticKernel}
+    cross::Dict{Tuple{Symbol,Symbol}, KineticKernel}
+end
+
+function Base.show(io::IO, mk::MultiFieldKernels)
+    n = length(mk.fields)
+    nd = length(mk.diagonal)
+    nc = length(mk.cross)
+    println(io, "MultiFieldKernels($(mk.fields), $nd diagonal + $nc cross blocks)")
+end
+
+"""
+    extract_kernel_multi(expr, fields::Vector{Symbol};
+                         k_name::Symbol=:k,
+                         registry=current_registry()) -> MultiFieldKernels
+
+Extract kinetic kernels from a multi-field quadratic action.
+
+For each field, extracts the diagonal (self-coupling) kernel using
+[`extract_kernel_direct`](@ref). For each ordered pair of distinct fields,
+extracts the cross-coupling kernel by identifying bilinear terms containing
+one factor of each field.
+
+# Arguments
+- `expr`: the quadratic action expression (sum of bilinear terms)
+- `fields`: list of field names (e.g., `[:h, :A, :phi]`)
+
+# Returns
+A [`MultiFieldKernels`](@ref) containing diagonal and cross-coupling blocks.
+
+# Example
+```julia
+mk = extract_kernel_multi(delta2_S, [:h, :phi]; registry=reg)
+K_hh = mk.diagonal[:h]          # graviton self-coupling
+K_cross = mk.cross[(:h, :phi)]  # scalar-graviton mixing
+```
+"""
+function extract_kernel_multi(expr::TensorExpr, fields::Vector{Symbol};
+                              k_name::Symbol=:k,
+                              registry=current_registry())
+    diagonal = Dict{Symbol, KineticKernel}()
+    cross = Dict{Tuple{Symbol,Symbol}, KineticKernel}()
+
+    # Extract diagonal blocks: each field's self-coupling
+    for field in fields
+        # Check if the expression contains this field at all
+        if _expr_contains_field(expr, field)
+            try
+                K = extract_kernel_direct(expr, field; k_name=k_name, registry=registry)
+                if !isempty(K.terms)
+                    diagonal[field] = K
+                end
+            catch
+                # Field might not have self-coupling terms; that's fine
+            end
+        end
+    end
+
+    # Extract cross-coupling blocks
+    for i in 1:length(fields)
+        for j in (i+1):length(fields)
+            f1, f2 = fields[i], fields[j]
+            cross_terms = _extract_cross_terms(expr, f1, f2)
+            if !isempty(cross_terms)
+                cross[(f1, f2)] = KineticKernel(
+                    Symbol(f1, :_, f2),
+                    cross_terms
+                )
+            end
+        end
+    end
+
+    MultiFieldKernels(fields, diagonal, cross)
+end
+
+"""Check if an expression contains a given field tensor."""
+function _expr_contains_field(expr::TensorExpr, field::Symbol)
+    found = Ref(false)
+    walk(expr) do node
+        if node isa Tensor && node.name == field
+            found[] = true
+        end
+        node
+    end
+    found[]
+end
+
+"""
+Extract bilinear terms that contain one factor of field1 and one of field2.
+Returns a vector of named tuples (coeff, left, right) where left indices
+are from field1 and right from field2.
+"""
+function _extract_cross_terms(expr::TensorExpr, field1::Symbol, field2::Symbol)
+    expanded = expand_products(expr)
+    raw_terms = expanded isa TSum ? expanded.terms : TensorExpr[expanded]
+
+    result = @NamedTuple{coeff::TensorExpr, left::Vector{TIndex}, right::Vector{TIndex}}[]
+
+    for term in raw_terms
+        term isa TProduct || continue
+        factors = term.factors
+
+        # Find exactly one factor of field1 and one of field2
+        idx1 = findfirst(f -> f isa Tensor && f.name == field1, factors)
+        idx2 = findfirst(f -> f isa Tensor && f.name == field2, factors)
+
+        idx1 === nothing && continue
+        idx2 === nothing && continue
+        idx1 == idx2 && continue  # same factor can't be both
+
+        # Check there's exactly one of each
+        count1 = count(f -> f isa Tensor && f.name == field1, factors)
+        count2 = count(f -> f isa Tensor && f.name == field2, factors)
+        count1 == 1 && count2 == 1 || continue
+
+        left_indices = factors[idx1].indices
+        right_indices = factors[idx2].indices
+
+        # Build coefficient: everything except the two field factors
+        remaining = TensorExpr[]
+        for (k, fk) in enumerate(factors)
+            k == idx1 && continue
+            k == idx2 && continue
+            push!(remaining, fk)
+        end
+        coeff = isempty(remaining) ? TScalar(term.scalar) : tproduct(term.scalar, remaining)
+
+        push!(result, (coeff=coeff, left=collect(left_indices), right=collect(right_indices)))
+    end
+
+    result
+end

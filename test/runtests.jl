@@ -236,4 +236,6 @@ using TensorGR
     include("test_np_commutators.jl")
     # GHP derivative operators
     include("test_ghp_derivatives.jl")
+    # Multi-field kernel extraction
+    include("test_multi_field_kernel.jl")
 end
