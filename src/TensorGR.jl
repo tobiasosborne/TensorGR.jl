@@ -484,6 +484,8 @@ export GHPWeight, ghp_weight, spin_weight, boost_weight, is_proper_ghp
 export WEYL_SCALAR_WEIGHTS, RICCI_SCALAR_WEIGHTS, SPIN_COEFF_WEIGHTS
 export GHPDerivative, GHP_DERIVATIVES, ghp_derivative, ghp_weight_shift
 export np_directional_derivative, NPCommutatorRelation, np_commutator_table
+export NPFieldEquation, np_field_equations, vacuum_np_field_equations, np_field_equation
+export NP_RICCI_SYMBOLS, NP_WEYL_SYMBOLS
 export GHPCommutatorRelation, ghp_commutator_table, ghp_commutator_weight_consistency
 
 # Exports: Feynman rules
