@@ -1,194 +1,132 @@
-# HANDOFF — 2026-03-19 Session (final update)
+# HANDOFF — 2026-03-19
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
 ## TOBIAS'S RULES — FOLLOW TO THE LETTER
 
-These rules were given explicitly by Tobias. They override any other guidance.
-
-**Rule 1:** Previous work and handoff is never to be completely trusted. Generations of agents have committed heresies.
-
-**Rule 2:** Goal is to fix the current bugs. Nothing else is currently in scope.
-
-**Rule 3:** These bugs are DEEP and COMPLEX. Do NOT underestimate this task.
-
-**Rule 4:** Use smart subagents to get a full overview of all the project. There is deep interlock between the current bugs, probably at the module contract level as well as line-by-line level.
-
-**Rule 5:** Liberally clean-room suspect modules to INDEPENDENT smart subagents.
-
-**Rule 6:** No more than 2-3 subagents at a time.
-
-**Rule 7:** DO NOT UNDERESTIMATE THIS TASK. Robust solutions, NO BANDAIDS. Prefer to work longer for a more solid solution, even at the expense of downstream work.
-
-**Rule 8:** Workflow for code changes: always spawn two independent subagents to propose a codebase change. Review and take best solution. THEN spawn a rigorous reviewer to IMMEDIATELY review the work. Do not deviate.
-
-**Rule 9:** Repeat rules when asked.
-
-**Corollary of Rule 1:** Tests may be suspect. Only trustworthy source is physics ground truth. Numbers of terms are not necessarily physics ground truth.
-
-**Additional:**
-- BEFORE making any changes, review xAct source (stored locally) to understand how the problem is solved there. Changing contraction.jl without this has led to "pain and misery."
-- Tests take ages — run selectively or in background only.
-- Document regularly / checkpoint in case of premature termination.
-- Move slowly and carefully via cleanroom testing and auditing of subagent proposals.
-
-**The Extended 9 Rules (from memory/feedback_session_rules.md):**
 1. **SKEPTICISM**: All subagent work, handoffs — verify everything twice.
 2. **DEEP BUGS**: Deep, complex, interlocked. Do not underestimate.
 3. **NO BANDAIDS**: Best-practices full solutions only.
 4. **WORKFLOW**: 3 subagents before any core code change (xAct research + 2 solutions).
 5. **REVIEW**: Rigorous reviewer agent after every core change. No exceptions.
-6. **GROUND TRUTH**: Physics is ground truth, not pinned numbers.
+6. **GROUND TRUTH**: Physics is ground truth, not pinned numbers. Tests may be suspect.
 7. **TESTING**: Targeted only, or full suite in background.
 8. **REPEAT RULES**: Repeat occasionally to maintain focus.
 9. **DO NOT UNDERESTIMATE**: This is deeply nontrivial.
 
----
-
-## Current State (2026-03-19, final update)
-
-- **356,800+ tests passing, 0 failed, 0 errored, 0 broken** (~940 new tests this session)
-- **182 of 357 issues closed** (51 closed this session, up from 131)
-- **175 open**, 41 ready to work, 134 blocked
-- All pushed to `master` on remote
-- Full test suite last verified: 355,795 (before final batch; ~1000 more tests added after)
+**Corollary**: Review xAct source (at `reference/xAct/`) BEFORE changing core modules.
+**Max 2-3 subagents at a time.** Checkpoint regularly.
 
 ---
 
-## xAct Ground Truth Side Quest (IN PROGRESS)
+## Current State
 
-Papers downloaded (12 PDFs + 8 TeX sources) to `reference/papers/`:
-- Equations extracted from Nutma 2014 (xTras) and Brizuela 2009 (xPert)
-- xAct API catalog completed: 950+ functions across 15 subpackages
-- Next step: write TensorGR test programs that reproduce paper equations
-- See beads issues TGR-xxx for specific per-paper test tasks
-
-### Priority equations to test (from extracted analysis):
-1. **Nutma**: Gauss-Bonnet E₄, Weyl decomposition, δR/δg^{ab}, AllContractions counts
-2. **Brizuela**: δ¹g^{ab}, δ¹Γ, δ¹Ric, δ¹R formulas (all implemented in TensorGR)
-3. **Barker**: Spin-2/1/0s/0w projector completeness (already tested)
-4. **Hohmann**: PPN parameter extraction for GR/BD (already tested)
-
-### Key gaps identified (TensorGR vs xAct):
-- **ConstructDDIs** (dimensional dependent identity enumeration)
-- **FullSimplification** (Invar-level multi-term Bianchi reduction)
-- **delta_einstein** (no dedicated function; compose from delta_ricci)
-- **Multi-order h^{(n)}** (TensorGR locked to background field method)
-- **Higher-d Euler densities** (d≥6 not verified)
+- **182 of 362 issues closed** (51 closed last session)
+- **356,800+ tests, 0 failures**
+- All pushed to `master`, repo cleaned (no stale branches/files)
+- `bd stats` for live counts, `bd ready` for available work
 
 ---
 
-## What Was Done This Sub-Session (Opus 4.6 continuation)
+## ACTIVE SIDE QUEST: xAct Ground Truth Test Suite
 
-### New Features Implemented (10 new files, ~2,800 LOC, ~340 new tests)
+**Priority**: Finish this before returning to feature work.
 
-| Feature | File | LOC | Tests | Issues |
-|---------|------|-----|-------|--------|
-| Algebra-valued forms | src/exterior/algebra_forms.jl | 340 | 72 | TGR-8nx.1-.4 |
-| Feynman contraction engine | src/feynman/contraction.jl | 250 | 20 | TGR-d42 |
-| PPN-to-component bridge | src/ppn/decompose.jl | 260 | 41 | TGR-bgl.13 |
-| PPN velocity-order expansion | src/ppn/velocity_order.jl | 155 | 45 | TGR-bgl.4 |
-| Loop integral representation | src/feynman/loop_integrals.jl | 225 | 37 | TGR-xex |
-| PN potential extraction | src/feynman/pn_matching.jl | 150 | 18 | TGR-ar7 |
-| Vector spin projectors | src/action/vector_spin_projectors.jl | 80 | 20 | TGR-4zw.2 |
-| Antisymmetric spin projectors | src/action/antisym2_spin_projectors.jl | 90 | 5 | TGR-4zw.3 |
-| Bianchi I background | src/foliation/bianchi.jl | 110 | 30 | TGR-34t.2 |
-| Bianchi structure constants | src/foliation/bianchi_structure.jl | 140 | 53 | TGR-34t.3 |
+### What It Is
 
-### Issues Closed (33 total, 3 epics auto-closed)
+xAct (the Mathematica CAS for tensor algebra) has NO official test suite. We are building one using published physics papers that used xAct. Each test reproduces a specific equation from a paper using TensorGR.jl and string-matches the output.
 
-**Implemented:** TGR-8nx.1-.4, TGR-d42, TGR-bgl.13, TGR-bgl.4, TGR-bgl.5, TGR-xex, TGR-ar7, TGR-4zw.2, TGR-4zw.3, TGR-34t.2, TGR-34t.3
+### Protocol (Tobias's orders)
 
-**Already done:** TGR-9tx.4, TGR-443.1-.5, TGR-7im, TGR-0ny, TGR-99d.1
+1. Deep-research all xAct API features and document them
+2. Find canonical published physics papers that used each feature
+3. Papers MUST be downloaded locally (all are in `reference/papers/`)
+4. Equations that xAct produced MUST be extracted from LOCAL TeX sources — no hallucination
+5. A TensorGR.jl program MUST compute the same thing — NO PRINTLN CHEATING
+6. The test passes if string match occurs between TensorGR output and paper equation
 
-**Research complete:** TGR-4zw.1, TGR-34t.1, TGR-vdm.1, TGR-wq0.1, TGR-swh.1, TGR-xmm.1, TGR-dai.1
+### What's Done
 
-**Epics auto-closed:** TGR-8nx (AVF), TGR-443 (Invar Epic 1), TGR-9tx (Harmonics Epic 1)
+**12 papers downloaded** (PDF + TeX source) to `reference/papers/`:
 
-**Deferred:** TGR-e04 (P4, optimization not bug — see updated description)
+| Paper | arXiv | xAct Feature | TeX Source |
+|-------|-------|-------------|------------|
+| Nutma 2014 | 1308.3493 | xTras (contractions, invariants, Euler density) | `1308_3493_src/xTras.tex` |
+| Brizuela 2009 | 0807.0824 | xPert (perturbation formulas) | `brizuela_src/xPert.tex` |
+| Barker 2024 | 2406.09500 | PSALTer (spin projections) | already local |
+| Bueno Cano 2016 | 1607.06463 | Higher-derivative gravity | `buenocano_src/` |
+| Buoninfante 2020 | 2012.11829 | Higher-derivative gravity | `buoninfante_src/` |
+| Hohmann 2021 | 2012.14984 | xPPN (PPN parameters) | `2012_14984_src/xppnpaper.tex` |
+| Pitrou 2013 | 1302.6174 | xPand (cosmological perturbations) | `1302_6174_src/xPand_-_arXiv2.tex` |
+| Garcia-Parrado 2012 | 1110.2662 | Spinors package | `1110_2662_src/SpinorsCPC.tex` |
+| Levi & Steinhoff 2017 | 1705.06309 | EFTofPNG | `1705_06309_src/revised3.tex` |
+| Tattersall 2018 | 1711.01992 | BH perturbations in modified gravity | `1711_01992_src/final_jan18.tex` |
+| Agullo 2020 | 2006.03397 | Bianchi I perturbations | `2006_03397_src/main.tex` |
+| Casalino 2020 | 2003.07068 | Regularized Lovelock | `2003_07068_src/main.tex` |
 
----
+**Equations extracted** from 2 papers so far:
 
-## What Was Done Earlier This Session (2026-03-19)
+- **Nutma (xTras)**: 13 computable equations cataloged. Key: Gauss-Bonnet E₄, Weyl decomposition, variational δR/δg, AllContractions counts (1 Riemann → 1 scalar, 2 Riemanns → 4 scalars), Euler densities d=2,4,6,8, linearized Einstein (10 terms).
+- **Brizuela (xPert)**: 14 equations cataloged. Key: inverse metric perturbation (Eq 6), Christoffel perturbation (Eq 7), Riemann perturbation (Eq 9/10), Ricci perturbation (Eq 11), Ricci scalar perturbation (Eq 12), linearized Einstein tensor (10 terms).
 
-### All march15-preserve Subsystems Ported
+### What's Next (for you to do)
 
-TGR-t28 (the meta-merge issue) is **CLOSED**. All 10 subsystems ported:
+1. **Extract equations from remaining 10 papers** — same protocol as Nutma/Brizuela. Read the TeX source, find equations computed by xAct, record equation number + LaTeX.
 
-| Subsystem | Directory | Issues | Tests | Source Lines |
-|-----------|-----------|:---:|:---:|:---:|
-| Spinors (display, see-saw, canon, soldering, macro) | `src/spinors/` | 5 | 165 | 576 |
-| Frame bundle (tetrads) | `src/tetrads/` | 1 | 49 | 100 |
-| xIdeal (Petrov/Segre/energy conditions) | `src/xideal/` | 10 | 228 | 873 |
-| Scalar-tensor (Horndeski/DHOST/EFT-DE) | `src/scalar_tensor/` | 12 | ~400 | 2,995 |
-| Harmonics (scalar/vector/tensor) | `src/harmonics/` | 8 | ~16,000 | 1,821 |
-| Phase space (Noether/symplectic/Wald) | `src/phase_space/` | 10 | 134 | 1,458 |
-| DDI (dimensionally dependent identities) | `src/algebra/ddi_rules.jl` | 4 | 92 | 789 |
-| RInv/DualRInv (Invar canonical forms) | `src/invariants/` | 6 | 324 | 965 |
-| Feynman (vertices/propagators/diagrams) | `src/feynman/` | 6 | 59 | 1,556 |
-| PPN (metric ansatz) | `src/ppn/` | 4 | 133 | 611 |
+2. **Write test file `test/test_xact_ground_truth.jl`** with sections per paper:
+   - Each test: set up registry, compute expression with TensorGR, compare output
+   - Use `to_latex()` or structural comparison, NOT println
+   - Group by xAct subpackage (xTensor, xPert, xCoba, xTras, Invar, Spinors, etc.)
 
-### Bug Fixes (14 broken -> 0 broken)
+3. **Priority equations to implement first** (these TensorGR CAN compute today):
+   - Gauss-Bonnet: `euler_density(:g)` == R² - 4R_{ab}R^{ab} + R_{abcd}R^{abcd}
+   - Weyl decomposition: `riemann_to_weyl` matches Nutma formula
+   - δR/δg^{ab}: `variational_derivative` matches Nutma Eq (line 1512)
+   - δ¹g^{ab} = -h^{ab}: first-order inverse metric perturbation
+   - δ¹Ric_{ab}: first-order Ricci perturbation
+   - δ¹R: first-order Ricci scalar perturbation
+   - PPN: γ_GR=1, γ_BD=(1+ω)/(2+ω) (already tested but need paper citation)
+   - Spin projector completeness: P2+P1+P0s+P0w = identity
 
-| Bug | Root Cause | Fix |
-|-----|-----------|-----|
-| TGR-55f (9 broken) | DHOST degeneracy: `horndeski_as_dhost` didn't encode a1=-a2 constraint | Store G4_X on a1/a2 via `options[:dhost_coeff_expr]`, add `_sym_add` x+(-x)=0 cancellation, fix `_is_vanishing` to check `.vanishing` field |
-| TGR-4aw (5 broken) | RInv xperm canonicalization: xperm solves LEFT-ACTION, RInv needs CONJUGATION | Delegate `canonicalize_rinv` to BFS orbit enumeration (`canonicalize(::RInv)`) |
+4. **Beads issues created**: TGR-4y6 (Nutma), TGR-1rq (Brizuela), TGR-6b8 (Hohmann), TGR-rzi8 (Barker), TGR-gmot (Pitrou)
 
-### Key Technical Findings
+### Key Gaps (TensorGR vs xAct — equations we CANNOT yet reproduce)
 
-1. **xperm already works for spinor indices** — symmetry generators operate on slot numbers within a single tensor, so no `canonicalize.jl` changes needed
-2. **xperm CANNOT solve RInv conjugation canonicalization** — fundamentally different group-theoretic problem (left-action vs conjugation orbit). BFS is correct for degree <= 6
-3. **`_sym_add` x+(-x)=0 cancellation** — reviewer-approved, safe, only fires on unary-minus Expr nodes
-4. **`_is_vanishing` was dead code** — old rule-scanning path never matched because `set_vanishing!` creates Function-pattern rules, not Tensor-pattern rules
-5. **Include ordering matters** — phase space has circular struct refs, scalar-tensor has forward refs. Document the correct orders in TensorGR.jl
-
----
-
-## What Remains
-
-### Ready Issues by Category
-
-#### Self-contained new functionality (low risk)
-- **TGR-bgl.13** [P2] xPPN: PPN-to-component bridge
-- **TGR-d42** [P2] EFTofPNG: tensor contraction engine for Feynman diagrams
-- Various research/design tasks
-
-#### Pipeline-touching issues (REQUIRE 3-AGENT PROTOCOL)
-- **TGR-e04** [P2] Investigate removing `_avoid` to recover 303-term R³ simplification
-  - `_avoid::Set{Symbol}` in perturbation engine prevents dummy collisions but breaks memoization
-  - Kernel extraction depends on `_avoid` — removing it breaks 19 numerical tests
-  - This is the MOST DANGEROUS remaining issue
-- **TGR-avk** [P2] Constraints: automatic trace-free enforcement in simplify pipeline
-- **TGR-ulo.2** [P2] SortCovDsToDiv enhancement (CLAUDE.md says stub is intentional)
-- **TGR-xlu.5** [P2] DDI simplification pass in simplify pipeline
-
-### The march15-preserve Branch — Exhausted for Safe Ports
-
-Remaining diffs require **struct-level changes** to core types:
-- `VBundleProperties`: `options::Dict` -> `conjugate_bundle::Union{Nothing,Symbol}`
-- `TensorProperties`: add `tracefree_pairs`, `divfree_indices` fields
-- `TensorRegistry`: add `tetrads::Dict` field
-
-These are needed for the full tetrad engine but require the 3-agent protocol.
+- **ConstructDDIs**: dimensional dependent identity enumeration (not implemented)
+- **FullSimplification**: Invar-level multi-term Bianchi scalar monomial reduction
+- **delta_einstein**: no dedicated function (compose from delta_ricci + delta_ricci_scalar)
+- **Multi-order h^{(n)}**: TensorGR locked to background field method (single h)
+- **Higher-d Euler densities**: d≥6 not verified (d=4 works)
+- **RiemannYoungProject**: automated Riemann Young tableau projection
+- **Determinant perturbation**: δⁿ(det g) not implemented
 
 ---
 
-## Physics Ground Truth (ONLY trustworthy reference)
+## Architecture Quick Reference
+
+See CLAUDE.md for full details. Key points:
+
+- **Core pipeline**: expand_products → contract_metrics → contract_curvature → canonicalize → collect_terms → apply_rules
+- **xperm.c FFI**: Butler-Portugal canonicalization via C library at `deps/libxperm.so`
+- **Registry**: thread-safe via `task_local_storage`, `with_registry(reg) do ... end`
+- **DO NOT** sort TSum terms, sort deriv chains in canonicalize, or simplify bilinear products before kernel extraction
+
+## Physics Ground Truth
 
 - K_FP: spin2=2.5k², spin0s=-k², spin1=0, spin0w=0
 - K_R²: spin2=0, spin0s=3k⁴, spin1=0, spin0w=0
 - K_Ric²: spin2=1.25k⁴, spin0s=k⁴, spin1=0, spin0w=0
-- spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
-- On MSS: R₀ = 4Λ, Ric₀_{ab} = Λg_{ab}, Riem₀_{abcd} = (Λ/3)(g_{ac}g_{bd} - g_{ad}g_{bc})
-- Horndeski DHOST: a1 = G4_X, a2 = -G4_X, a3=a4=a5=0 (Langlois & Noui 2016)
-- RInv canonicalization is a CONJUGATION problem, not a left-action problem
+- Spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
+- Horndeski DHOST: a1 = G4_X, a2 = -G4_X, a3=a4=a5=0
+- RInv canonicalization is CONJUGATION, not left-action
+- _avoid in perturbation engine is correct (deferred to P4, not a bug)
 
 ## Quick Commands
 
 ```bash
 bd ready                    # see available work
-bd stats                    # project health (131 closed / 357 total)
+bd stats                    # project health
+bd show <id>                # issue details
 julia --project -e 'using Pkg; Pkg.test()'  # full test suite (~7min)
 git log --oneline -10       # recent commits
 ```
