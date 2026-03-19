@@ -157,15 +157,19 @@ include("ppn/observables.jl")
 
 # Layer 5.5: Fermions (Clifford algebra)
 include("fermions/gamma.jl")
+include("fermions/traces.jl")
 
 # Layer 5.5: Metric-affine gravity
 include("metric_affine/connection.jl")
+include("metric_affine/torsion.jl")
 
 # Layer 5.5: Hamiltonian analysis
 include("hamiltonian/adm.jl")
+include("hamiltonian/poisson.jl")
 
 # Layer 5.5: Bimetric gravity
 include("bimetric/registration.jl")
+include("bimetric/potential.jl")
 
 # Layer 5.5: Covariant phase space (Noether charge, symplectic form)
 include("phase_space/divergence.jl")
@@ -477,18 +481,22 @@ export ppn_nordtvedt_eta, ppn_geodetic_factor, ppn_observational_bounds
 
 # Exports: Gamma matrices / Clifford algebra
 export GammaMatrix, gamma5, clifford_relation, gamma_trace
+export gamma_chain_trace, trace_identity_2, trace_identity_4, slash
 
 # Exports: Metric-affine gravity
 export AffineConnection, define_affine_connection!
 export is_metric_compatible, is_torsion_free
 export set_metric_compatible!, set_torsion_free!
+export TorsionDecomposition, decompose_torsion!, torsion_vector_expr, contortion_expr
 
 # Exports: ADM decomposition
 export ADMDecomposition, define_adm!
 export hamiltonian_constraint, momentum_constraint
+export CanonicalPair, adm_canonical_pair, fundamental_bracket, PoissonBracketResult
 
 # Exports: Bimetric gravity
 export BimetricSetup, define_bimetric!, bimetric_field_equations
+export HassanRosenParams, elementary_symmetric, hassan_rosen_potential
 
 # Exports: Loop integrals
 export PropagatorDenom, MomentumIntegral, ScalarIntegral

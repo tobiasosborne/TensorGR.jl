@@ -208,4 +208,6 @@ using TensorGR
     include("test_gamma_matrix.jl")
     # Affine connection
     include("test_affine_connection.jl")
+    # Chain continuations: Poisson, HR potential, torsion, traces
+    include("test_chain_continuations.jl")
 end
