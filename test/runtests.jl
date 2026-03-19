@@ -212,4 +212,26 @@ using TensorGR
     include("test_chain_continuations.jl")
     # xAct ground truth: paper-verified equations (Nutma, Brizuela, Barker, Hohmann)
     include("test_xact_ground_truth.jl")
+    # Weyl and Ricci curvature spinors
+    include("test_weyl_ricci_spinors.jl")
+    # Newman-Penrose null tetrad
+    include("test_null_tetrad.jl")
+    # Spin covariant derivative
+    include("test_spin_covd.jl")
+    # Irreducible spinor decomposition
+    include("test_irreducible_spinor.jl")
+    # NP Weyl and Ricci scalars
+    include("test_np_scalars.jl")
+    # Spinor pipeline integration
+    include("test_spinor_integration.jl")
+    # Riemann spinor decomposition
+    include("test_curvature_decomp.jl")
+    # Spinor commutator identities
+    include("test_spin_commutator.jl")
+    # NP spin coefficients
+    include("test_spin_coefficients.jl")
+    # GHP spin/boost weights
+    include("test_ghp_weights.jl")
+    # NP commutator relations
+    include("test_np_commutators.jl")
 end

@@ -41,6 +41,13 @@ include("spinors/spin_metric.jl")
 include("spinors/soldering_form.jl")
 include("spinors/setup.jl")
 include("spinors/curvature_spinors.jl")
+include("spinors/irreducible.jl")
+include("spinors/spin_covd.jl")
+include("spinors/np.jl")
+include("spinors/curvature_decomp.jl")
+include("spinors/spin_commutator.jl")
+include("spinors/ghp.jl")
+include("spinors/np_equations.jl")
 
 # Layer 2.6: Tetrad/frame bundle
 include("tetrads/frame_bundle.jl")
@@ -452,6 +459,17 @@ export to_tensor_expr, from_tensor_expr
 export simplify_level1, simplify_level2, is_riemann_monomial, count_riemann_degree
 export apply_bianchi_cyclic, bianchi_relation
 export define_lambda_spinor!, lambda_spinor_expr
+export define_weyl_spinor!, define_ricci_spinor!, define_curvature_spinors!
+export irreducible_decompose
+export spin_covd, spin_covd_expr
+export define_null_tetrad!, np_completeness
+export weyl_scalar, weyl_scalars, ricci_scalar_np, np_lambda
+export spin_coefficient, all_spin_coefficients
+export weyl_spinor_expr, weyl_spinor_bar_expr, ricci_spinor_expr, riemann_spinor_parts
+export spinor_ricci_identity
+export GHPWeight, ghp_weight, spin_weight, boost_weight, is_proper_ghp
+export WEYL_SCALAR_WEIGHTS, RICCI_SCALAR_WEIGHTS, SPIN_COEFF_WEIGHTS
+export np_directional_derivative, NPCommutatorRelation, np_commutator_table
 
 # Exports: Feynman rules
 export TensorVertex, TensorPropagator, FeynmanDiagram
