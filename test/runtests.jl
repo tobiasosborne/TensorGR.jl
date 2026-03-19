@@ -210,4 +210,6 @@ using TensorGR
     include("test_affine_connection.jl")
     # Chain continuations: Poisson, HR potential, torsion, traces
     include("test_chain_continuations.jl")
+    # xAct ground truth: paper-verified equations (Nutma, Brizuela, Barker, Hohmann)
+    include("test_xact_ground_truth.jl")
 end
