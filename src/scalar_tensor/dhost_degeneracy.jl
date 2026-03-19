@@ -49,11 +49,17 @@ function degeneracy_conditions(theory::DHOSTTheory;
     mul = _sym_mul
     add = _sym_add
 
-    a1 = g_tensor_name(theory.a[1])
-    a2 = g_tensor_name(theory.a[2])
-    a3 = g_tensor_name(theory.a[3])
-    a4 = g_tensor_name(theory.a[4])
-    a5 = g_tensor_name(theory.a[5])
+    # Return 0 for vanishing coefficients so conditions simplify algebraically
+    function _coeff(stf)
+        name = g_tensor_name(stf)
+        (has_tensor(registry, name) && get_tensor(registry, name).vanishing) ? 0 : name
+    end
+
+    a1 = _coeff(theory.a[1])
+    a2 = _coeff(theory.a[2])
+    a3 = _coeff(theory.a[3])
+    a4 = _coeff(theory.a[4])
+    a5 = _coeff(theory.a[5])
 
     # C1: 2 a_2(a_1 + a_2) + 3 a_3^2 = 0
     C1 = add(mul(2, mul(a2, add(a1, a2))),
