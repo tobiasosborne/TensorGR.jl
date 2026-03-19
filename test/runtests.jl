@@ -133,4 +133,13 @@ using TensorGR
     include("test_xideal_schwarzschild.jl")
     include("test_xideal_frw.jl")
     include("test_petrov_ppwave.jl")
+    # Scalar-tensor gravity
+    include("test_horndeski.jl")
+    include("test_horndeski_eom.jl")
+    include("test_beyond_horndeski.jl")
+    include("test_dhost.jl")
+    include("test_dhost_degeneracy.jl")
+    include("test_eft_de.jl")
+    include("test_fr_as_horndeski.jl")
+    include("test_multi_horndeski.jl")
 end

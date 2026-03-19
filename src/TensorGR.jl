@@ -121,6 +121,17 @@ include("xideal/petrov_classify.jl")
 include("xideal/segre.jl")
 include("xideal/energy_conditions.jl")
 
+# Layer 5.5: Scalar-tensor gravity (Horndeski, DHOST, EFT-DE)
+include("scalar_tensor/horndeski.jl")
+include("scalar_tensor/horndeski_eom.jl")
+include("scalar_tensor/alpha_params.jl")
+include("scalar_tensor/beyond_horndeski.jl")
+include("scalar_tensor/dhost.jl")
+include("scalar_tensor/dhost_degeneracy.jl")
+include("scalar_tensor/eft_de.jl")
+include("scalar_tensor/multi_horndeski.jl")
+include("scalar_tensor/quadratic_action_st.jl")
+
 # Layer 5.5: Worldline / PN
 include("worldline/worldline.jl")
 
@@ -342,6 +353,27 @@ export TOVSystem, TOVSolution, setup_tov, tov_rhs!, solve_tov, mass_radius_curve
 
 # Exports: LaTeX parser
 export parse_tex, @tex_str
+
+# Exports: Scalar-tensor gravity
+export ScalarTensorFunction, g_tensor_name, differentiate_G
+export HorndeskiTheory, define_horndeski!, kinetic_X
+export horndeski_L2, horndeski_L3, horndeski_L4, horndeski_L5, horndeski_lagrangian
+export horndeski_metric_eom, horndeski_scalar_eom, horndeski_eom
+export BeyondHorndeskiTheory, define_beyond_horndeski!
+export beyond_horndeski_L4, beyond_horndeski_L5, beyond_horndeski_lagrangian, alpha_H
+export DHOSTTheory, define_dhost!
+export dhost_L1, dhost_L2, dhost_L3, dhost_L4, dhost_L5, dhost_lagrangian
+export degeneracy_conditions, is_degenerate, dhost_class
+export horndeski_as_dhost, reduce_to_horndeski, dhost_dof_count
+export FRWBackground, define_frw_background, BelliniSawickiAlphas
+export compute_alphas, compute_alphas_numerical
+export EFTDarkEnergy, eft_from_horndeski, eft_from_beyond_horndeski, eft_from_numerical
+export eft_stability, eft_observables, gw170817_constraint
+export eft_gr, eft_quintessence, eft_fR, apply_gw170817
+export MultiScalarTensorFunction, multi_g_tensor_name, differentiate_MG
+export MultiHorndeskiTheory, define_multi_horndeski!
+export multi_horndeski_L2, multi_horndeski_L3, multi_horndeski_L4, multi_horndeski_L5
+export multi_horndeski_lagrangian, kinetic_matrix, kinetic_matrix_full, to_single_field
 
 # Exports: xIdeal — Petrov/Segre classification, energy conditions
 export weyl_scalars, validate_null_tetrad, null_tetrad_from_metric
