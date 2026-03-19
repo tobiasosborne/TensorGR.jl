@@ -153,6 +153,13 @@ include("ppn/metric_ansatz.jl")
 include("ppn/decompose.jl")
 include("ppn/velocity_order.jl")
 include("ppn/field_equations.jl")
+include("ppn/observables.jl")
+
+# Layer 5.5: Fermions (Clifford algebra)
+include("fermions/gamma.jl")
+
+# Layer 5.5: Metric-affine gravity
+include("metric_affine/connection.jl")
 
 # Layer 5.5: Hamiltonian analysis
 include("hamiltonian/adm.jl")
@@ -465,6 +472,16 @@ export ppn_order, ppn_max_order, truncate_ppn, ppn_truncate_metric
 export PPN_ORDER_TABLE, PPN_METRIC_ORDERS
 export PPNFieldEquationResult, ppn_solve_gr, ppn_solve_scalar_tensor, ppn_solve
 export extract_ppn_parameters, ppn_parameter_table
+export ppn_perihelion_factor, ppn_deflection_factor, ppn_shapiro_factor
+export ppn_nordtvedt_eta, ppn_geodetic_factor, ppn_observational_bounds
+
+# Exports: Gamma matrices / Clifford algebra
+export GammaMatrix, gamma5, clifford_relation, gamma_trace
+
+# Exports: Metric-affine gravity
+export AffineConnection, define_affine_connection!
+export is_metric_compatible, is_torsion_free
+export set_metric_compatible!, set_torsion_free!
 
 # Exports: ADM decomposition
 export ADMDecomposition, define_adm!

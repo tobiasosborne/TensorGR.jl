@@ -202,4 +202,10 @@ using TensorGR
     include("test_bimetric.jl")
     # PPN field equations
     include("test_ppn_field_equations.jl")
+    # PPN observables
+    include("test_ppn_observables.jl")
+    # Gamma matrices
+    include("test_gamma_matrix.jl")
+    # Affine connection
+    include("test_affine_connection.jl")
 end
