@@ -168,4 +168,8 @@ using TensorGR
     include("test_feynman_types.jl")
     # PPN metric ansatz
     include("test_ppn_metric.jl")
+    # Algebra-valued differential forms
+    include("test_algebra_forms.jl")
+    # Feynman diagram contraction engine
+    include("test_feynman_contraction.jl")
 end

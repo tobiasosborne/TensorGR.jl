@@ -105,6 +105,7 @@ include("gr/conversions.jl")
 include("exterior/forms.jl")
 include("exterior/operations.jl")
 include("exterior/connection_forms.jl")
+include("exterior/algebra_forms.jl")
 
 # Layer 5: Component calculations
 include("components/basis.jl")
@@ -135,6 +136,7 @@ include("feynman/propagator.jl")
 include("feynman/vertices.jl")
 include("feynman/gauge_fixing.jl")
 include("feynman/matter_vertices.jl")
+include("feynman/contraction.jl")
 
 # Layer 5.5: PPN (Parametrized Post-Newtonian)
 include("ppn/metric_ansatz.jl")
@@ -361,6 +363,10 @@ export codifferential, cartan_lie_d
 export wedge_power
 export connection_form, curvature_form
 export cartan_first_structure, cartan_second_structure
+export AlgValuedForm, alg_exterior_d, alg_wedge
+export connection_1form, curvature_2form, gauge_covd
+export field_strength, yang_mills_eom, bianchi_identity
+export instanton_density, chern_simons_form, chern_simons_invariant
 
 # Exports: Components
 export ChartProperties, define_chart!, get_chart
@@ -412,6 +418,8 @@ export fp_operator, ghost_propagator, ghost_graviton_vertex
 export gauge_fixed_kinetic_operator
 export build_diagram, tree_exchange_diagram, contract_diagram, DiagramAmplitude
 export vertex_from_perturbation
+export contract_line, find_loop_momenta, symmetry_factor
+export momentum_constraints, impose_momentum_conservation, MomentumConstraint
 
 # Exports: PPN
 export PPNParameters, ppn_gr, is_gr, is_fully_conservative, is_preferred_frame_free
