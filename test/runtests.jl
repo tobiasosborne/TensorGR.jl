@@ -246,4 +246,10 @@ using TensorGR
     include("test_moore_penrose.jl")
     # Gamma^5 chirality matrix
     include("test_gamma5.jl")
+    # Unitarity conditions (PSALTer)
+    include("test_unitarity.jl")
+    # Non-metricity decomposition
+    include("test_nonmetricity.jl")
+    # GHP commutator relations
+    include("test_ghp_commutators.jl")
 end

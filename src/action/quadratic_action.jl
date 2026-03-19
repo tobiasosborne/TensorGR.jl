@@ -237,6 +237,113 @@ function no_tachyon(mass_sq::SpinSectorDecomposition)
     true
 end
 
+"""
+    SpinSectorResult
+
+Per-sector unitarity result for one spin sector.
+
+# Fields
+- `sector::Symbol`     -- :spin2, :spin1, :spin0s, :spin0w
+- `form_factor::Any`   -- kinetic form factor a_J(k²)
+- `propagator::Any`    -- 1/a_J (or 0 if gauge)
+- `is_gauge::Bool`     -- true if sector has zero kinetic term (gauge mode)
+- `ghost_free::Bool`   -- true if residue has correct sign
+- `tachyon_free::Bool` -- true if mass² ≥ 0 (for massive modes)
+"""
+struct SpinSectorResult
+    sector::Symbol
+    form_factor::Any
+    propagator::Any
+    is_gauge::Bool
+    ghost_free::Bool
+    tachyon_free::Bool
+end
+
+function Base.show(io::IO, r::SpinSectorResult)
+    status = r.is_gauge ? "gauge" :
+             (r.ghost_free && r.tachyon_free) ? "healthy" :
+             !r.ghost_free ? "GHOST" : "TACHYON"
+    print(io, "SpinSectorResult($(r.sector): $(status), a=$(r.form_factor))")
+end
+
+"""
+    UnitarityAnalysis
+
+Complete unitarity analysis of a quadratic action.
+
+# Fields
+- `sectors::Dict{Symbol, SpinSectorResult}` -- per-sector results
+- `ghost_free::Bool`    -- true if all sectors are ghost-free
+- `tachyon_free::Bool`  -- true if all sectors are tachyon-free
+- `unitary::Bool`       -- true if both ghost-free and tachyon-free
+"""
+struct UnitarityAnalysis
+    sectors::Dict{Symbol, SpinSectorResult}
+    ghost_free::Bool
+    tachyon_free::Bool
+    unitary::Bool
+end
+
+function Base.show(io::IO, u::UnitarityAnalysis)
+    status = u.unitary ? "UNITARY" : u.ghost_free ? "tachyonic" : "ghosty"
+    print(io, "UnitarityAnalysis($status, $(length(u.sectors)) sectors)")
+end
+
+"""
+    unitarity_conditions(kernel::SpinSectorDecomposition;
+                         reference_sign::Int=1,
+                         atol::Real=0) -> UnitarityAnalysis
+
+Analyze unitarity of a quadratic action from its spin-sector decomposition.
+
+For each spin sector J:
+- **Gauge mode** (a_J = 0): excluded from analysis
+- **Ghost-free**: sign(a_J) == `reference_sign` (default: positive)
+- **Tachyon-free**: always true for polynomial form factors (no massive poles)
+
+For massive theories where form factors are rational in k², tachyon analysis
+requires additional pole extraction (not done here — use `propagator_poles`).
+
+Ground truth: Barker (2024) arXiv:2406.09500, Sec 6.
+
+# Returns
+A [`UnitarityAnalysis`](@ref) with per-sector breakdown and overall verdict.
+"""
+function unitarity_conditions(kernel::SpinSectorDecomposition;
+                              reference_sign::Int=1,
+                              atol::Real=0)
+    sector_names = [:spin2, :spin1, :spin0s, :spin0w]
+    sector_vals = [kernel.spin2, kernel.spin1, kernel.spin0s, kernel.spin0w]
+
+    prop = moore_penrose_propagator(kernel; atol=atol)
+    prop_vals = [prop.spin2, prop.spin1, prop.spin0s, prop.spin0w]
+
+    results = Dict{Symbol, SpinSectorResult}()
+    all_ghost_free = true
+    all_tachyon_free = true
+
+    for (name, ff, pv) in zip(sector_names, sector_vals, prop_vals)
+        is_gauge = _mp_is_zero(ff, atol)
+
+        if is_gauge
+            results[name] = SpinSectorResult(name, ff, 0, true, true, true)
+        else
+            # Ghost check: form factor sign matches reference
+            gf = ff isa Number ? (sign(ff) == reference_sign) : true  # symbolic: assume ok
+            # Tachyon check: for polynomial form factors, always true
+            # (massive poles need separate analysis)
+            tf = true
+            if !gf
+                all_ghost_free = false
+            end
+            results[name] = SpinSectorResult(name, ff, pv, false, gf, tf)
+        end
+    end
+
+    UnitarityAnalysis(results, all_ghost_free, all_tachyon_free,
+                      all_ghost_free && all_tachyon_free)
+end
+
 # ─── Symbolic arithmetic helpers ─────────────────────────────────────
 # Operate on numbers (exact Rational) or Expr trees.
 

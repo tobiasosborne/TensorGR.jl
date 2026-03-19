@@ -48,6 +48,7 @@ include("spinors/curvature_decomp.jl")
 include("spinors/spin_commutator.jl")
 include("spinors/ghp.jl")
 include("spinors/np_equations.jl")
+include("spinors/ghp_equations.jl")
 
 # Layer 2.6: Tetrad/frame bundle
 include("tetrads/frame_bundle.jl")
@@ -169,6 +170,7 @@ include("fermions/traces.jl")
 # Layer 5.5: Metric-affine gravity
 include("metric_affine/connection.jl")
 include("metric_affine/torsion.jl")
+include("metric_affine/nonmetricity.jl")
 
 # Layer 5.5: Hamiltonian analysis
 include("hamiltonian/adm.jl")
@@ -376,6 +378,7 @@ export bianchi_I, bianchi_II, bianchi_VI0, bianchi_VII0, bianchi_VIII, bianchi_I
 export QuadraticForm, quadratic_form, propagator, determinant, extract_quadratic_form
 export sym_det, sym_inv, sym_eval
 export SpinSectorDecomposition, moore_penrose_propagator, no_ghost, no_tachyon
+export SpinSectorResult, UnitarityAnalysis, unitarity_conditions
 export KineticKernel, extract_kernel, extract_kernel_direct, spin_project, contract_momenta
 export MultiFieldKernels, extract_kernel_multi
 export build_FP_momentum_kernel, build_R2_momentum_kernel, build_Ric2_momentum_kernel
@@ -475,6 +478,7 @@ export GHPWeight, ghp_weight, spin_weight, boost_weight, is_proper_ghp
 export WEYL_SCALAR_WEIGHTS, RICCI_SCALAR_WEIGHTS, SPIN_COEFF_WEIGHTS
 export GHPDerivative, GHP_DERIVATIVES, ghp_derivative, ghp_weight_shift
 export np_directional_derivative, NPCommutatorRelation, np_commutator_table
+export GHPCommutatorRelation, ghp_commutator_table, ghp_commutator_weight_consistency
 
 # Exports: Feynman rules
 export TensorVertex, TensorPropagator, FeynmanDiagram
@@ -512,6 +516,8 @@ export AffineConnection, define_affine_connection!
 export is_metric_compatible, is_torsion_free
 export set_metric_compatible!, set_torsion_free!
 export TorsionDecomposition, decompose_torsion!, torsion_vector_expr, contortion_expr
+export NonmetricityDecomposition, decompose_nonmetricity!
+export weyl_vector_expr, second_trace_expr
 
 # Exports: ADM decomposition
 export ADMDecomposition, define_adm!
