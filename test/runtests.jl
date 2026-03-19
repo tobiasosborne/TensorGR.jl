@@ -118,4 +118,6 @@ using TensorGR
     include("test_spinor_canonicalize.jl")
     # Soldering form sigma^a_{AA'} and tensor-spinor conversion
     include("test_soldering_form.jl")
+    # Spinor structure one-liner setup
+    include("test_spinor_setup.jl")
 end

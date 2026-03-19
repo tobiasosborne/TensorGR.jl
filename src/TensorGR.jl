@@ -39,6 +39,7 @@ include("algebra/solve.jl")
 include("spinors/spinor_bundles.jl")
 include("spinors/spin_metric.jl")
 include("spinors/soldering_form.jl")
+include("spinors/setup.jl")
 
 # Layer 2.6: Scalar algebra
 include("scalar/algebra.jl")
@@ -145,6 +146,7 @@ export spin_up, spin_down, spin_dot_up, spin_dot_down
 export is_spinor_index, is_dotted, conjugate_index
 export define_spin_metric!, spin_metric
 export define_soldering_form!, to_spinor_indices, to_tensor_indices
+export define_spinor_structure!, @spinor_manifold
 export set_vanishing!
 export current_registry, with_registry
 
