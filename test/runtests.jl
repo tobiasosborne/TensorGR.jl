@@ -264,4 +264,8 @@ using TensorGR
     include("test_distortion.jl")
     # Fierz identities
     include("test_fierz.jl")
+    # Metric-affine curvature
+    include("test_ma_curvature.jl")
+    # Charge conjugation matrix
+    include("test_charge_conjugation.jl")
 end

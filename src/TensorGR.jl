@@ -167,12 +167,14 @@ include("ppn/observables.jl")
 include("fermions/gamma.jl")
 include("fermions/traces.jl")
 include("fermions/fierz.jl")
+include("fermions/charge_conjugation.jl")
 
 # Layer 5.5: Metric-affine gravity
 include("metric_affine/connection.jl")
 include("metric_affine/torsion.jl")
 include("metric_affine/nonmetricity.jl")
 include("metric_affine/distortion.jl")
+include("metric_affine/curvature.jl")
 
 # Layer 5.5: Hamiltonian analysis
 include("hamiltonian/adm.jl")
@@ -523,6 +525,8 @@ export NonmetricityDecomposition, decompose_nonmetricity!
 export weyl_vector_expr, second_trace_expr
 export DistortionDecomposition, decompose_distortion!
 export contortion_from_torsion, disformation_from_nonmetricity
+export MAFieldStrength, define_ma_curvature!, ma_riemann_decomposition
+export ChargeConjugation, charge_conjugation_properties, majorana_condition
 export CliffordBasis, CB_S, CB_V, CB_T, CB_A, CB_P
 export CLIFFORD_NAMES, CLIFFORD_DIM
 export fierz_matrix, fierz_coefficient, fierz_identity_check
