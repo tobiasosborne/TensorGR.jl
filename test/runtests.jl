@@ -260,4 +260,8 @@ using TensorGR
     include("test_proca_spectrum.jl")
     # PSALTer validation: Fierz-Pauli unitarity
     include("test_fp_unitarity.jl")
+    # Distortion tensor decomposition
+    include("test_distortion.jl")
+    # Fierz identities
+    include("test_fierz.jl")
 end
