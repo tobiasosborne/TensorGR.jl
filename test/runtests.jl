@@ -244,4 +244,6 @@ using TensorGR
     include("test_ppn_scalar_tensor.jl")
     # Moore-Penrose propagator (PSALTer)
     include("test_moore_penrose.jl")
+    # Gamma^5 chirality matrix
+    include("test_gamma5.jl")
 end

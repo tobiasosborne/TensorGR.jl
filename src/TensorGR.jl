@@ -504,6 +504,7 @@ export ppn_nordtvedt_eta, ppn_geodetic_factor, ppn_observational_bounds
 
 # Exports: Gamma matrices / Clifford algebra
 export GammaMatrix, gamma5, clifford_relation, gamma_trace
+export Gamma5, gamma5_trace, gamma5_anticommutator, gamma5_squared
 export gamma_chain_trace, trace_identity_2, trace_identity_4, slash
 
 # Exports: Metric-affine gravity

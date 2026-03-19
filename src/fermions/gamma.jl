@@ -144,3 +144,113 @@ function gamma_trace(n::Int; dim::Int=4)
         return nothing  # Needs recursive computation for n ≥ 4
     end
 end
+
+# ────────────────────────────────────────────────────────────────────
+# γ⁵ chirality: algebraic properties and trace identities
+# ────────────────────────────────────────────────────────────────────
+
+#= γ⁵ properties (d=4):
+#   (γ⁵)² = I                                           (involutory)
+#   {γ⁵, γ^a} = 0                                       (anticommutes with all γ^a)
+#   Tr(γ⁵) = 0
+#   Tr(γ⁵ γ^a γ^b) = 0
+#   Tr(γ⁵ γ^a γ^b γ^c γ^d) = -4i ε^{abcd}
+#
+# Ground truth: Peskin & Schroeder (1995) Eq A.30; Wald, GR, Appendix B.
+=#
+
+"""
+    Gamma5 <: TensorExpr
+
+The chirality matrix γ⁵ = iγ⁰γ¹γ²γ³ as a distinct AST node.
+
+γ⁵ is index-free (no spacetime indices). Its algebraic properties
+are encoded in trace identities and anticommutation rules.
+"""
+struct Gamma5 <: TensorExpr end
+
+Base.:(==)(::Gamma5, ::Gamma5) = true
+Base.hash(::Gamma5, h::UInt) = hash(:Gamma5, h)
+
+indices(::Gamma5) = TIndex[]
+free_indices(::Gamma5) = TIndex[]
+children(::Gamma5) = TensorExpr[]
+walk(f, g::Gamma5) = f(g)
+derivative_order(::Gamma5) = 0
+is_constant(::Gamma5) = false
+is_sorted_covds(::Gamma5) = true
+rename_dummy(g::Gamma5, ::Symbol, ::Symbol) = g
+rename_dummies(g::Gamma5, ::Dict{Symbol,Symbol}) = g
+_replace_index_name(g::Gamma5, ::Symbol, ::Symbol) = g
+to_expr(::Gamma5) = :(Gamma5())
+is_well_formed(::Gamma5) = true
+_validate_walk(::Gamma5, ::TensorRegistry, ::Vector{String}) = nothing
+dagger(::Gamma5) = Gamma5()  # γ⁵ is Hermitian: (γ⁵)† = γ⁵
+
+Base.show(io::IO, ::Gamma5) = print(io, "γ⁵")
+to_latex(::Gamma5) = "\\gamma^5"
+to_unicode(::Gamma5) = "γ⁵"
+
+"""
+    gamma5_trace(n_gamma::Int; dim::Int=4) -> Any
+
+Trace identities involving γ⁵ and n gamma matrices.
+
+    Tr(γ⁵) = 0
+    Tr(γ⁵ γ^a γ^b) = 0
+    Tr(γ⁵ γ^a γ^b γ^c γ^d) = -4i ε^{abcd}  (coefficient: -4i)
+    Tr(γ⁵ × odd number of γ^a) = 0
+
+Ground truth: Peskin & Schroeder (1995) Eq A.30.
+"""
+function gamma5_trace(n_gamma::Int; dim::Int=4)
+    if n_gamma == 0
+        # Tr(γ⁵) = 0
+        return 0
+    elseif n_gamma % 2 == 1
+        # Tr(γ⁵ × odd) = 0
+        return 0
+    elseif n_gamma == 2
+        # Tr(γ⁵ γ^a γ^b) = 0
+        return 0
+    elseif n_gamma == 4
+        # Tr(γ⁵ γ^a γ^b γ^c γ^d) = -4i ε^{abcd}
+        # Return the coefficient: -4i (the ε tensor is separate)
+        return :(-4im)  # symbolic imaginary
+    else
+        return nothing  # Higher traces need recursive computation
+    end
+end
+
+"""
+    gamma5_anticommutator() -> TScalar
+
+The anticommutator {γ⁵, γ^a} = 0.
+
+Returns TScalar(0) since the anticommutator always vanishes.
+"""
+gamma5_anticommutator() = TScalar(0)
+
+"""
+    gamma5_squared() -> TScalar
+
+(γ⁵)² = I (the identity matrix in spinor space).
+
+Returns TScalar(1) representing the identity.
+"""
+gamma5_squared() = TScalar(1)
+
+"""
+    slash(v::TensorExpr) -> TensorExpr
+
+Feynman slash notation: v̸ = γ^a v_a (contraction of vector with gamma matrix).
+
+For a vector `v` with one free Down index, returns γ^a v_a.
+"""
+function slash(v::TensorExpr)
+    free = free_indices(v)
+    length(free) == 1 || error("slash requires a vector (1 free index), got $(length(free))")
+    idx = free[1]
+    gamma = GammaMatrix(TIndex(idx.name, idx.position == Up ? Down : Up, idx.vbundle))
+    tproduct(1 // 1, TensorExpr[gamma, v])
+end
