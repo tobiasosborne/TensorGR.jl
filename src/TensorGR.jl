@@ -93,6 +93,7 @@ include("foliation/sectors.jl")
 include("action/quadratic_action.jl")
 include("action/extract_quadratic.jl")
 include("action/spin_projectors.jl")
+include("action/vector_spin_projectors.jl")
 include("action/kernel_extraction.jl")
 include("action/svt_quadratic.jl")
 
@@ -138,6 +139,7 @@ include("feynman/gauge_fixing.jl")
 include("feynman/matter_vertices.jl")
 include("feynman/contraction.jl")
 include("feynman/loop_integrals.jl")
+include("feynman/pn_matching.jl")
 
 # Layer 5.5: PPN (Parametrized Post-Newtonian)
 include("ppn/metric_ansatz.jl")
@@ -344,6 +346,11 @@ export BuenoCanoParams, dS_spectrum_6deriv, bc_to_form_factors
 export bc_EH, bc_R2, bc_RicSq, bc_R3, bc_RRicSq, bc_Ric3
 export bc_RRiem2, bc_RicRiem2, bc_Riem3
 export svt_quadratic_forms_6deriv
+export vector_spin1_projector, vector_spin0_projector, vector_spin_project
+
+# Exports: PN matching
+export FourierEntry, FOURIER_TABLE, fourier_transform_potential
+export PNPotentialTerm, classify_pn_order, newton_potential_coeff
 
 # Exports: CAS integration
 export simplify_scalar, simplify_quadratic_form

@@ -178,4 +178,8 @@ using TensorGR
     include("test_ppn_velocity_order.jl")
     # Loop integral representation
     include("test_loop_integrals.jl")
+    # Vector field spin projectors
+    include("test_vector_spin_projectors.jl")
+    # PN potential extraction
+    include("test_pn_matching.jl")
 end
