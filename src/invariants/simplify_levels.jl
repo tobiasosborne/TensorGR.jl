@@ -352,3 +352,124 @@ function simplify_level4(expr::TensorExpr;
         simplify(commuted; registry=registry, commute_covds_name=covd)
     end
 end
+
+# ────────────────────────────────────────────────────────────────────
+# Level 5: Dimensionally-dependent identities (DDIs)
+# ────────────────────────────────────────────────────────────────────
+
+#= Dimensionally-dependent identities arise from the vanishing of the
+# generalized Kronecker delta when its rank exceeds the manifold dimension d:
+#
+#   delta^{a1...a_{d+1}}_{b1...b_{d+1}} = 0
+#
+# Contracting pairs of indices with curvature tensors yields algebraic
+# identities between curvature invariants at each polynomial order:
+#
+# Order 2 (quadratic):
+#   d=4: Riem^2 - 4 Ric^2 + R^2 = 0  (Gauss-Bonnet / Euler density)
+#   d=3: C_{abcd} = 0  (Weyl vanishes identically)
+#   d=2: R_{ab} = (R/2) g_{ab}  (Ricci is pure trace)
+#
+# Order 3 (cubic):
+#   d=4: I1 - (1/4) I2 + 2 I3 - I4 + (1/4) I5 = 0
+#   (Fulling et al. 1992, Table 1)
+#
+# Level 5 integrates these DDIs into the Invar simplification pipeline.
+# It delegates to the existing DDI infrastructure in src/algebra/ddi_rules.jl:
+#   - generate_ddi_rules / generate_riemann_ddi: construct DDI rewrite rules
+#   - register_ddi_rules!: register rules in the registry (idempotent)
+#   - simplify_with_ddis: convenience wrapper for simplify + DDIs
+#
+# Ground truth:
+#   - Garcia-Parrado & Martin-Garcia (2007) Sec 4, Level 3 (their numbering)
+#   - Lovelock (1971), J. Math. Phys. 12, 498
+#   - Fulling et al. (1992), Class. Quantum Grav. 9, 1151, Table 1
+=#
+
+"""
+    simplify_level5(expr::TensorExpr;
+                     covd::Symbol=:D,
+                     dim::Int=4,
+                     max_order::Int=0,
+                     registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Apply Level 5 (dimensionally-dependent identities) of the Invar simplification
+algorithm.
+
+Dimensionally-dependent identities (DDIs) are algebraic relations between
+curvature invariants that arise from the vanishing of the generalized Kronecker
+delta `delta^{a1...a_{d+1}}_{b1...b_{d+1}} = 0` in `d` dimensions. Contracting
+this identity with curvature tensors yields relations such as:
+
+- **d=4, order 2 (Gauss-Bonnet)**: `Riem^2 = 4 Ric^2 - R^2`
+- **d=3**: Weyl tensor vanishes identically
+- **d=2**: `R_{ab} = (R/2) g_{ab}` (Ricci is pure trace)
+- **d=4, order 3 (cubic DDI)**: relates `R_{abcd}R^{cdef}R_{ef}^{ab}` to
+  lower-rank invariants (Fulling et al. 1992, Table 1)
+
+This level first applies Level 4 (which includes Levels 1-3: permutation
+symmetries, cyclic Bianchi, differential Bianchi, and derivative commutation),
+then registers and applies DDI rewrite rules for the given manifold dimension.
+
+# Arguments
+- `expr`: tensor expression to simplify
+- `covd::Symbol=:D`: name of the covariant derivative (for Levels 3-4)
+- `dim::Int=4`: manifold dimension (determines which DDIs apply)
+- `max_order::Int=0`: highest polynomial order of DDI rules to apply.
+  If `0` (default), automatically determined from the Riemann degree of `expr`:
+  order 2 for quadratic or lower, order 3 for cubic, etc.
+- `registry`: the TensorRegistry to use
+
+# Ground truth
+Garcia-Parrado & Martin-Garcia (2007) Sec 4, Level 3 (their numbering);
+Lovelock (1971); Fulling et al. (1992) Table 1.
+
+# Examples
+```julia
+reg = TensorRegistry()
+@manifold M4 dim=4 metric=g registry=reg
+define_curvature_tensors!(reg, :M4, :g)
+@covd D on=M4 metric=g registry=reg
+
+# Gauss-Bonnet identity simplifies to zero
+gb = gauss_bonnet_ddi(; metric=:g, registry=reg)
+simplify_level5(gb; dim=4, registry=reg)  # => 0
+
+# Kretschner scalar eliminated in favour of Ricci invariants
+K = Tensor(:Riem, [down(:a), down(:b), down(:c), down(:d)]) *
+    Tensor(:Riem, [up(:a), up(:b), up(:c), up(:d)])
+simplify_level5(K; dim=4, registry=reg)  # => 4 Ric^2 - R^2
+```
+
+See also: [`simplify_with_ddis`](@ref), [`register_ddi_rules!`](@ref),
+[`generate_ddi_rules`](@ref), [`simplify_level4`](@ref)
+"""
+function simplify_level5(expr::TensorExpr;
+                          covd::Symbol=:D,
+                          dim::Int=4,
+                          max_order::Int=0,
+                          registry::TensorRegistry=current_registry())
+    # First apply Level 4 (includes Levels 1-3)
+    expr4 = simplify_level4(expr; covd=covd, registry=registry)
+
+    # Determine the DDI order from the expression's Riemann degree if not specified
+    ddi_order = max_order
+    if ddi_order <= 0
+        degree = count_riemann_degree(expr4)
+        # DDI order = degree (quadratic invariants use order 2, cubic use order 3)
+        # Minimum order 2 since DDIs start at order 2
+        ddi_order = max(degree, 2)
+    end
+
+    # Cap the DDI order at what the dimension supports:
+    # generate_riemann_ddi requires 2*(order-1) <= dim+1
+    # i.e., order <= (dim+1)/2 + 1 = (dim+3)/2
+    max_supported = (dim + 3) ÷ 2
+    ddi_order = min(ddi_order, max_supported)
+
+    # Apply DDIs via the existing infrastructure
+    with_registry(registry) do
+        simplify_with_ddis(expr4; dim=dim, order=ddi_order, registry=registry,
+                           commute_covds_name=covd)
+    end
+end
