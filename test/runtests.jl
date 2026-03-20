@@ -292,4 +292,6 @@ using TensorGR
     include("test_goldberg_sachs.jl")
     # DHOST-Horndeski reduction validation
     include("test_dhost_horndeski.jl")
+    # Weyl completeness identity C² = K - 2Ric² + R²/3
+    include("test_weyl_identity.jl")
 end
