@@ -306,4 +306,10 @@ using TensorGR
     include("test_euler_density.jl")
     # Bimetric matrix square root algebra
     include("test_bimetric_sqrt.jl")
+    # Bimetric field equations (Y-tensors, interaction terms)
+    include("test_bimetric_eom.jl")
+    # Primary constraint detection (ADM Hamiltonian)
+    include("test_primary_constraints.jl")
+    # Poincare gauge theory action
+    include("test_pgt_action.jl")
 end
