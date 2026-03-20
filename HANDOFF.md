@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-20 (Session 7)
+# HANDOFF — 2026-03-20 (Session 8)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -22,38 +22,31 @@
 
 ## Current State
 
-- **230 of 352 issues closed** (70 closed this session, mostly stale-issue reconciliation + new validation)
-- **Full test suite: ALL PASS** (360,310+ tests, verified this session)
+- **254 of 352 issues closed** (4 closed this session + 3 new features)
+- **Full test suite: ALL PASS** (360,582 tests, verified this session)
 - All pushed to `master`, no uncommitted work
 - `bd stats` for live counts, `bd ready` for available work
-- **Note**: beads database was restored from stale backup (March 16 snapshot). ~80 issues from sessions 3-6 may still be open but have implementations. Close as encountered.
+- Beads cleanup done: CLI updated 0.57→0.61, runtime files untracked, hooks updated
 
 ---
 
-## What Was Done This Session (70 issues)
+## What Was Done This Session
 
-### New Validation Tests (9 test files, ~260 tests)
-- **test_np_schwarzschild.jl** (49 tests): Kinnersley tetrad + all 12 spin coefficients + Weyl scalars. Ground truth: Teukolsky 1973 Eq 4.4-4.6.
-- **test_np_kerr.jl** (53 tests): Full Kerr NP quantities (complex spin coefficients, a=0.5). Ground truth: Teukolsky 1973.
-- **test_goldberg_sachs.jl** (40 tests): κ=σ=0 ⟺ Ψ₀=Ψ₁=0 at 5 points (Schwarzschild + Kerr).
-- **test_dhost_horndeski.jl** (31 tests): DHOST class Ia reduces to Horndeski (degeneracy, DOF count, round-trip).
-- **test_weyl_identity.jl** (1 test): C²=K-2Ric²+R²/3 string match.
-- **test_riemann_identities.jl** (6 tests): Pair symmetry, first Bianchi, ∇G=0, Einstein trace, Kretschner.
-- **test_eih_potential.jl** (35 tests): Full EFTofPNG Feynman pipeline — EIH 1PN coefficients 3/-7/-1/2 against Goldberger-Rothstein Eq 40.
-- **test_invar_level4.jl** (11 tests): Derivative commutation for differential invariants.
+### New Features (3 implementations, 148 tests)
+- **simplify_level5** (TGR-6bn.5): DDI integration for Invar pipeline — 27 tests
+- **euler_density arbitrary dim** (TGR-99d.2): Extended to all even d with `lovelock_lagrangian` — 76 tests
+- **bimetric matrix square root** (TGR-wq0.4): `sqrt_matrix_identity`, `cayley_hamilton_S`, `register_sqrt_rules!`, `sqrt_matrix_variation` — 45 tests
 
-### New Implementation
-- **simplify_level4**: Invar Level 4 derivative commutation (src/invariants/simplify_levels.jl)
+### Infrastructure
+- Pulled remote, resolved merge conflict, updated beads CLI (0.57→0.61)
+- Fixed beads doctor: untracked 43 runtime files, updated hooks, cleaned SQLite artifacts
+- Closed TGR-443 (Invar Epic 1, stale molecule)
 
-### Stale Issue Reconciliation (~55 closures)
-- Closed ~55 issues that had implementations from prior sessions but were marked open due to stale beads backup
-- Deferred 10 speculative core-touching issues (tetrad AST, FullSimplify, IndexFree, etc.)
-- PSALTer epic auto-closed (all children done)
-
-### Sign Convention Discovery
-- Our (-,+,+,+) code negates l-type and compound spin coefficients from Teukolsky (+,-,-,-)
-- n-type coefficients (ν,λ,μ,π) match Teukolsky because metric flip cancels the missing NP negative sign in our definitions
-- Documented in test headers with full derivation
+### Documentation Overhaul
+- Created 12 new API reference pages: spinors, scalar-tensor, feynman, metric-affine, harmonics, invariants, bimetric, ppn, hamiltonian, phase-space, fermions, tetrads
+- Updated README with current stats (360,582 tests, 13 new feature table rows)
+- Updated docs/src/index.md landing page with full module coverage
+- Updated docs/make.jl with all 25 API pages (was 13)
 
 ---
 
