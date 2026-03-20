@@ -296,4 +296,6 @@ using TensorGR
     include("test_weyl_identity.jl")
     # Riemann tensor identities (symmetries, Bianchi, ∇G=0)
     include("test_riemann_identities.jl")
+    # EIH 1PN potential (Goldberger-Rothstein 2006)
+    include("test_eih_potential.jl")
 end
