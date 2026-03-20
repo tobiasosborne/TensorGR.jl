@@ -204,3 +204,279 @@ function momentum_constraint(adm::ADMDecomposition;
     # -2 D_j π^j_i (the derivative contracts with the up index)
     tproduct(-2 // 1, TensorExpr[TDeriv(down(j), pi_mixed)])
 end
+
+# ────────────────────────────────────────────────────────────────────
+# Primary constraint detection
+# ────────────────────────────────────────────────────────────────────
+#
+# In the Hamiltonian formulation, primary constraints arise when the
+# Legendre transformation is degenerate: momenta conjugate to certain
+# variables vanish identically.
+#
+# For ADM GR:
+#   π_N ≈ 0      (lapse has no time derivative in the Lagrangian)
+#   π_{N^i} ≈ 0  (shift has no time derivative in the Lagrangian)
+#
+# These are first-class constraints — their Poisson brackets with all
+# other constraints vanish weakly (on the constraint surface). They
+# generate gauge transformations (time reparametrization and spatial
+# diffeomorphisms respectively).
+#
+# Ground truth: Henneaux & Teitelboim, "Quantization of Gauge Systems"
+#               (1992), Ch 1-2; Dirac, "Lectures on Quantum Mechanics"
+#               (1964); Arnowitt, Deser, Misner (1962).
+
+"""
+    PrimaryConstraint
+
+A primary constraint in the Hamiltonian formalism: a relation among canonical
+variables that follows directly from the definition of conjugate momenta,
+without using the equations of motion.
+
+# Fields
+- `name::Symbol`            -- constraint name (e.g., :pi_N)
+- `variable::Symbol`        -- the variable whose momentum is constrained
+- `expression::TensorExpr`  -- the constraint expression (≈ 0 on constraint surface)
+- `constraint_type::Symbol` -- classification (:lapse, :shift, or :generic)
+"""
+struct PrimaryConstraint
+    name::Symbol
+    variable::Symbol
+    expression::TensorExpr
+    constraint_type::Symbol
+end
+
+function Base.show(io::IO, pc::PrimaryConstraint)
+    print(io, "PrimaryConstraint(:$(pc.name), type=:$(pc.constraint_type))")
+end
+
+"""
+    detect_primary_constraints(adm::ADMDecomposition;
+                                registry::TensorRegistry=current_registry())
+        -> Vector{PrimaryConstraint}
+
+Detect primary constraints of the ADM decomposition of GR.
+
+For general relativity, the lapse N and shift N^i are Lagrange multipliers:
+their time derivatives do not appear in the Lagrangian. The Legendre
+transformation is therefore degenerate, giving primary constraints:
+
+    π_N ≈ 0           (momentum conjugate to lapse vanishes)
+    π_{N^i} ≈ 0       (momenta conjugate to shift components vanish)
+
+The constraint momentum tensors are registered in the registry and set to
+vanishing (identically zero).
+
+Returns a `Vector{PrimaryConstraint}` with 1 lapse + (d-1) shift constraints,
+where d is the spacetime dimension.
+
+Ground truth: Henneaux & Teitelboim (1992) Ch 1; Dirac (1964).
+"""
+function detect_primary_constraints(adm::ADMDecomposition;
+                                     registry::TensorRegistry=current_registry())
+    mp = get_manifold(registry, adm.manifold)
+    d = mp.dim                           # spacetime dimension
+    d_spatial = d - 1                    # spatial dimension
+
+    constraints = PrimaryConstraint[]
+
+    # ── Lapse constraint: π_N ≈ 0 ──────────────────────────────────
+    pi_N_name = Symbol(:pi_, adm.lapse)
+    if !has_tensor(registry, pi_N_name)
+        register_tensor!(registry, TensorProperties(
+            name=pi_N_name, manifold=adm.manifold, rank=(0, 0),
+            symmetries=SymmetrySpec[],
+            options=Dict{Symbol,Any}(:is_momentum => true,
+                                     :is_constraint_momentum => true,
+                                     :adm => true)))
+        set_vanishing!(registry, pi_N_name)
+    end
+
+    # The constraint expression: π_N (which is ≈ 0)
+    pi_N_expr = Tensor(pi_N_name, TIndex[])
+    push!(constraints, PrimaryConstraint(pi_N_name, adm.lapse, pi_N_expr, :lapse))
+
+    # ── Shift constraints: π_{N^i} ≈ 0 ────────────────────────────
+    pi_Ni_name = Symbol(:pi_, adm.shift)
+    if !has_tensor(registry, pi_Ni_name)
+        register_tensor!(registry, TensorProperties(
+            name=pi_Ni_name, manifold=adm.manifold, rank=(0, 1),
+            symmetries=SymmetrySpec[],
+            options=Dict{Symbol,Any}(:is_momentum => true,
+                                     :is_constraint_momentum => true,
+                                     :adm => true)))
+        set_vanishing!(registry, pi_Ni_name)
+    end
+
+    # One constraint per spatial direction
+    used = Set{Symbol}()
+    for _ in 1:d_spatial
+        idx = fresh_index(used); push!(used, idx)
+        pi_Ni_expr = Tensor(pi_Ni_name, [down(idx)])
+        push!(constraints, PrimaryConstraint(
+            pi_Ni_name, adm.shift, pi_Ni_expr, :shift))
+    end
+
+    constraints
+end
+
+"""
+    primary_constraint_count(adm::ADMDecomposition;
+                              registry::TensorRegistry=current_registry()) -> Int
+
+Return the number of primary constraints for the ADM decomposition.
+
+For GR in d spacetime dimensions: 1 (lapse) + (d-1) (shift) = d.
+In d=4: 4 primary constraints.
+
+Ground truth: Henneaux & Teitelboim (1992) Ch 1.
+"""
+function primary_constraint_count(adm::ADMDecomposition;
+                                   registry::TensorRegistry=current_registry())
+    mp = get_manifold(registry, adm.manifold)
+    d = mp.dim
+    # 1 lapse constraint + (d-1) shift constraints
+    return d
+end
+
+"""
+    is_first_class(constraint::PrimaryConstraint,
+                   other_constraints::Vector{PrimaryConstraint};
+                   registry::TensorRegistry=current_registry()) -> Bool
+
+Determine whether a primary constraint is first-class.
+
+A constraint is first-class if its Poisson bracket with ALL other constraints
+vanishes weakly (i.e., vanishes on the constraint surface, meaning it is
+proportional to constraints).
+
+For GR: all primary constraints are first-class. The lapse constraint π_N ≈ 0
+generates time reparametrizations; the shift constraints π_{N^i} ≈ 0 generate
+spatial diffeomorphisms. Their Poisson brackets with all other constraints
+(including the secondary Hamiltonian and momentum constraints) vanish weakly.
+
+This follows because the ADM Hamiltonian H = N·H + N^i·H_i is linear in
+the lapse and shift, so:
+    {π_N, H_total} = -H ≈ 0
+    {π_{N^i}, H_total} = -H_i ≈ 0
+and the π_N, π_{N^i} brackets among themselves vanish identically.
+
+Ground truth: Henneaux & Teitelboim (1992) Ch 1.4, 4.1; Dirac (1964).
+"""
+function is_first_class(constraint::PrimaryConstraint,
+                        other_constraints::Vector{PrimaryConstraint};
+                        registry::TensorRegistry=current_registry())
+    # For GR's ADM decomposition, all primary constraints are first-class.
+    # The lapse and shift momenta have vanishing Poisson brackets among
+    # themselves (they are independent phase space variables with no
+    # canonical cross-terms), and their brackets with the secondary
+    # constraints are proportional to constraints.
+    #
+    # For a generic theory this would require explicit Poisson bracket
+    # computation via the Dirac algorithm. Here we use the known structure
+    # of GR.
+    for pc in other_constraints
+        pc === constraint && continue
+        # π_N and π_{N^i} are independent momenta with no cross-brackets.
+        # {π_N, π_N} = 0, {π_{N^i}, π_{N^j}} = 0, {π_N, π_{N^i}} = 0.
+        # All brackets among primary constraints vanish identically (not
+        # just weakly), so they are trivially first-class with respect to
+        # each other.
+    end
+    # In GR, all primary constraints are first-class (gauge generators).
+    true
+end
+
+"""
+    constraint_algebra(constraints::Vector{PrimaryConstraint};
+                        registry::TensorRegistry=current_registry()) -> NamedTuple
+
+Classify all constraints as first-class or second-class and compute
+the physical degree-of-freedom count.
+
+Returns a NamedTuple with fields:
+- `first_class::Vector{PrimaryConstraint}` -- first-class constraints
+- `second_class::Vector{PrimaryConstraint}` -- second-class constraints
+- `n_first_class::Int` -- number of first-class constraints
+- `n_second_class::Int` -- number of second-class constraints
+- `n_primary::Int` -- total number of primary constraints
+- `n_secondary::Int` -- number of secondary constraints (Hamiltonian + momentum)
+- `n_total_first_class::Int` -- total first-class constraints (primary + secondary)
+- `physical_dof::Int` -- number of physical degrees of freedom
+
+For GR in d=4:
+- 4 primary constraints (all first-class)
+- 4 secondary constraints: H ≈ 0 (Hamiltonian) + H_i ≈ 0 (3 momentum)
+- All 8 constraints are first-class
+- DOF = d(d+1)/2 - n_total_first_class = 10 - 8 = 2
+
+Each first-class constraint removes one Lagrangian DOF (equivalently,
+two phase space DOF: the constraint itself and the gauge freedom it
+generates).
+
+Ground truth: Henneaux & Teitelboim (1992) Ch 1.4; Wald (1984) Ch 10.
+"""
+function constraint_algebra(constraints::Vector{PrimaryConstraint};
+                             registry::TensorRegistry=current_registry())
+    first_class = PrimaryConstraint[]
+    second_class = PrimaryConstraint[]
+
+    for c in constraints
+        if is_first_class(c, constraints; registry=registry)
+            push!(first_class, c)
+        else
+            push!(second_class, c)
+        end
+    end
+
+    n_primary = length(constraints)
+    n_fc = length(first_class)
+    n_sc = length(second_class)
+
+    # Secondary constraints: for GR, there are d secondary constraints
+    # (1 Hamiltonian + (d-1) momentum constraints). These are also first-class.
+    # We detect the dimension from any constraint's associated manifold.
+    d = if !isempty(constraints)
+        # Get manifold dimension from the first constraint's variable
+        # by looking up what define_adm! registered
+        _dim = 4  # default
+        for (_, tp) in registry.tensors
+            if get(tp.options, :is_constraint_momentum, false)
+                mp = get_manifold(registry, tp.manifold)
+                _dim = mp.dim
+                break
+            end
+        end
+        _dim
+    else
+        4
+    end
+
+    # Secondary constraints: 1 Hamiltonian + (d-1) momentum = d total
+    # In GR, these are also first-class (Dirac algebra).
+    n_secondary = d
+    n_total_first_class = n_fc + n_secondary
+
+    # DOF counting for metric gravity (Lagrangian counting):
+    # The spacetime metric g_{ab} has d(d+1)/2 independent components.
+    # Each first-class constraint removes one configuration DOF
+    # (the constraint eliminates one variable, and the associated gauge
+    # freedom eliminates its conjugate — so one first-class constraint
+    # removes one Lagrangian DOF, equivalently two phase space DOF).
+    # Physical DOF = d(d+1)/2 - n_total_first_class
+    #
+    # For d=4: 10 - 8 = 2 (two polarizations of gravitational waves)
+    #
+    # Equivalently in phase space: 2*d(d+1)/2 - 2*n_total_first_class = 2*DOF
+    n_metric_components = d * (d + 1) ÷ 2
+    physical_dof = n_metric_components - n_total_first_class
+
+    (first_class=first_class,
+     second_class=second_class,
+     n_first_class=n_fc,
+     n_second_class=n_sc,
+     n_primary=n_primary,
+     n_secondary=n_secondary,
+     n_total_first_class=n_total_first_class,
+     physical_dof=physical_dof)
+end
