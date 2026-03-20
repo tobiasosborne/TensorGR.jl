@@ -284,4 +284,12 @@ using TensorGR
     include("test_ghp_field_equations.jl")
     # Brauer algebra 11-piece decomposition
     include("test_brauer.jl")
+    # NP validation: Schwarzschild (Teukolsky 1973)
+    include("test_np_schwarzschild.jl")
+    # NP validation: Kerr (Teukolsky 1973)
+    include("test_np_kerr.jl")
+    # Goldberg-Sachs theorem validation
+    include("test_goldberg_sachs.jl")
+    # DHOST-Horndeski reduction validation
+    include("test_dhost_horndeski.jl")
 end
