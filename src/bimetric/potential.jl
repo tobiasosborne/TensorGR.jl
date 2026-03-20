@@ -493,3 +493,300 @@ function sqrt_matrix_variation(bs::BimetricSetup;
     # LHS - RHS = S δS + δS S - g⁻¹ δf + g⁻¹ δg g⁻¹ f = 0
     tsum(TensorExpr[term1, term2, -rhs_term1, rhs_term2])
 end
+
+# ── Y-tensors and field equations ─────────────────────────────────
+
+"""
+    y_tensor(n::Int, S_name::Symbol;
+             registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Construct the n-th Y-tensor (cofactor polynomial) of the matrix square root S.
+
+The Y-tensors are defined as:
+
+    Y_0(S) = I                                    (identity)
+    Y_1(S) = S - e₁(S) I
+    Y_2(S) = S² - e₁(S) S + e₂(S) I
+    Y_3(S) = S³ - e₁(S) S² + e₂(S) S - e₃(S) I
+
+They satisfy the recursion: Y_{n+1}(S) = S · Y_n(S) + (-1)^{n+1} e_{n+1}(S) · I
+
+The result is a mixed-index expression with one free upper index and one free
+lower index: Y_n(S)^a_b.
+
+Ground truth: Hassan & Rosen, JHEP 02 (2012) 126, Eq 2.7;
+             de Rham, Living Rev. Rel. 17, 7 (2014) Sec 1.1.3 Eq (1.11).
+"""
+function y_tensor(n::Int, S_name::Symbol;
+                  registry::TensorRegistry=current_registry())
+    n in 0:3 || error("Y-tensor order must be 0-3, got $n")
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+
+    if n == 0
+        # Y_0 = δ^a_b  (identity)
+        return Tensor(:δ, [up(a), down(b)])
+    end
+
+    # Build explicit Y_n = Σ_{k=0}^{n} (-1)^{n-k} e_{n-k}(S) · S^k
+    # i.e. Y_n = S^n - e_1 S^{n-1} + e_2 S^{n-2} - ... + (-1)^n e_n I
+    terms = TensorExpr[]
+    for k in n:-1:0
+        # Coefficient: (-1)^{n-k} × e_{n-k}(S)
+        sign = iseven(n - k) ? 1 : -1
+        en_k = elementary_symmetric(n - k, S_name; registry=registry)
+        Sk = _S_power_chain(S_name, k, a, b, copy(used))
+
+        if n - k == 0
+            # e_0 = 1, so coefficient is just the sign
+            if sign == 1
+                push!(terms, Sk)
+            else
+                push!(terms, tproduct(-1 // 1, TensorExpr[Sk]))
+            end
+        else
+            push!(terms, tproduct(sign // 1, TensorExpr[en_k, Sk]))
+        end
+    end
+
+    length(terms) == 1 ? terms[1] : tsum(terms)
+end
+
+"""
+    interaction_tensor_g(bs::BimetricSetup, params::HassanRosenParams;
+                          registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Construct the g-sector interaction tensor V_{ab}^{(g)} from the Hassan-Rosen
+bimetric potential.
+
+    V_{ab}^{(g)} = -Σ_{n=0}^{3} (-1)^n β_n g_{ac} Y_n(S)^c_b
+
+The result is a rank-(0,2) expression with both free indices down: V^{(g)}_{ab}.
+
+Ground truth: Hassan & Rosen, JHEP 02 (2012) 126, Eq 2.8;
+             de Rham, Living Rev. Rel. 17, 7 (2014) Sec 8.1.
+"""
+function interaction_tensor_g(bs::BimetricSetup, params::HassanRosenParams;
+                               registry::TensorRegistry=current_registry())
+    S_name = Symbol(:S_, bs.metric_g, :_, bs.metric_f)
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+
+    # V^{(g)}_{ab} = -Σ_{n=0}^{3} (-1)^n β_n g_{ac} Y_n(S)^c_b
+    terms = TensorExpr[]
+    for n in 0:3
+        coeff = params.beta[n + 1]  # β_n (0-indexed in physics, 1-indexed in tuple)
+        (coeff isa Number && coeff == 0) && continue
+
+        # Overall sign: -(-1)^n = (-1)^{n+1}
+        overall_sign = iseven(n) ? -1 : 1
+
+        # Build Y_n(S)^c_b with specified contraction index c and free index b
+        Yn_cb = _build_y_tensor_with_indices(n, S_name, c, b, copy(used), registry)
+
+        # g_{ac}
+        g_ac = Tensor(bs.metric_g, [down(a), down(c)])
+
+        # Combine: overall_sign * β_n * g_{ac} * Y_n^c_b
+        if coeff isa Number && coeff == 1
+            push!(terms, tproduct(overall_sign // 1, TensorExpr[g_ac, Yn_cb]))
+        else
+            push!(terms, tproduct(overall_sign // 1, TensorExpr[TScalar(coeff), g_ac, Yn_cb]))
+        end
+    end
+
+    isempty(terms) && return TScalar(0 // 1)
+    length(terms) == 1 ? terms[1] : tsum(terms)
+end
+
+"""
+    _build_y_tensor_with_indices(n, S_name, idx_top, idx_bot, used, registry) -> TensorExpr
+
+Build Y_n(S)^{idx_top}_{idx_bot} with specified free indices.
+Internal helper for interaction_tensor_g and interaction_tensor_f.
+"""
+function _build_y_tensor_with_indices(n::Int, S_name::Symbol, idx_top::Symbol,
+                                       idx_bot::Symbol, used::Set{Symbol},
+                                       registry::TensorRegistry)
+    if n == 0
+        return Tensor(:δ, [up(idx_top), down(idx_bot)])
+    end
+
+    # Y_n = S^n - e_1 S^{n-1} + e_2 S^{n-2} - ... + (-1)^n e_n I
+    terms = TensorExpr[]
+    for k in n:-1:0
+        sign = iseven(n - k) ? 1 : -1
+        en_k = elementary_symmetric(n - k, S_name; registry=registry)
+        Sk = _S_power_chain(S_name, k, idx_top, idx_bot, copy(used))
+
+        if n - k == 0
+            # e_0 = 1
+            if sign == 1
+                push!(terms, Sk)
+            else
+                push!(terms, tproduct(-1 // 1, TensorExpr[Sk]))
+            end
+        else
+            push!(terms, tproduct(sign // 1, TensorExpr[en_k, Sk]))
+        end
+    end
+
+    length(terms) == 1 ? terms[1] : tsum(terms)
+end
+
+"""
+    interaction_tensor_f(bs::BimetricSetup, params::HassanRosenParams;
+                          registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Construct the f-sector interaction tensor V_{ab}^{(f)} from the Hassan-Rosen
+bimetric potential.
+
+    V_{ab}^{(f)} = -Σ_{n=0}^{3} (-1)^n β_{4-n} f_{ac} [Y_n(γ)]^c_b
+
+where γ = S⁻¹ = √(f⁻¹g) is the inverse matrix square root.
+
+The inverse square root tensor γ^a_b is automatically registered (as
+`Sinv_<g>_<f>`) if not already present in the registry.
+
+The Y-tensors Y_n(γ) are built from powers of γ and its elementary symmetric
+polynomials, using the same `_S_power_chain` infrastructure as Y_n(S).
+
+The result is a rank-(0,2) expression with both free indices down: V^{(f)}_{ab}.
+
+Ground truth: Hassan & Rosen, JHEP 02 (2012) 126, Eq 2.9;
+             de Rham, Living Rev. Rel. 17, 7 (2014) Sec 8.1;
+             Baccetta, Martin-Moruno & Visser, JHEP 1208 (2012) 148, Eq 2.16.
+"""
+function interaction_tensor_f(bs::BimetricSetup, params::HassanRosenParams;
+                               registry::TensorRegistry=current_registry())
+    # γ = S⁻¹ = √(f⁻¹g), the inverse matrix square root
+    Sinv_name = Symbol(:Sinv_, bs.metric_g, :_, bs.metric_f)
+
+    # Register γ if not already present
+    if !has_tensor(registry, Sinv_name)
+        register_tensor!(registry, TensorProperties(
+            name=Sinv_name, manifold=bs.manifold, rank=(1, 1),
+            symmetries=SymmetrySpec[],
+            options=Dict{Symbol,Any}(
+                :is_sqrt_matrix_inv => true,
+                :bimetric => true,
+                :metric_g => bs.metric_g,
+                :metric_f => bs.metric_f)))
+    end
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+
+    # V^{(f)}_{ab} = -Σ_{n=0}^{3} (-1)^n β_{4-n} f_{ac} Y_n(γ)^c_b
+    terms = TensorExpr[]
+    for n in 0:3
+        coeff = params.beta[5 - n]  # β_{4-n}: n=0 → β_4, n=1 → β_3, n=2 → β_2, n=3 → β_1
+        (coeff isa Number && coeff == 0) && continue
+
+        # Overall sign: -(-1)^n = (-1)^{n+1}
+        overall_sign = iseven(n) ? -1 : 1
+
+        # Build Y_n(γ)^c_b
+        Yn_cb = _build_y_tensor_with_indices(n, Sinv_name, c, b, copy(used), registry)
+
+        # f_{ac}
+        f_ac = Tensor(bs.metric_f, [down(a), down(c)])
+
+        # Combine: overall_sign * β_{4-n} * f_{ac} * Y_n(γ)^c_b
+        if coeff isa Number && coeff == 1
+            push!(terms, tproduct(overall_sign // 1, TensorExpr[f_ac, Yn_cb]))
+        else
+            push!(terms, tproduct(overall_sign // 1, TensorExpr[TScalar(coeff), f_ac, Yn_cb]))
+        end
+    end
+
+    isempty(terms) && return TScalar(0 // 1)
+    length(terms) == 1 ? terms[1] : tsum(terms)
+end
+
+"""
+    bimetric_eom_g(bs::BimetricSetup, params::HassanRosenParams;
+                    registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Construct the g-sector bimetric field equation (LHS = 0 on-shell):
+
+    G_{ab}[g] + m² V_{ab}^{(g)} = 0
+
+Returns the LHS as a TensorExpr with both free indices down.
+The factor m² is taken from params.m_sq.
+
+Ground truth: Hassan & Rosen, JHEP 02 (2012) 126, Eq 2.8.
+"""
+function bimetric_eom_g(bs::BimetricSetup, params::HassanRosenParams;
+                         registry::TensorRegistry=current_registry())
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used)
+
+    # G_{ab}[g]
+    ein_g_name = bs.curvature_g[:einstein]
+    G_g = Tensor(ein_g_name, [down(a), down(b)])
+
+    # V^{(g)}_{ab}
+    V_g = interaction_tensor_g(bs, params; registry=registry)
+
+    # m² * V^{(g)}
+    m2 = params.m_sq
+    if m2 isa Number && m2 == 1
+        m2_V_g = V_g
+    elseif m2 isa Number && m2 == 0
+        return G_g
+    else
+        m2_V_g = tproduct(1 // 1, TensorExpr[TScalar(m2), V_g])
+    end
+
+    # G_{ab}[g] + m² V^{(g)}_{ab}
+    G_g + m2_V_g
+end
+
+"""
+    bimetric_eom_f(bs::BimetricSetup, params::HassanRosenParams;
+                    registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Construct the f-sector bimetric field equation (LHS = 0 on-shell):
+
+    G_{ab}[f] + m² V_{ab}^{(f)} = 0
+
+Returns the LHS as a TensorExpr with both free indices down.
+The factor m² is taken from params.m_sq.
+
+Ground truth: Hassan & Rosen, JHEP 02 (2012) 126, Eq 2.9.
+"""
+function bimetric_eom_f(bs::BimetricSetup, params::HassanRosenParams;
+                         registry::TensorRegistry=current_registry())
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used)
+
+    # G_{ab}[f]
+    ein_f_name = bs.curvature_f[:einstein]
+    G_f = Tensor(ein_f_name, [down(a), down(b)])
+
+    # V^{(f)}_{ab}
+    V_f = interaction_tensor_f(bs, params; registry=registry)
+
+    # m² * V^{(f)}
+    m2 = params.m_sq
+    if m2 isa Number && m2 == 1
+        m2_V_f = V_f
+    elseif m2 isa Number && m2 == 0
+        return G_f
+    else
+        m2_V_f = tproduct(1 // 1, TensorExpr[TScalar(m2), V_f])
+    end
+
+    # G_{ab}[f] + m² V^{(f)}_{ab}
+    G_f + m2_V_f
+end
