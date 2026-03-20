@@ -294,4 +294,6 @@ using TensorGR
     include("test_dhost_horndeski.jl")
     # Weyl completeness identity C² = K - 2Ric² + R²/3
     include("test_weyl_identity.jl")
+    # Riemann tensor identities (symmetries, Bianchi, ∇G=0)
+    include("test_riemann_identities.jl")
 end
