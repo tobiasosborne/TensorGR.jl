@@ -1092,3 +1092,4 @@
 {"actor":"tobias","comment":null,"created_at":"2026-03-20T12:20:59Z","event_type":"closed","id":1092,"issue_id":"TGR-swh.3","new_value":"src/metric_affine/torsion.jl: TorsionDecomposition, decompose_torsion!","old_value":""}
 {"actor":"tobias","comment":null,"created_at":"2026-03-20T12:21:01Z","event_type":"closed","id":1093,"issue_id":"TGR-swh.4","new_value":"src/metric_affine/nonmetricity.jl: decompose_nonmetricity!, test_nonmetricity.jl","old_value":""}
 {"actor":"tobias","comment":null,"created_at":"2026-03-20T12:31:48Z","event_type":"closed","id":1094,"issue_id":"TGR-28t","new_value":"src/spinors/soldering_form.jl: to_tensor_indices, test_soldering_form.jl","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-20T12:50:28Z","event_type":"closed","id":1095,"issue_id":"TGR-v8u","new_value":"35 tests: Feynman pipeline validation, EIH coefficients 3/-7/-1/2 verified against Goldberger-Rothstein Eq 40","old_value":""}
