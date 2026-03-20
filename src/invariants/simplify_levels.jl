@@ -300,3 +300,55 @@ function simplify_level3(expr::TensorExpr;
         simplify(expr2; registry=registry, commute_covds_name=covd)
     end
 end
+
+# ────────────────────────────────────────────────────────────────────
+# Level 4: Derivative commutation for differential invariants
+# ────────────────────────────────────────────────────────────────────
+
+#= Covariant derivative commutation: [nabla_a, nabla_b] T_{c...} = Riemann terms.
+#
+# For a (0,r) tensor T_{c1...cr}:
+#   (nabla_a nabla_b - nabla_b nabla_a) T_{c1...cr}
+#     = - sum_i R^d_{c_i a b} T_{c1...d...cr}
+#
+# Level 4 uses this to canonically order covariant derivatives acting
+# on curvature tensors, generating additional Riemann terms from the
+# commutation. This is the derivative analogue of Level 1 (permutation
+# symmetries for undifferentiated monomials).
+#
+# The existing commute_covds() infrastructure (src/gr/sort_covds.jl)
+# already handles the commutation. Level 4 wraps it specifically for
+# differential invariants.
+#
+# Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4.3, Level 4.
+=#
+
+"""
+    simplify_level4(expr::TensorExpr;
+                     covd::Symbol=:D,
+                     registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Apply Level 4 (derivative commutation) of the Invar simplification algorithm.
+
+For differential invariants containing `nabla_a nabla_b R_{cdef}`, commute
+the covariant derivatives to canonical order, generating Riemann commutator
+terms via `[nabla_a, nabla_b] T = -R^d_{c ab} T_{...d...}`.
+
+This includes Levels 1-3 as prerequisites, then applies `commute_covds`
+to sort derivative indices and `simplify` to collect terms.
+
+Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4.3, Level 4.
+"""
+function simplify_level4(expr::TensorExpr;
+                          covd::Symbol=:D,
+                          registry::TensorRegistry=current_registry())
+    # First apply Level 3 (includes Levels 1-2)
+    expr3 = simplify_level3(expr; covd=covd, registry=registry)
+
+    # Apply derivative commutation to sort covds, generating Riemann terms
+    with_registry(registry) do
+        commuted = commute_covds(expr3, covd; registry=registry)
+        # Final simplify pass to collect terms from commutation
+        simplify(commuted; registry=registry, commute_covds_name=covd)
+    end
+end

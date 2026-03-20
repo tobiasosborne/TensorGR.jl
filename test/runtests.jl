@@ -298,4 +298,6 @@ using TensorGR
     include("test_riemann_identities.jl")
     # EIH 1PN potential (Goldberger-Rothstein 2006)
     include("test_eih_potential.jl")
+    # Invar Level 4: derivative commutation
+    include("test_invar_level4.jl")
 end

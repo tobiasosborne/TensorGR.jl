@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-19 (Session 6)
+# HANDOFF — 2026-03-20 (Session 7)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -22,54 +22,38 @@
 
 ## Current State
 
-- **243 of 369 issues closed** (8 closed this session: 235 → 243)
-- **Full test suite: ALL PASS** (verified this session)
+- **230 of 352 issues closed** (70 closed this session, mostly stale-issue reconciliation + new validation)
+- **Full test suite: ALL PASS** (360,310+ tests, verified this session)
 - All pushed to `master`, no uncommitted work
 - `bd stats` for live counts, `bd ready` for available work
+- **Note**: beads database was restored from stale backup (March 16 snapshot). ~80 issues from sessions 3-6 may still be open but have implementations. Close as encountered.
 
 ---
 
-## What Was Done This Session (8 issues)
+## What Was Done This Session (70 issues)
 
-### NP/GHP Formalism (3 issues)
-- **TGR-900**: 18 NP field equations (Ricci identities, NP 1962 Eqs 4.2a–4.2r)
-  - NPFieldEquation struct with symbolic RHS terms
-  - Vacuum reduction, l↔n symmetry verified, Lambda in exactly 4 equations
-  - 1128 tests
-- **TGR-jvn**: 11 NP Bianchi identities (NP 1962 Eqs 4.5a–4.5k)
-  - NPBianchiIdentity struct with Ricci derivative terms on LHS
-  - 8 Weyl-sector + 3 contracted Bianchi identities
-  - Cross-checked against PreludeAndFugue/newmanpenrose Python/SymPy
-  - 962 tests
-- **TGR-2gx**: 12 GHP field equations (GHP 1973 Eqs 3.3–3.12)
-  - GHPFieldEquation struct with GHP weight tracking
-  - Derived from NP eqs by absorbing improper coefficients (ε,γ,α,β)
-  - Weight consistency verified for every term
-  - 420 tests
+### New Validation Tests (9 test files, ~260 tests)
+- **test_np_schwarzschild.jl** (49 tests): Kinnersley tetrad + all 12 spin coefficients + Weyl scalars. Ground truth: Teukolsky 1973 Eq 4.4-4.6.
+- **test_np_kerr.jl** (53 tests): Full Kerr NP quantities (complex spin coefficients, a=0.5). Ground truth: Teukolsky 1973.
+- **test_goldberg_sachs.jl** (40 tests): κ=σ=0 ⟺ Ψ₀=Ψ₁=0 at 5 points (Schwarzschild + Kerr).
+- **test_dhost_horndeski.jl** (31 tests): DHOST class Ia reduces to Horndeski (degeneracy, DOF count, round-trip).
+- **test_weyl_identity.jl** (1 test): C²=K-2Ric²+R²/3 string match.
+- **test_riemann_identities.jl** (6 tests): Pair symmetry, first Bianchi, ∇G=0, Einstein trace, Kretschner.
+- **test_eih_potential.jl** (35 tests): Full EFTofPNG Feynman pipeline — EIH 1PN coefficients 3/-7/-1/2 against Goldberger-Rothstein Eq 40.
+- **test_invar_level4.jl** (11 tests): Derivative commutation for differential invariants.
 
-### Bimetric Gravity (2 issues + 1 epic)
-- **TGR-6s5**: Mass eigenstates diagonalization
-  - bimetric_mass_eigenstates(bp) → (massless, massive, m2_FP)
-  - bimetric_inverse_transform(bp) → (delta_g, delta_f)
-  - **BUG CAUGHT**: Agent used wrong massive mode (c²δg−δf instead of δg−δf); round-trip failed for c≠1. Fixed during review.
-  - 50 tests
-- **TGR-bj3**: Higuchi bound validation (m² ≥ 2Λ/3)
-  - higuchi_bound, higuchi_coefficient, is_higuchi_healthy
-  - Partially massless point verified: coefficient = 0 at m² = 2Λ/3
-  - 68 tests
+### New Implementation
+- **simplify_level4**: Invar Level 4 derivative commutation (src/invariants/simplify_levels.jl)
 
-### Clifford Algebra (1 issue + 1 epic auto-closed)
-- **TGR-dai.7**: Gamma trace validation to order 6
-  - Tr(γ^a...γ^f) recursive formula verified (15 terms at order 6)
-  - γ⁵ traces, Fierz completeness, charge conjugation properties
-  - 84 tests
-- **TGR-dai epic auto-closed** (all children complete)
+### Stale Issue Reconciliation (~55 closures)
+- Closed ~55 issues that had implementations from prior sessions but were marked open due to stale beads backup
+- Deferred 10 speculative core-touching issues (tetrad AST, FullSimplify, IndexFree, etc.)
+- PSALTer epic auto-closed (all children done)
 
-### Metric-Affine Gravity (1 issue)
-- **TGR-swh.7**: Brauer algebra 11-piece irreducible decomposition
-  - 6 symmetric + 5 antisymmetric pieces of MA Riemann tensor
-  - Dimensions sum to 96 for d=4, completeness verified
-  - 75 tests
+### Sign Convention Discovery
+- Our (-,+,+,+) code negates l-type and compound spin coefficients from Teukolsky (+,-,-,-)
+- n-type coefficients (ν,λ,μ,π) match Teukolsky because metric flip cancels the missing NP negative sign in our definitions
+- Documented in test headers with full derivation
 
 ---
 
@@ -77,15 +61,15 @@
 
 ### Carried from previous sessions
 - **FullySymmetric(n)** takes slot numbers as varargs: `FullySymmetric(1,2,3,4)` NOT `FullySymmetric(4)`
-- **make_rule** RETURNS rules but does NOT register them. Use `register_rule!(reg, rule)` for function-based rules
-- **NP tetrad rules**: use function-based RewriteRule (like soldering_form.jl), not pattern matching on products with dummy pairs
+- **make_rule** RETURNS rules but does NOT register them
+- **NP tetrad rules**: use function-based RewriteRule
 - **symmetrize** takes `Vector{Symbol}` not `Vector{TIndex}`
-- **_is_zero name collision**: renamed to `_mp_is_zero` to avoid clash with petrov_classify.jl
+- **Bimetric massive mode**: Use `(1/(1+c²))(δg − δf)` NOT `(1/(1+c²))(c²δg − δf)`
 
 ### New this session
-- **Bimetric massive mode**: Use `(1/(1+c²))(δg − δf)` NOT `(1/(1+c²))(c²δg − δf)`. The inverse δg = γ + c²χ, δf = γ − χ only round-trips correctly with the first convention.
-- **Medium-effort subagents miss physics bugs**: A medium-effort agent noticed the round-trip failed for c≠1 and rationalized it as "expected". Always use max thinking (opus) for physics code.
-- **NP Bianchi identities have 11 equations**, not 8: 8 Weyl-sector (4.5a–4.5h) + 3 contracted (4.5i–4.5k) involving only Ricci scalars.
+- **NP sign convention**: Spin coefficients in (-,+,+,+) are NOT simply negated from Teukolsky. l-type (κ,σ,ρ,τ) are negated; n-type (ν,λ,μ,π) match Teukolsky; compound (ε,γ,α,β) are negated. This is because our code defines all simple coefficients WITHOUT the standard NP negative sign on n-type.
+- **Beads sync issues**: Different machines have divergent beads state. The backup/restore path loses closures made after the last backup. Always `bd backup` before switching machines.
+- **Ground truth verification**: Downloaded Teukolsky 1973 and Goldberger-Rothstein 2006 to reference/papers/. All NP and EIH test values are string-matched against these papers.
 
 ---
 
@@ -95,22 +79,17 @@
 bd ready -n 10   # see top priorities
 ```
 
-**High-value P2 tasks:**
-- TGR-v8u: EFTofPNG 1PN EIH potential (needs local paper research)
-- TGR-ulo.2: SortCovDsToDiv (core pipeline — needs full workflow)
-- TGR-xlu.5: DDI simplification pass (core pipeline — needs full workflow)
-- TGR-lnp: Schwarzschild NP quantities validation (just unblocked)
-- TGR-w0z: Kerr NP quantities validation (just unblocked)
+**Remaining P2 tasks (genuine new implementation):**
+- TGR-bgl.11: Abstract Poisson equation solver for PPN
+- TGR-u19: BH-Pert2 radial source term assembly
+- TGR-34t.4: Anisotropic perturbation decomposition on Bianchi I
 
-**Newly unblocked by this session:**
-- TGR-9t4: Goldberg-Sachs theorem test (needs NP field equations)
-- TGR-lnp: Schwarzschild NP validation (needs NP field equations)
-- TGR-w0z: Kerr NP validation (needs NP field equations)
-- TGR-swh.8: Poincare gauge theory action (needs Brauer decomposition)
-
-**Deferred:**
-- TGR-avk: trace-free enforcement (deferred, see Session 5 notes)
-- TGR-e04: _avoid removal (P4, deferred from earlier)
+**Deferred (speculative, no downstream need):**
+- TGR-lej: Abstract tetrad indices in AST
+- TGR-ulo.1: FullSimplification
+- TGR-0o2: Spin coefficients as Ricci rotation coefficients
+- TGR-2d4.2: Tetrad type with frame vectors
+- TGR-xmm.2: IndexFree type
 
 ---
 
@@ -131,6 +110,8 @@ See CLAUDE.md for full details. Key points:
 - PPN scalar-tensor: gamma=(omega+1)/(omega+2), beta=1+Psi*omega'/(4(2omega+3)(omega+2)^2)
 - Bimetric FP mass: m²_FP = m²(β₁+2cβ₂+c²β₃)/(1+c²)
 - Higuchi bound: m² ≥ 2Λ/3 for massive spin-2 on dS
+- NP Schwarzschild: Ψ₂ = -M/r³, ρ=+1/r (our convention), α=-β=+cotθ/(2√2r)
+- EIH 1PN: L_EIH coefficients 3(v²), -7(v·v), -1/2(G²m(m₁+m₂)/r²) from Goldberger-Rothstein Eq 40
 
 ## Quick Commands
 

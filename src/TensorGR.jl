@@ -468,7 +468,7 @@ export generate_riemann_ddi, riemann_ddi_expr, simplify_with_ddis
 export RInv, canonicalize_rinv, are_equivalent, rinv_symmetry_group
 export DualRInv, left_dual, right_dual, double_dual, pontryagin_rinv
 export to_tensor_expr, from_tensor_expr
-export simplify_level1, simplify_level2, simplify_level3
+export simplify_level1, simplify_level2, simplify_level3, simplify_level4
 export is_riemann_monomial, count_riemann_degree
 export apply_bianchi_cyclic, bianchi_relation
 export differential_bianchi, contracted_bianchi
