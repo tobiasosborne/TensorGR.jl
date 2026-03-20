@@ -300,4 +300,10 @@ using TensorGR
     include("test_eih_potential.jl")
     # Invar Level 4: derivative commutation
     include("test_invar_level4.jl")
+    # Invar Level 5: dimensionally-dependent identities (DDIs)
+    include("test_invar_level5.jl")
+    # Euler density for arbitrary dimension + Lovelock Lagrangians
+    include("test_euler_density.jl")
+    # Bimetric matrix square root algebra
+    include("test_bimetric_sqrt.jl")
 end
