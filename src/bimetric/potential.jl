@@ -150,3 +150,346 @@ function hassan_rosen_potential(bs::BimetricSetup, params::HassanRosenParams;
     end
     tproduct(1 // 1, TensorExpr[TScalar(params.m_sq), potential])
 end
+
+# ── Matrix square root algebra ─────────────────────────────────────
+
+"""
+    _S_power_chain(S_name, n, idx_top, idx_bot, used) -> TensorExpr
+
+Build S^n as a chain of n factors of S contracted along internal indices:
+
+    (S^n)^{idx_top}_{idx_bot} = S^{idx_top}_{c₁} S^{c₁}_{c₂} ⋯ S^{c_{n-1}}_{idx_bot}
+
+For n=0, returns the Kronecker delta δ^{idx_top}_{idx_bot}.
+For n=1, returns S^{idx_top}_{idx_bot}.
+
+The `used` set is updated with any fresh indices consumed.
+"""
+function _S_power_chain(S_name::Symbol, n::Int, idx_top::Symbol, idx_bot::Symbol,
+                        used::Set{Symbol})
+    n >= 0 || error("Power must be non-negative, got $n")
+
+    if n == 0
+        return Tensor(:δ, [up(idx_top), down(idx_bot)])
+    end
+
+    if n == 1
+        return Tensor(S_name, [up(idx_top), down(idx_bot)])
+    end
+
+    # n >= 2: chain S^{idx_top}_{c₁} S^{c₁}_{c₂} ⋯ S^{c_{n-1}}_{idx_bot}
+    internal = Symbol[]
+    for _ in 1:(n - 1)
+        c = fresh_index(used)
+        push!(used, c)
+        push!(internal, c)
+    end
+
+    factors = TensorExpr[]
+    # First factor: S^{idx_top}_{c₁}
+    push!(factors, Tensor(S_name, [up(idx_top), down(internal[1])]))
+    # Middle factors: S^{c_i}_{c_{i+1}}
+    for i in 1:(n - 2)
+        push!(factors, Tensor(S_name, [up(internal[i]), down(internal[i + 1])]))
+    end
+    # Last factor: S^{c_{n-1}}_{idx_bot}
+    push!(factors, Tensor(S_name, [up(internal[end]), down(idx_bot)]))
+
+    tproduct(1 // 1, factors)
+end
+
+"""
+    sqrt_matrix_identity(bs::BimetricSetup;
+                          registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Return the defining identity for the matrix square root S = √(g⁻¹f):
+
+    S^a_c S^c_b - g^{ac} f_{cb} = 0
+
+Returns the LHS as a TensorExpr with free indices (a, b). This is the
+fundamental algebraic identity: S² = g⁻¹ f.
+
+Ground truth: Hassan & Rosen, JHEP 02 (2012) 126, Sec 2.
+"""
+function sqrt_matrix_identity(bs::BimetricSetup;
+                               registry::TensorRegistry=current_registry())
+    S_name = Symbol(:S_, bs.metric_g, :_, bs.metric_f)
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used)
+
+    # S^a_c S^c_b  (= S² with free indices a, b)
+    S_ac = Tensor(S_name, [up(a), down(c)])
+    S_cb = Tensor(S_name, [up(c), down(b)])
+    S_squared = S_ac * S_cb
+
+    # g^{ac} f_{cb}  (= g⁻¹ f with free indices a, b)
+    g_up = Tensor(bs.metric_g, [up(a), up(c)])
+    f_dn = Tensor(bs.metric_f, [down(c), down(b)])
+    ginv_f = g_up * f_dn
+
+    # LHS = S² - g⁻¹f
+    S_squared - ginv_f
+end
+
+"""
+    cayley_hamilton_S(bs::BimetricSetup, params::HassanRosenParams;
+                       registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Return the Cayley-Hamilton identity for the 4×4 matrix S = √(g⁻¹f):
+
+    S⁴ - e₁(S) S³ + e₂(S) S² - e₃(S) S + e₄(S) I = 0
+
+Returns the LHS as a TensorExpr with free indices (a, b). The e_n are the
+elementary symmetric polynomials of S, computed via `elementary_symmetric`.
+
+By the Cayley-Hamilton theorem, every matrix satisfies its own characteristic
+equation. For a 4×4 matrix, the characteristic polynomial is degree 4 with
+coefficients given by the elementary symmetric polynomials of the eigenvalues.
+
+Ground truth: Cayley-Hamilton theorem; Hassan & Rosen (2012) Sec 2.
+"""
+function cayley_hamilton_S(bs::BimetricSetup, params::HassanRosenParams;
+                            registry::TensorRegistry=current_registry())
+    S_name = Symbol(:S_, bs.metric_g, :_, bs.metric_f)
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+
+    # Build S^n for n = 0, 1, 2, 3, 4
+    # Each call to _S_power_chain may consume indices from `used`
+    S0 = _S_power_chain(S_name, 0, a, b, copy(used))  # δ^a_b
+    S1 = _S_power_chain(S_name, 1, a, b, copy(used))  # S^a_b
+    S2 = _S_power_chain(S_name, 2, a, b, copy(used))  # S^a_c S^c_b
+    S3 = _S_power_chain(S_name, 3, a, b, copy(used))  # S^a_c S^c_d S^d_b
+    S4 = _S_power_chain(S_name, 4, a, b, copy(used))  # S^a_c S^c_d S^d_e S^e_b
+
+    # Compute e_n(S) — these are scalars (fully contracted)
+    e1 = elementary_symmetric(1, S_name; registry=registry)
+    e2 = elementary_symmetric(2, S_name; registry=registry)
+    e3 = elementary_symmetric(3, S_name; registry=registry)
+    e4 = elementary_symmetric(4, S_name; registry=registry)
+
+    # Cayley-Hamilton: S⁴ - e₁ S³ + e₂ S² - e₃ S + e₄ I = 0
+    terms = TensorExpr[
+        S4,                                                    # + S⁴
+        tproduct(-1 // 1, TensorExpr[e1, S3]),                # - e₁ S³
+        tproduct(1 // 1, TensorExpr[e2, S2]),                 # + e₂ S²
+        tproduct(-1 // 1, TensorExpr[e3, S1]),                # - e₃ S
+        tproduct(1 // 1, TensorExpr[e4, S0]),                 # + e₄ I
+    ]
+
+    tsum(terms)
+end
+
+"""
+    register_sqrt_rules!(reg::TensorRegistry, bs::BimetricSetup;
+                          max_power::Int=4) -> Vector{RewriteRule}
+
+Register rewrite rules that reduce powers of S using the Cayley-Hamilton theorem.
+
+In d=4, the Cayley-Hamilton identity gives:
+
+    S⁴ = e₁ S³ - e₂ S² + e₃ S - e₄ I
+
+This function creates a functional rewrite rule that detects a chain of
+`max_power` or more S factors contracted in sequence and replaces them using
+the identity above.
+
+Returns the vector of rules created. The rules are also added to the registry.
+
+Ground truth: Cayley-Hamilton theorem for 4×4 matrices.
+"""
+function register_sqrt_rules!(reg::TensorRegistry, bs::BimetricSetup;
+                                max_power::Int=4)
+    S_name = Symbol(:S_, bs.metric_g, :_, bs.metric_f)
+
+    # Functional rule: detect S^{max_power} chains in TProduct factors
+    # and replace using Cayley-Hamilton reduction.
+    rule = RewriteRule(
+        function(expr::TensorExpr)
+            # Match a TProduct containing a chain of max_power S factors
+            expr isa TProduct || return false
+            chain = _find_S_chain(expr, S_name, max_power)
+            return chain !== nothing
+        end,
+        function(expr::TensorExpr)
+            _reduce_S_chain(expr, S_name, max_power, bs, reg)
+        end
+    )
+
+    push!(reg.rules, rule)
+    RewriteRule[rule]
+end
+
+"""Find a chain of `n` S-factors contracted in sequence within a TProduct."""
+function _find_S_chain(expr::TProduct, S_name::Symbol, n::Int)
+    # Collect S-factor indices
+    s_indices = Int[]
+    for (i, f) in enumerate(expr.factors)
+        if f isa Tensor && f.name == S_name
+            push!(s_indices, i)
+        end
+    end
+
+    length(s_indices) < n && return nothing
+
+    # Check all length-n subsequences for chain contraction:
+    # S^{a₁}_{b₁}, S^{a₂}_{b₂}, ... where b_i == a_{i+1}
+    for start_idx in 1:(length(s_indices) - n + 1)
+        candidate = s_indices[start_idx:start_idx + n - 1]
+        is_chain = true
+        for k in 1:(n - 1)
+            f_k = expr.factors[candidate[k]]
+            f_next = expr.factors[candidate[k + 1]]
+            # Check: down index of f_k matches up index of f_next
+            if !(f_k.indices[2].name == f_next.indices[1].name &&
+                 f_k.indices[2].position == Down &&
+                 f_next.indices[1].position == Up)
+                is_chain = false
+                break
+            end
+        end
+        if is_chain
+            return candidate
+        end
+    end
+    nothing
+end
+
+"""Replace the first S^n chain in a TProduct using Cayley-Hamilton."""
+function _reduce_S_chain(expr::TProduct, S_name::Symbol, n::Int,
+                          bs::BimetricSetup, reg::TensorRegistry)
+    chain = _find_S_chain(expr, S_name, n)
+    chain === nothing && return expr
+
+    # Extract the free indices of the chain: up index of first, down index of last
+    first_S = expr.factors[chain[1]]
+    last_S = expr.factors[chain[end]]
+    idx_top = first_S.indices[1].name   # the upper free index
+    idx_bot = last_S.indices[2].name    # the lower free index
+
+    # Collect all index names in the expression to avoid clashes
+    all_idxs = indices(expr)
+    used = Set{Symbol}(idx.name for idx in all_idxs)
+
+    # Build the Cayley-Hamilton replacement: S⁴ → e₁S³ - e₂S² + e₃S - e₄I
+    e1 = elementary_symmetric(1, S_name; registry=reg)
+    e2 = elementary_symmetric(2, S_name; registry=reg)
+    e3 = elementary_symmetric(3, S_name; registry=reg)
+    e4 = elementary_symmetric(4, S_name; registry=reg)
+
+    S0 = _S_power_chain(S_name, 0, idx_top, idx_bot, copy(used))
+    S1 = _S_power_chain(S_name, 1, idx_top, idx_bot, copy(used))
+    S2 = _S_power_chain(S_name, 2, idx_top, idx_bot, copy(used))
+    S3 = _S_power_chain(S_name, 3, idx_top, idx_bot, copy(used))
+
+    replacement = tsum(TensorExpr[
+        tproduct(1 // 1, TensorExpr[e1, S3]),        # + e₁ S³
+        tproduct(-1 // 1, TensorExpr[e2, S2]),       # - e₂ S²
+        tproduct(1 // 1, TensorExpr[e3, S1]),         # + e₃ S
+        tproduct(-1 // 1, TensorExpr[e4, S0]),        # - e₄ I
+    ])
+
+    # Rebuild the TProduct: replace the chain factors with the replacement
+    other_factors = TensorExpr[]
+    chain_set = Set(chain)
+    for (i, f) in enumerate(expr.factors)
+        if i == chain[1]
+            push!(other_factors, replacement)
+        elseif i in chain_set
+            # skip — these are part of the chain we replaced
+        else
+            push!(other_factors, f)
+        end
+    end
+
+    tproduct(expr.scalar, other_factors)
+end
+
+"""
+    sqrt_matrix_variation(bs::BimetricSetup;
+                           registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Return the Sylvester equation for the variation of the matrix square root:
+
+    S δS + δS S = δ(g⁻¹f) = g⁻¹(δf - δg · g⁻¹f)
+
+Equivalently, using S² = g⁻¹f:
+
+    S^a_c (δS)^c_b + (δS)^a_c S^c_b - g^{ac}(δf_{cb} - δg_{cd} g^{de} f_{eb}) = 0
+
+Returns the LHS (which = 0) as a TensorExpr with free indices (a, b).
+The variation fields δg, δf are represented as tensors named `delta_g`, `delta_f`.
+
+The Sylvester equation SX + XS = C (with C = δ(g⁻¹f)) has a unique solution
+when S has no pair of eigenvalues that sum to zero, which is generically true.
+
+Ground truth: Hassan & Rosen (2012) Sec 2;
+             de Rham, Living Rev. Rel. 17, 7 (2014) Sec 8.1.
+"""
+function sqrt_matrix_variation(bs::BimetricSetup;
+                                registry::TensorRegistry=current_registry())
+    S_name = Symbol(:S_, bs.metric_g, :_, bs.metric_f)
+    dS_name = Symbol(:deltaS_, bs.metric_g, :_, bs.metric_f)
+
+    # Register δS if not already present
+    if !has_tensor(registry, dS_name)
+        register_tensor!(registry, TensorProperties(
+            name=dS_name, manifold=bs.manifold, rank=(1, 1),
+            symmetries=SymmetrySpec[],
+            options=Dict{Symbol,Any}(
+                :is_variation => true,
+                :of_tensor => S_name)))
+    end
+
+    # Register the variation tensors δg, δf
+    dg_name = Symbol(:delta_, bs.metric_g)
+    df_name = Symbol(:delta_, bs.metric_f)
+    for (dn, desc) in [(dg_name, "variation of $(bs.metric_g)"),
+                         (df_name, "variation of $(bs.metric_f)")]
+        if !has_tensor(registry, dn)
+            register_tensor!(registry, TensorProperties(
+                name=dn, manifold=bs.manifold, rank=(0, 2),
+                symmetries=SymmetrySpec[Symmetric(1, 2)],
+                options=Dict{Symbol,Any}(
+                    :is_variation => true,
+                    :description => desc)))
+        end
+    end
+
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used); push!(used, d)
+    e_idx = fresh_index(used)
+
+    # LHS term 1: S^a_c (δS)^c_b
+    S_ac = Tensor(S_name, [up(a), down(c)])
+    dS_cb = Tensor(dS_name, [up(c), down(b)])
+    term1 = S_ac * dS_cb
+
+    # LHS term 2: (δS)^a_c S^c_b
+    dS_ac = Tensor(dS_name, [up(a), down(c)])
+    S_cb = Tensor(S_name, [up(c), down(b)])
+    term2 = dS_ac * S_cb
+
+    # RHS: g^{ac}(δf_{cb} - δg_{cd} g^{de} f_{eb})
+    # = g^{ac} δf_{cb} - g^{ac} δg_{cd} g^{de} f_{eb}
+    g_up_ac = Tensor(bs.metric_g, [up(a), up(c)])
+    df_cb = Tensor(df_name, [down(c), down(b)])
+    rhs_term1 = g_up_ac * df_cb                          # g^{ac} δf_{cb}
+
+    g_up_ac2 = Tensor(bs.metric_g, [up(a), up(c)])
+    dg_cd = Tensor(dg_name, [down(c), down(d)])
+    g_up_de = Tensor(bs.metric_g, [up(d), up(e_idx)])
+    f_eb = Tensor(bs.metric_f, [down(e_idx), down(b)])
+    rhs_term2 = tproduct(1 // 1, TensorExpr[g_up_ac2, dg_cd, g_up_de, f_eb])
+
+    # LHS - RHS = S δS + δS S - g⁻¹ δf + g⁻¹ δg g⁻¹ f = 0
+    tsum(TensorExpr[term1, term2, -rhs_term1, rhs_term2])
+end
