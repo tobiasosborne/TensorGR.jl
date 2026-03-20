@@ -2,7 +2,7 @@
 
 A Julia package for abstract tensor algebra and general relativity calculations, providing feature parity with the core functionality of [xAct](http://www.xact.es/) (Mathematica).
 
-TensorGR.jl comprises approximately 12,100 lines of source code across 71 files, with 2,900+ tests and 12 benchmarks. It supports Julia 1.10 and 1.11.
+TensorGR.jl comprises approximately 39,000 lines of source code across 167 files in 30 modules, with ~360,000 tests across 172 test files and 12 benchmarks. It supports Julia 1.10 and 1.11.
 
 ## Installation
 
@@ -63,11 +63,20 @@ end
 - **Curvature algebra**: Riemann-Weyl decomposition, Schouten, trace-free Ricci, Einstein, Kretschmann scalar, curvature basis conversions
 - **Lie derivatives**: Lie derivative of arbitrary tensors, Lie bracket, conversion to covariant derivative form
 - **Killing vectors**: define Killing fields with automatic Killing equation metadata
-- **Hypersurface geometry**: induced metric, extrinsic curvature, projector, normal normalization
+- **Hypersurface geometry**: induced metric, extrinsic curvature, projector, normal normalization, Gauss-Codazzi equations, Israel junction conditions, GHY boundary term
 - **Smooth maps**: pullback, pushforward via explicit Jacobian contraction, induced metric
 - **Product manifolds**: M1 x M2 with block-diagonal metric, curvature decomposition by factor
 - **Topological invariants**: Pontryagin density, Euler (Gauss-Bonnet) density, Chern-Simons coupling
 - **Differential operators**: box (d'Alembertian), gradient squared, derivative chains
+
+### Spinor Formalism (`spinors/`, `xideal/`)
+
+- **Spinor bundles**: unprimed/primed (dotted) spinor indices, spin metric, soldering form (Infeld-van der Waerden symbols)
+- **Curvature spinors**: Weyl spinor, Ricci spinor, lambda spinor, irreducible decomposition
+- **Newman-Penrose**: null tetrads, 12 spin coefficients, NP field equations, NP Bianchi identities, directional derivatives
+- **GHP formalism**: GHP-weighted quantities, GHP derivatives (edth, edth-bar, thorn, thorn-bar), GHP commutators, GHP field equations
+- **Spacetime classification**: Weyl scalars, Petrov type (I/II/III/D/N/O), Segre classification, energy condition checks
+- See [Spinors API](@ref) for details.
 
 ### Perturbation Theory
 
@@ -78,9 +87,100 @@ end
 - **Isaacson averaging**: short-wavelength averaging for gravitational wave stress-energy
 - **Variational derivatives**: Euler-Lagrange equations, metric variation for deriving field equations
 
+### Scalar-Tensor Theories (`scalar_tensor/`)
+
+- **Horndeski gravity**: L2-L5 Lagrangians, metric and scalar field equations, kinetic scalar X
+- **Beyond Horndeski**: quartic and quintic extensions, alpha_H parameter
+- **DHOST**: degenerate higher-order scalar-tensor theories, degeneracy classification (Class I/II/III), DOF counting
+- **EFT of dark energy**: Bellini-Sawicki alpha parameters, observational constraints (GW170817), stability conditions
+- **Multi-field Horndeski**: multi-scalar extension, kinetic matrix, reduction to single field
+- See [Scalar-Tensor API](@ref) for details.
+
+### Feynman Rules (`feynman/`)
+
+- **Graviton propagator**: de Donder gauge graviton propagator with numerator structure
+- **Vertices**: n-point graviton vertices from perturbation expansion, matter-graviton couplings
+- **Gauge fixing**: de Donder gauge fixing action, Faddeev-Popov ghost sector
+- **Diagrams**: tree-exchange diagrams, contraction engine, symmetry factors
+- **Loop integrals**: Passarino-Veltman topology, dimensional regularization traces, superficial divergence
+- **PN matching**: Fourier transform table for potential matching, Newton potential extraction
+- See [Feynman Rules API](@ref) for details.
+
+### Metric-Affine Gravity (`metric_affine/`)
+
+- **Independent connection**: affine connection with torsion and nonmetricity
+- **Torsion**: decomposition into vector, axial, and tensor parts; contortion tensor
+- **Nonmetricity**: Weyl vector, second trace, disformation tensor
+- **Distortion**: full distortion tensor relating affine and Levi-Civita connections
+- **Curvature**: independent connection Riemann tensor, decomposition into Riemannian + torsion/nonmetricity parts
+- **Brauer decomposition**: 11-piece irreducible decomposition of the curvature tensor
+- See [Metric-Affine API](@ref) for details.
+
+### Spherical Harmonics (`harmonics/`)
+
+- **Scalar harmonics**: Y_lm with product rules, conjugation, inner products
+- **Vector harmonics**: even and odd vector harmonics, divergence/curl eigenvalues
+- **Tensor harmonics**: even (Y, Z) and odd tensor harmonics, completeness
+- **Angular integrals**: Gaunt integrals, angular selection rules, vector and tensor Gaunt coefficients
+- **Clebsch-Gordan**: Wigner 3j symbols, Clebsch-Gordan coefficients
+- **Harmonic decomposition**: decompose scalars, vectors, and symmetric tensors into harmonic modes
+- See [Spherical Harmonics API](@ref) for details.
+
+### PPN Formalism (`ppn/`)
+
+- **PPN parameters**: all 10 PPN parameters, GR values, conservation/preferred-frame tests
+- **Metric ansatz**: PPN metric components with superpotentials
+- **Field equations**: solve PPN field equations for GR and scalar-tensor theories
+- **Observables**: perihelion precession, light deflection, Shapiro delay, Nordtvedt effect, geodetic precession
+- See [PPN API](@ref) for details.
+
+### Hamiltonian / ADM (`hamiltonian/`)
+
+- **ADM decomposition**: lapse, shift, spatial metric decomposition
+- **Constraints**: Hamiltonian and momentum constraints
+- **Poisson brackets**: canonical pairs, fundamental brackets
+- See [Hamiltonian API](@ref) for details.
+
+### Covariant Phase Space (`phase_space/`)
+
+- **Noether currents**: Noether current and charge for diffeomorphism invariance
+- **Symplectic structure**: symplectic potential, symplectic current, boundary ambiguities
+- **Wald entropy**: Wald entropy integrand for general diffeomorphism-invariant theories
+- **First law**: Hamiltonian variation, first law of black hole mechanics
+- See [Phase Space API](@ref) for details.
+
+### Invariants (`invariants/`)
+
+- **RInv/DualRInv**: canonical forms for Riemann polynomial invariants, left/right/double duals
+- **Simplification**: 6-level simplification algorithm (Garcia-Parrado and Martin-Garcia)
+- **DDI**: dimensionally dependent identities, generalized delta, Gauss-Bonnet DDI
+- See [Invariants API](@ref) for details.
+
+### Bimetric Gravity (`bimetric/`)
+
+- **Hassan-Rosen potential**: elementary symmetric polynomials, interaction potential
+- **Linearization**: bimetric perturbation, mass matrix, mass eigenstates (massless + massive)
+- **Higuchi bound**: Higuchi bound check for massive spin-2 on de Sitter
+- See [Bimetric API](@ref) for details.
+
+### Fermions / Clifford Algebra (`fermions/`)
+
+- **Gamma matrices**: Clifford algebra relation, gamma-5, slash notation
+- **Traces**: Dirac traces (2-point, 4-point), gamma-5 traces
+- **Fierz identities**: Fierz matrix, Fierz coefficients, identity verification
+- **Charge conjugation**: charge conjugation properties, Majorana condition
+- See [Fermions API](@ref) for details.
+
+### Frame Bundle / Tetrads (`tetrads/`)
+
+- **Frame indices**: Lorentz frame index bundle, frame metric
+- **Tetrad formalism**: frame bundle registration for vierbein/tetrad computations
+- See [Tetrads API](@ref) for details.
+
 ### Matter Fields
 
 - **Perfect fluid**: stress-energy tensor with energy density, pressure, and 4-velocity, including normalization rules
+- **Equations of state**: barotropic, polytropic, tabular EOS
 
 ### Component Calculations
 
@@ -101,18 +201,20 @@ end
 - **Hodge dual**: star operator via Levi-Civita tensor
 - **Codifferential**: adjoint of exterior derivative
 - **Cartan structure equations**: connection and curvature forms in the vierbein/tetrad formalism
+- **Gauge theory**: algebra-valued forms, field strength, Yang-Mills equations, Bianchi identity, instanton density, Chern-Simons forms
 
 ### Decomposition & Cosmological Perturbation Theory
 
-- **3+1 foliation**: split spacetime indices into temporal and spatial, SVT substitution rules
-- **SVT decomposition**: Fourier transforms, transverse/TT projectors
-- **Barnes-Rivers projectors**: spin-2, spin-1, spin-0s, spin-0w projection operators for propagator analysis
-- **Quadratic action**: extract kinetic matrix from Lagrangian, propagator inversion, determinant
+- **3+1 foliation**: split spacetime indices into temporal and spatial, SVT substitution rules, Bianchi type I backgrounds, Bianchi structure constants (types I-IX)
+- **SVT decomposition**: Fourier transforms, transverse/TT projectors, gauge choices (synchronous, Newtonian, flat slicing, comoving, uniform density)
+- **Barnes-Rivers projectors**: spin-2, spin-1, spin-0s, spin-0w projection operators for propagator analysis; extended to vector, antisymmetric-2, and rank-3 fields
+- **Quadratic action**: extract kinetic matrix from Lagrangian, propagator inversion, determinant, unitarity analysis, source constraints
 
 ### Other Features
 
 - **Vector bundles**: per-index bundle tracking, cross-bundle contraction protection (gauge theory)
 - **Worldline / PN**: point-particle EFT, post-Newtonian order counting, truncation
+- **TOV solver**: neutron star structure with EOS coupling, mass-radius curves
 - **Integration by parts**: move derivatives off specified fields in product expressions
 - **LaTeX parser**: `parse_tex`, `@tex_str` for reading LaTeX tensor notation
 - **Display**: LaTeX (`to_latex`) and Unicode (`to_unicode`) output
@@ -139,6 +241,7 @@ The simplification pipeline runs a fixed-point loop: expand products over sums, 
 ```@contents
 Pages = [
     "tutorial.md",
+    "examples.md",
     "api/types.md",
     "api/algebra.md",
     "api/gr.md",
@@ -151,6 +254,18 @@ Pages = [
     "api/svt.md",
     "api/action.md",
     "api/ansatz.md",
+    "api/spinors.md",
+    "api/scalar_tensor.md",
+    "api/feynman.md",
+    "api/metric_affine.md",
+    "api/harmonics.md",
+    "api/invariants.md",
+    "api/bimetric.md",
+    "api/ppn.md",
+    "api/hamiltonian.md",
+    "api/phase_space.md",
+    "api/fermions.md",
+    "api/tetrads.md",
     "api/advanced.md",
     "xperm_internals.md",
 ]

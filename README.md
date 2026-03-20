@@ -5,7 +5,7 @@
 
 **Abstract tensor algebra and general relativity in Julia.**
 
-TensorGR.jl is a symbolic tensor calculus system for general relativity, providing capabilities comparable to [xAct](http://www.xact.es/) for Mathematica. It features a typed abstract syntax tree for tensor expressions, Butler-Portugal index canonicalization via xperm.c, a covariant derivative engine with curvature commutation, arbitrary-order metric perturbation theory, component computation, exterior calculus, 3+1 foliation with SVT decomposition, particle spectrum analysis via Barnes-Rivers spin projection, geodesic integration, stellar structure (TOV equations), and CAS integration through Symbolics.jl and SymEngine.jl extensions.
+TensorGR.jl is a symbolic tensor calculus system for general relativity, providing capabilities comparable to [xAct](http://www.xact.es/) for Mathematica. It comprises ~39,000 lines of source across 167 files, with ~360,000 tests across 172 test files. Features include a typed abstract syntax tree for tensor expressions, Butler-Portugal index canonicalization via xperm.c, a covariant derivative engine with curvature commutation, arbitrary-order metric perturbation theory, component computation, exterior calculus, 3+1 foliation with SVT decomposition, particle spectrum analysis via Barnes-Rivers spin projection, Newman-Penrose/GHP spinor formalism, Horndeski/DHOST scalar-tensor theories, Feynman rules for quantum gravity, metric-affine gravity with torsion and nonmetricity, PPN formalism, Hamiltonian/ADM analysis, covariant phase space methods, spherical harmonic decomposition, bimetric gravity, Clifford algebra with Dirac traces, geodesic integration, stellar structure (TOV equations), and CAS integration through Symbolics.jl and SymEngine.jl extensions.
 
 ## Features
 
@@ -41,6 +41,19 @@ TensorGR.jl is a symbolic tensor calculus system for general relativity, providi
 | **Vector Bundles** | `define_vbundle!`, per-index bundle tracking, cross-bundle contraction protection |
 | **Worldline / PN** | `Worldline` struct, PN order tracking, `truncate_pn` |
 | **CAS Integration** | Symbolics.jl and SymEngine.jl extensions for scalar simplification and symbolic components |
+| **Spinor Formalism** | Newman-Penrose null tetrads, GHP formalism, Weyl scalars, Petrov classification, spin coefficients, NP field equations, NP Bianchi identities |
+| **Scalar-Tensor Theories** | Horndeski (L2-L5), Beyond Horndeski, DHOST with degeneracy classification, EFT of dark energy, Bellini-Sawicki alpha parameters, multi-field Horndeski |
+| **Feynman Rules** | Graviton propagators, n-point vertices, gauge fixing (de Donder), Faddeev-Popov ghosts, matter couplings, loop integrals, PN matching |
+| **Metric-Affine Gravity** | Torsion, nonmetricity, distortion tensor, contortion, disformation, independent connection curvature, Brauer 11-piece decomposition |
+| **Spherical Harmonics** | Scalar/vector/tensor harmonics, Clebsch-Gordan coefficients, orthogonality, angular integrals, Gaunt integrals, harmonic decomposition |
+| **PPN Formalism** | Parametrized post-Newtonian (10 PPN parameters), metric ansatz, field equations, perihelion precession, light deflection, Shapiro delay, Nordtvedt effect |
+| **Hamiltonian / ADM** | ADM decomposition (lapse, shift, spatial metric), Poisson brackets, Hamiltonian and momentum constraints |
+| **Covariant Phase Space** | Noether currents, symplectic potential, symplectic current, Wald entropy, first law of black hole mechanics |
+| **Invariants (Invar)** | RInv/DualRInv canonical forms, 6-level simplification algorithm, dimensionally dependent identities (DDI), Gauss-Bonnet DDI |
+| **Bimetric Gravity** | Hassan-Rosen potential, elementary symmetric polynomials, mass eigenstates, Fierz-Pauli mass, Higuchi bound |
+| **Fermions / Clifford Algebra** | Gamma matrices, Dirac traces (2,4-point), Fierz identities, charge conjugation, Majorana condition |
+| **Frame Bundle / Tetrads** | Lorentz frame indices, frame metric, tetrad formalism |
+| **Spacetime Classification** | Weyl scalars, Petrov type (I/II/III/D/N/O), Segre classification, energy condition checks |
 | **Parallel Simplify** | `simplify(expr; parallel=true)` for TSum-level threading |
 | **Rewrite Rules** | Pattern-matching rule engine with pattern indices, Bianchi identities, background field equations |
 | **Display** | LaTeX and Unicode output, `parse_tex` / `@tex_str` input |
@@ -195,7 +208,7 @@ Run the full test suite:
 julia --project -e 'using Pkg; Pkg.test()'
 ```
 
-The test suite covers ~3,500 tests across 50 test files.
+The test suite covers ~360,000 tests across 172 test files.
 
 Run benchmarks (tiered by complexity):
 
@@ -218,7 +231,9 @@ TensorGR.jl aims for feature parity with the core xAct packages:
 | xCoba | `components/` module, `CTensor`, `metric_compute` |
 | xPert | `perturbation/` module, `expand_perturbation`, `MetricPerturbation` |
 | xTras | `solve_tensors`, `collect_tensors`, `make_ansatz`, `all_contractions` |
-| Invar | `gr/invariants.jl`, `curvature_invariant`, `list_invariants`, `contract_curvature`, `kretschmann_expr` |
+| Invar | `invariants/` module, `RInv`, `DualRInv`, 6-level simplification, DDI rules |
+| SpinFrames | `spinors/` module, Newman-Penrose, GHP, Weyl scalars, spin coefficients |
+| xIdeal | `xideal/` module, Petrov classification, Segre type, energy conditions |
 
 ## Citation
 
@@ -229,7 +244,7 @@ If you use TensorGR.jl in your research, please cite:
   title  = {TensorGR.jl: Abstract Tensor Algebra and General Relativity in Julia},
   author = {Tobias Osborne},
   url    = {https://github.com/tobiasosborne/TensorGR.jl},
-  year   = {2025}
+  year   = {2025--2026}
 }
 ```
 
