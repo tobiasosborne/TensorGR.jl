@@ -312,4 +312,10 @@ using TensorGR
     include("test_primary_constraints.jl")
     # Poincare gauge theory action
     include("test_pgt_action.jl")
+    # Invar Level 6: dual invariant product relations
+    include("test_invar_level6.jl")
+    # Secondary constraint generation (Dirac algorithm)
+    include("test_secondary_constraints.jl")
+    # PPN Poisson equation solver
+    include("test_ppn_poisson.jl")
 end
