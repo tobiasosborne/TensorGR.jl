@@ -2,5 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "server",
-  "dolt_database": "TGR"
+  "dolt_database": "TGR",
+  "project_id": "d7b9816c-ebdd-47f6-aeee-6042afd9c07d"
 }
