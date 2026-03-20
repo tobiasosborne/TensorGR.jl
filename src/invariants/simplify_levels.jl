@@ -473,3 +473,249 @@ function simplify_level5(expr::TensorExpr;
                            commute_covds_name=covd)
     end
 end
+
+# ────────────────────────────────────────────────────────────────────
+# Level 6: Dual invariant product relations
+# ────────────────────────────────────────────────────────────────────
+
+#= Dual invariant product relations arise from the Hodge dual of the
+# Riemann tensor in d=4.  The Hodge duals are:
+#
+#   *R_{abcd}  = (1/2) ε_{ab}^{ef} R_{efcd}          (left dual)
+#   R*_{abcd}  = (1/2) R_{abef} ε^{ef}_{cd}           (right dual)
+#   *R*_{abcd} = (1/4) ε_{ab}^{ef} R_{efgh} ε^{gh}_{cd} (double dual)
+#
+# Key identity in d=4 (pair symmetry + epsilon contraction):
+#
+#   *R*_{abcd} = R_{abcd}
+#
+# That is, the double Hodge dual of the Riemann tensor equals the
+# original Riemann tensor in 4 dimensions.  This is a consequence of
+# the identity ε_{abef} ε^{ghef} = -2 (δ^g_a δ^h_b - δ^h_a δ^g_b)
+# combined with the pair and antisymmetry of Riemann.
+#
+# Consequences for scalar invariants at degree 2:
+#
+#   (*R*)_{abcd} (*R*)^{abcd} = R_{abcd} R^{abcd}
+#   (double-dual Kretschner = Kretschner)
+#
+# Level 6 wraps the existing DualRInv infrastructure and applies
+# these reduction rules after Level 5 (DDIs).
+#
+# Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4, Level 6;
+#               Zakhary & McIntosh (1997) GRG 29, 539.
+=#
+
+"""
+    double_dual_identity(; metric::Symbol=:g,
+                           registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Construct the double-dual Kretschner identity in d=4:
+
+    (*R*)_{abcd} (*R*)^{abcd} - R_{abcd} R^{abcd} = 0
+
+Returns the LHS as a `TensorExpr`.  In 4 dimensions, this expression
+equals zero because the double Hodge dual of the Riemann tensor equals
+the original: `*R*_{abcd} = R_{abcd}`.
+
+The double-dual term is constructed using the `DualRInv` infrastructure
+with explicit Levi-Civita tensors.
+
+# Arguments
+- `metric::Symbol=:g`: the metric name (determines the epsilon tensor name `ε\$metric`)
+- `registry::TensorRegistry`: the registry to use
+
+# Returns
+A `TensorExpr` representing `(*R*)^2 - R^2`, which should be zero in d=4.
+"""
+function double_dual_identity(; metric::Symbol=:g,
+                                registry::TensorRegistry=current_registry())
+    with_registry(registry) do
+        # (*R*)_{abcd} (*R*)^{abcd} via DualRInv infrastructure
+        kr = RInv(2, [5, 6, 7, 8, 1, 2, 3, 4])  # Kretschner contraction pattern
+        # Double dual on BOTH factors: use DualRInv constructor directly
+        dd_kretschner = DualRInv(kr, [(1, :double), (2, :double)])
+        dd_expr = to_tensor_expr(dd_kretschner; registry=registry, metric=metric)
+
+        # Ordinary Kretschner: R_{abcd} R^{abcd}
+        used = Set{Symbol}()
+        a = fresh_index(used); push!(used, a)
+        b = fresh_index(used); push!(used, b)
+        c = fresh_index(used); push!(used, c)
+        d = fresh_index(used); push!(used, d)
+        Riem_down = Tensor(:Riem, [down(a), down(b), down(c), down(d)])
+        Riem_up = Tensor(:Riem, [up(a), up(b), up(c), up(d)])
+        kretschner = Riem_down * Riem_up
+
+        # Identity: (*R*)^2 - R^2 = 0
+        dd_expr - kretschner
+    end
+end
+
+"""
+    register_dual_rules!(reg::TensorRegistry;
+                          dim::Int=4,
+                          metric::Symbol=:g) -> Vector{RewriteRule}
+
+Register rewrite rules for dual invariant product identities in `dim`
+dimensions.
+
+In d=4, the key rules are:
+1. The double-dual Kretschner equals the ordinary Kretschner:
+   `(*R*)_{abcd} (*R*)^{abcd} → R_{abcd} R^{abcd}`
+
+These rules reduce products involving dual Riemann tensors to
+expressions involving only the undualised Riemann tensor.
+
+The rules are registered in the given registry and also returned.
+
+# Arguments
+- `reg::TensorRegistry`: the registry in which to register rules
+- `dim::Int=4`: manifold dimension (dual rules currently only for d=4)
+- `metric::Symbol=:g`: the metric name
+
+# Returns
+`Vector{RewriteRule}` of the registered rules.
+"""
+function register_dual_rules!(reg::TensorRegistry;
+                               dim::Int=4,
+                               metric::Symbol=:g)
+    rules = RewriteRule[]
+
+    # Dual rules are specific to d=4
+    dim == 4 || return rules
+
+    eps_name = Symbol(:ε, metric)
+
+    # Rule: products of epsilon pairs contracting with Riemann tensors
+    # can be reduced using ε_{abef} ε^{ghef} = -2(δ^g_a δ^h_b - δ^g_b δ^h_a)
+    #
+    # Rather than building pattern-matching rules for the complex epsilon
+    # contraction structure, we register an identity rule via the algebra:
+    # *R*_{abcd} = R_{abcd} in d=4.
+    #
+    # Construct: (1/4) ε_{ab}^{ef} R_{efgh} ε^{gh}_{cd} -> R_{abcd}
+    #
+    # This is encoded as a rewrite rule on the explicit epsilon-Riemann product.
+    used = Set{Symbol}()
+    a = fresh_index(used); push!(used, a)
+    b = fresh_index(used); push!(used, b)
+    c = fresh_index(used); push!(used, c)
+    d = fresh_index(used); push!(used, d)
+    e = fresh_index(used); push!(used, e)
+    f = fresh_index(used); push!(used, f)
+    g_idx = fresh_index(used); push!(used, g_idx)
+    h = fresh_index(used); push!(used, h)
+
+    # LHS: (1/4) ε_{ab}^{ef} R_{efgh} ε^{gh}_{cd}
+    eps_left = Tensor(eps_name, [down(a), down(b), up(e), up(f)])
+    riem = Tensor(:Riem, [down(e), down(f), down(g_idx), down(h)])
+    eps_right = Tensor(eps_name, [up(g_idx), up(h), down(c), down(d)])
+    lhs = tproduct(1 // 4, TensorExpr[eps_left, riem, eps_right])
+
+    # RHS: R_{abcd}
+    rhs = Tensor(:Riem, [down(a), down(b), down(c), down(d)])
+
+    rule = RewriteRule(lhs, rhs)
+    push!(rules, rule)
+    register_rule!(reg, rule)
+
+    rules
+end
+
+# Module-level tracking of which registries have dual rules registered.
+const _DUAL_RULES_REGISTERED = Dict{UInt, Set{Tuple{Int,Symbol}}}()
+
+"""
+    has_dual_rules(reg::TensorRegistry; dim::Int=4, metric::Symbol=:g) -> Bool
+
+Check whether dual invariant rules for the given dimension and metric have
+already been registered in the registry via `register_dual_rules!`.
+"""
+function has_dual_rules(reg::TensorRegistry; dim::Int=4, metric::Symbol=:g)
+    key = objectid(reg)
+    haskey(_DUAL_RULES_REGISTERED, key) && (dim, metric) in _DUAL_RULES_REGISTERED[key]
+end
+
+"""
+    simplify_level6(expr::TensorExpr;
+                     covd::Symbol=:D,
+                     dim::Int=4,
+                     max_order::Int=0,
+                     registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Apply Level 6 (dual invariant product relations) of the Invar simplification
+algorithm.
+
+Level 6 handles algebraic identities between curvature invariants involving
+the Hodge dual of the Riemann tensor.  In d=4, the key identity is:
+
+    *R*_{abcd} = R_{abcd}  (double dual = original)
+
+which implies that any scalar invariant built from the double-dual Riemann
+equals the corresponding invariant built from the undualised Riemann.
+
+This level first applies Level 5 (which includes Levels 1-4: permutation
+symmetries, cyclic/differential Bianchi, derivative commutation, and DDIs),
+then registers and applies dual invariant reduction rules.
+
+# Arguments
+- `expr`: tensor expression to simplify
+- `covd::Symbol=:D`: name of the covariant derivative (for Levels 3-4)
+- `dim::Int=4`: manifold dimension (dual rules currently for d=4 only)
+- `max_order::Int=0`: forwarded to Level 5 (DDI polynomial order)
+- `registry`: the TensorRegistry to use
+
+# Ground truth
+Garcia-Parrado & Martin-Garcia (2007) Sec 4, Level 6 (their numbering: Schouten/Lovelock);
+Zakhary & McIntosh (1997) GRG 29, 539.
+
+# Examples
+```julia
+reg = TensorRegistry()
+@manifold M4 dim=4 metric=g registry=reg
+define_curvature_tensors!(reg, :M4, :g)
+@covd D on=M4 metric=g registry=reg
+
+# Pontryagin density is a well-formed scalar
+pont = pontryagin_density(:g; registry=reg)
+result = simplify_level6(pont; dim=4, registry=reg)
+@test isempty(free_indices(result))
+```
+
+See also: [`simplify_level5`](@ref), [`register_dual_rules!`](@ref),
+[`double_dual_identity`](@ref), [`DualRInv`](@ref)
+"""
+function simplify_level6(expr::TensorExpr;
+                          covd::Symbol=:D,
+                          dim::Int=4,
+                          max_order::Int=0,
+                          registry::TensorRegistry=current_registry())
+    # First apply Level 5 (includes Levels 1-4)
+    expr5 = simplify_level5(expr; covd=covd, dim=dim, max_order=max_order,
+                            registry=registry)
+
+    # Register dual rules if not already present (idempotent)
+    metric_name = _dual_metric_name(registry)
+    if dim == 4 && !has_dual_rules(registry; dim=dim, metric=metric_name)
+        with_registry(registry) do
+            register_dual_rules!(registry; dim=dim, metric=metric_name)
+        end
+        # Track registration
+        key = objectid(registry)
+        if !haskey(_DUAL_RULES_REGISTERED, key)
+            _DUAL_RULES_REGISTERED[key] = Set{Tuple{Int,Symbol}}()
+        end
+        push!(_DUAL_RULES_REGISTERED[key], (dim, metric_name))
+    end
+
+    # Apply the full simplify pipeline with dual rules in the registry
+    with_registry(registry) do
+        simplify(expr5; registry=registry)
+    end
+end
+
+"""Look up the metric name from the registry for dual rule registration."""
+function _dual_metric_name(reg::TensorRegistry)
+    isempty(reg.metric_cache) ? :g : first(values(reg.metric_cache))
+end
