@@ -152,6 +152,7 @@ include("invariants/db/degree2.jl")
 include("invariants/db/degree3.jl")
 include("invariants/db/dual.jl")
 include("invariants/db/differential_2.jl")
+include("invariants/db/differential_4.jl")
 
 # Layer 5.5: Feynman rules (graviton vertices, propagators)
 include("feynman/types.jl")

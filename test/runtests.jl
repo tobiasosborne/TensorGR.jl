@@ -178,6 +178,8 @@ using TensorGR
     include("test_invar_differential.jl")
     # Invar validation: degree-3 independence (Fulling et al 1992)
     include("test_invar_validation_degree3.jl")
+    # Invar differential invariant database (4 derivatives)
+    include("test_invar_differential_4.jl")
     # Feynman diagram types
     include("test_feynman_types.jl")
     # PPN metric ansatz

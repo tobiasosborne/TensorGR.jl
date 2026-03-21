@@ -33,45 +33,46 @@
         @test entry2.is_total_derivative == false
     end
 
-    # ---- Catalog contains expected entries ----
-    @testset "Catalog completeness" begin
-        expected = Set([:box_R, :grad_R_sq, :grad_Ric_sq, :grad_Riem_sq])
+    # ---- Catalog contains expected order-4 entries ----
+    @testset "Catalog completeness (order 4)" begin
+        expected_order4 = Set([:box_R, :grad_R_sq, :grad_Ric_sq, :grad_Riem_sq])
         actual = Set(keys(TensorGR._DIFF_INVAR_CATALOG))
-        @test actual == expected
-        @test length(TensorGR._DIFF_INVAR_CATALOG) == 4
+        @test expected_order4 ⊆ actual
+        @test length(TensorGR._DIFF_INVAR_CATALOG) >= 4
     end
 
     # ---- list_diff_invariants ----
     @testset "list_diff_invariants" begin
         all_inv = list_diff_invariants()
-        @test length(all_inv) == 4
+        @test length(all_inv) >= 4
 
         # Filter by order
         order4 = list_diff_invariants(order=4)
         @test length(order4) == 4
         @test all(e -> e.order == 4, order4)
 
-        # Filter by n_derivs
+        # Filter by n_derivs (order-4 entries all have n_derivs=2)
         nd2 = list_diff_invariants(n_derivs=2)
-        @test length(nd2) == 4
+        @test length(nd2) >= 4
         @test all(e -> e.n_derivs == 2, nd2)
 
-        # All entries should have correct metadata
-        for entry in all_inv
+        # All order-4 entries should have correct metadata
+        for entry in order4
             @test entry.n_derivs == 2
             @test entry.n_riemann == 1
             @test entry.order == 4
         end
 
-        # Exactly 1 total derivative (box_R)
-        @test count(e -> e.is_total_derivative, all_inv) == 1
-        @test any(e -> e.name == :box_R && e.is_total_derivative, all_inv)
+        # At least 1 total derivative (box_R) among order 4
+        @test count(e -> e.is_total_derivative, order4) == 1
+        @test any(e -> e.name == :box_R && e.is_total_derivative, order4)
     end
 
     # ---- diff_invariant_count ----
     @testset "diff_invariant_count" begin
         @test diff_invariant_count(4) == 4
-        @test_throws ErrorException diff_invariant_count(6)
+        @test diff_invariant_count(6) == 6
+        @test_throws ErrorException diff_invariant_count(8)
     end
 
     # ---- Expression builders produce valid scalar TensorExpr ----
