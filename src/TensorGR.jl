@@ -150,6 +150,7 @@ include("invariants/riemann_simplify.jl")
 include("invariants/database.jl")
 include("invariants/db/degree2.jl")
 include("invariants/db/degree3.jl")
+include("invariants/db/degree4.jl")
 include("invariants/db/dual.jl")
 include("invariants/db/differential_2.jl")
 include("invariants/db/differential_4.jl")
@@ -487,6 +488,7 @@ export differential_bianchi, contracted_bianchi
 export InvarRelation, CaseRelations, get_invar_relations, list_invar_cases, is_independent_rinv
 export degree2_canonical_rinvs, degree2_independent_rinvs
 export degree3_canonical_rinvs, degree3_independent_rinvs
+export degree4_canonical_rinvs, degree4_independent_rinvs
 export dual_independent_rinvs, pontryagin_rinv_canonical
 export DiffInvariantEntry, diff_invariant, list_diff_invariants, diff_invariant_count
 export define_lambda_spinor!, lambda_spinor_expr
