@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-20 (Session 8)
+# HANDOFF — 2026-03-21 (Session 9)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -16,37 +16,67 @@
 
 **Corollary**: Review xAct source (at `reference/xAct/`) BEFORE changing core modules.
 **Max 2-3 subagents at a time.** Checkpoint regularly.
-**USE MAX THINKING (opus) for all subagents.** Medium effort missed a bimetric sign bug this session.
+**USE MAX THINKING (opus) for all subagents.** Medium effort missed a bimetric sign bug last session.
+**WSL2 MEMORY**: Never enumerate large combinatorial sets in memory. Use streaming/chunked processing.
 
 ---
 
 ## Current State
 
-- **254 of 352 issues closed** (4 closed this session + 3 new features)
-- **Full test suite: ALL PASS** (360,582 tests, verified this session)
+- **298 of 355 issues closed** (37 closed this session + 3 new issues created)
+- **Full test suite: 370,224+ tests, ALL PASS** (verified this session)
 - All pushed to `master`, no uncommitted work
 - `bd stats` for live counts, `bd ready` for available work
-- Beads cleanup done: CLI updated 0.57→0.61, runtime files untracked, hooks updated
 
 ---
 
-## What Was Done This Session
+## What Was Done This Session (37 issues closed, 8 epics completed)
 
-### New Features (3 implementations, 148 tests)
-- **simplify_level5** (TGR-6bn.5): DDI integration for Invar pipeline — 27 tests
-- **euler_density arbitrary dim** (TGR-99d.2): Extended to all even d with `lovelock_lagrangian` — 76 tests
-- **bimetric matrix square root** (TGR-wq0.4): `sqrt_matrix_identity`, `cayley_hamilton_S`, `register_sqrt_rules!`, `sqrt_matrix_variation` — 45 tests
+### Invar Pipeline (Epic 2, 3, 6 — ALL CLOSED)
+- **riemann_simplify**: Top-level 6-level orchestrator (21 tests)
+- **Invar database**: Complete infrastructure + data for degrees 2-7
+  - Degree 2: 4 canonical, 3 independent, 1 Bianchi relation (134 tests)
+  - Degree 3: 13 canonical, 8 independent, 5 Bianchi relations (695 tests)
+  - Degree 4: 57 canonical, 26 independent, ALL 31 Bianchi relations computed via numerical SVD
+  - Degrees 5-7: Counts verified (75/409/2247 independent) from Garcia-Parrado & Martin-Garcia 2007
+  - Dual invariants: degrees 2-5, Pontryagin density independent
+  - Differential invariants: orders 4 and 6 (10 entries total)
+  - **inv_simplify**: Database-driven fast-path lookup with fallback
+  - **xAct parser**: Mathematica Invar.m parser, cross-check confirms ALL degrees 2-7 match
+  - **Generation script**: Memory-safe streaming enumeration with --verify-orbits mode
+  - **Fast canonicalization**: xperm TensorExpr round-trip (~17% speedup for degree 4)
+- Validation: Gauss-Bonnet, degree-2 independence, degree-3 independence (8 invariants), Weyl completeness
 
-### Infrastructure
-- Pulled remote, resolved merge conflict, updated beads CLI (0.57→0.61)
-- Fixed beads doctor: untracked 43 runtime files, updated hooks, cleaned SQLite artifacts
-- Closed TGR-443 (Invar Epic 1, stale molecule)
+### Invar Pipeline (Epics 4, 5 — IN PROGRESS)
+- **TInvar design doc**: Proposes TRInv partial involution + xperm canonical_perm_ext
+- **SymManipulator design doc**: Proposes SymH type hierarchy, 5-phase plan
+- **SymH type implemented**: MonotermSym, MultitermSym, riemann_symh(), n_independent_components (68 tests)
 
-### Documentation Overhaul
-- Created 12 new API reference pages: spinors, scalar-tensor, feynman, metric-affine, harmonics, invariants, bimetric, ppn, hamiltonian, phase-space, fermions, tetrads
-- Updated README with current stats (360,582 tests, 13 new feature table rows)
-- Updated docs/src/index.md landing page with full module coverage
-- Updated docs/make.jl with all 25 API pages (was 13)
+### Spatial Spinors (SU(2) / Loop Quantum Gravity)
+- **define_space_spinors!**: SU(2) VBundle, eps_space, tau soldering form (69 tests)
+- **Sen connection**: Gamma_sen, F_sen curvature, metricity/compatibility rules (58 tests)
+- **Ashtekar-Barbero variables**: A^i_a connection, E^a_i densitized triad, F^i_{ab} curvature, Gauss constraint (67 tests)
+- **Space spinors design doc**: Full design including Ashtekar variables
+
+### Hamiltonian Analysis (Epic CLOSED)
+- **classify_constraints**: First-class vs second-class with DOF formula (30 tests)
+- **DOF counting**: DOFSummary, dof_count, dof_summary pipeline (54 tests)
+- **GR validation**: 2 DOF verified via full pipeline (24 tests)
+- **Proca validation**: 3 DOF, Maxwell comparison, Stückelberg (23 tests)
+
+### Other Features
+- **invariant_lagrangian**: Most general Lagrangian at orders 0/2/4 with Gauss-Bonnet DDI (47 tests)
+- **Metric-affine validation**: Levi-Civita limit (32 tests), Einstein-Cartan (38 tests)
+- **Fermion design doc**: Recommends is_grassmann registry flag + Grassmann-aware sort
+- **GradedTensor**: register_grassmann_field!, grassmann_parity, grassmann_sign (24 tests)
+- **Invar database design doc**: Recommends lazy-loaded Julia source files (Option E)
+
+### Design Documents Created
+- `docs/design/invar_database_design.md` — Database format comparison (DuckDB vs Julia source)
+- `docs/design/tinvar_design.md` — Tensorial invariant canonicalization
+- `docs/design/symmanipulator_design.md` — SymH type hierarchy (966 lines)
+- `docs/design/space_spinors_design.md` — SU(2) spatial spinors + Ashtekar
+- `docs/design/fermion_design.md` — Grassmann algebra + fermion field types
 
 ---
 
@@ -55,44 +85,44 @@
 ### Carried from previous sessions
 - **FullySymmetric(n)** takes slot numbers as varargs: `FullySymmetric(1,2,3,4)` NOT `FullySymmetric(4)`
 - **make_rule** RETURNS rules but does NOT register them
-- **NP tetrad rules**: use function-based RewriteRule
 - **symmetrize** takes `Vector{Symbol}` not `Vector{TIndex}`
-- **Bimetric massive mode**: Use `(1/(1+c²))(δg − δf)` NOT `(1/(1+c²))(c²δg − δf)`
 
 ### New this session
-- **NP sign convention**: Spin coefficients in (-,+,+,+) are NOT simply negated from Teukolsky. l-type (κ,σ,ρ,τ) are negated; n-type (ν,λ,μ,π) match Teukolsky; compound (ε,γ,α,β) are negated. This is because our code defines all simple coefficients WITHOUT the standard NP negative sign on n-type.
-- **Beads sync issues**: Different machines have divergent beads state. The backup/restore path loses closures made after the last backup. Always `bd backup` before switching machines.
-- **Ground truth verification**: Downloaded Teukolsky 1973 and Goldberger-Rothstein 2006 to reference/papers/. All NP and EIH test values are string-matched against these papers.
+- **RInv BFS orbit canonicalization** is too slow for degree ≥ 4 (~0.1s per involution). The xperm TensorExpr round-trip (to_tensor_expr → canonicalize → from_tensor_expr) provides modest speedup but doesn't solve the fundamental conjugation problem. For degree 4, full enumeration (2M involutions) takes ~55 hours via BFS. Solved by computing Bianchi relations directly on known canonical forms via numerical SVD instead.
+- **xAct doesn't solve conjugation either**: It uses standard left-action canonicalization via ToCanonical[]. The conjugation problem σ→g·σ·g⁻¹ is fundamentally different from xperm's left-action g·σ.
+- **WSL2 memory**: Never store millions of items in memory. Use streaming enumeration (generate → process → discard).
+- **Integralis uses DuckDB** for integral storage, but invariant relations are frozen math — static Julia source files are simpler and have zero dependencies.
+- **Garcia-Parrado & Martin-Garcia 2007 Table 1** is the ground truth for canonical form counts. MaxIndex in Invar.m counts NON-PRODUCT forms only.
+- **Degree-4 Bianchi relations**: All 31 computed via numerical SVD at d=8 with random Bianchi-satisfying Riemann tensors. Rank verified = 26. All coefficients are clean rationals.
 
 ---
 
-## Ready Queue Highlights
+## Ready Queue
 
 ```bash
-bd ready -n 10   # see top priorities
+bd ready    # see available work
+bd stats    # project health
 ```
 
-**Remaining P2 tasks (genuine new implementation):**
-- TGR-bgl.11: Abstract Poisson equation solver for PPN
-- TGR-u19: BH-Pert2 radial source term assembly
-- TGR-34t.4: Anisotropic perturbation decomposition on Bianchi I
+**P2 (implementation):**
+- TGR-4zb.3: SymManipulator: SymH canonicalization
+- TGR-5lp.2: TInvar: tensorial Riemann monomial canonicalization
+- TGR-u19: BH-Pert2: radial source assembly (check deps exist first!)
 
-**Deferred (speculative, no downstream need):**
-- TGR-lej: Abstract tetrad indices in AST
-- TGR-ulo.1: FullSimplification
-- TGR-0o2: Spin coefficients as Ricci rotation coefficients
-- TGR-2d4.2: Tetrad type with frame vectors
-- TGR-xmm.2: IndexFree type
+**P3 (implementation):**
+- TGR-2jh.3: Dirac field with kinetic term
+- TGR-bm6.1: Schwarzschild 2+2 decomposition
+
+**Epics still open:**
+- Invar Epic 4 (TInvar) — design doc ready
+- Invar Epic 5 (SymManipulator) — SymH type done, canonicalization next
+- FullSimplification (xTras)
+- Tetrad/xCoba
+- Fermion Fields — GradedTensor done, Dirac field next
+- Harmonics Epic 4 (RW/Zerilli)
+- Index-Free Notation
 
 ---
-
-## Architecture Quick Reference
-
-See CLAUDE.md for full details. Key points:
-
-- **Core pipeline**: expand_products → contract_metrics → contract_curvature → canonicalize → collect_terms → apply_rules
-- **DO NOT** sort TSum terms, sort deriv chains in canonicalize, or simplify bilinear products before kernel extraction
-- **Registry**: thread-safe via `task_local_storage`, `with_registry(reg) do ... end`
 
 ## Physics Ground Truth
 
@@ -101,10 +131,12 @@ See CLAUDE.md for full details. Key points:
 - K_Ric²: spin2=1.25k⁴, spin0s=k⁴, spin1=0, spin0w=0
 - Spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
 - PPN scalar-tensor: gamma=(omega+1)/(omega+2), beta=1+Psi*omega'/(4(2omega+3)(omega+2)^2)
-- Bimetric FP mass: m²_FP = m²(β₁+2cβ₂+c²β₃)/(1+c²)
-- Higuchi bound: m² ≥ 2Λ/3 for massive spin-2 on dS
-- NP Schwarzschild: Ψ₂ = -M/r³, ρ=+1/r (our convention), α=-β=+cotθ/(2√2r)
-- EIH 1PN: L_EIH coefficients 3(v²), -7(v·v), -1/2(G²m(m₁+m₂)/r²) from Goldberger-Rothstein Eq 40
+- NP Schwarzschild: Ψ₂ = -M/r³, ρ=+1/r (our convention)
+- EIH 1PN: L_EIH coefficients from Goldberger-Rothstein Eq 40
+- Riemann d=4: 20 independent components (verified via SymH n_independent_components)
+- GR: 2 propagating DOF (verified via full Hamiltonian pipeline)
+- Proca: 3 propagating DOF (0 first-class, 2 second-class)
+- Degree-4 invariants: 57 canonical, 26 independent, 31 Bianchi relations (all computed)
 
 ## Quick Commands
 
