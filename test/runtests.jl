@@ -332,6 +332,8 @@ using TensorGR
     include("test_pgt_action.jl")
     # Validation: Levi-Civita limit (T=0, Q=0 recovers GR)
     include("test_levi_civita_limit.jl")
+    # Validation: Einstein-Cartan theory (Q=0, T!=0)
+    include("test_einstein_cartan.jl")
     # Invar Level 6: dual invariant product relations
     include("test_invar_level6.jl")
     # Secondary constraint generation (Dirac algorithm)
