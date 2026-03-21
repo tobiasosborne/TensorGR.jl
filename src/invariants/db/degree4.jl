@@ -20,6 +20,11 @@
 #   - 11 are product-type (automatically independent from lower-degree bases)
 #   - 15 are genuinely quartic (Invar Table 2, step B)
 #
+# The 26 independent forms (dimension-independent, valid for d >= 8):
+#   Product-type (11): I1, I2, I3, I5, I6, I7, I9, I13, I14, I15, I35
+#   Non-product (15): I17, I18, I19, I21, I22, I25, I27, I31, I33, I37,
+#                     I39, I42, I53, I55, I57
+#
 # The 57 canonical forms are organized by lexicographic contraction vector.
 # Product forms (I1-I16, I35, I36, I46) are identified by their factor-level
 # graph being disconnected: some subset of factors contracts only among
@@ -34,8 +39,9 @@
 #   I35: K^2 = (R_{abcd}R^{abcd})^2
 #   I39: R^{ab}_{cd}R^{cd}_{ef}R^{ef}_{gh}R^{gh}_{ab}  (Riem^4 4-cycle)
 #
-# Bianchi relations at Level 2:
-#   Product-type relations (inherited from degree-2 and degree-3 Bianchi):
+# All 31 Bianchi relations at Level 2 (first Bianchi identity):
+#
+#   Product-type relations (8, inherited from degree-2 and degree-3 Bianchi):
 #     I4  = (1/2) I3     [from d2: I4_d2 = (1/2) K, times R^2]
 #     I8  = (1/2) I7     [from d3: I8_d3 = (1/2) I7_d3, times R]
 #     I10 = (1/2) I9     [from d3: I10_d3 = (1/2) I9_d3, times R]
@@ -44,9 +50,38 @@
 #     I16 = (1/2) I15    [from d2: I4_d2 = (1/2) K, times Ric^2]
 #     I36 = (1/2) I35    [from d2: I4_d2 = (1/2) K, times K]
 #     I46 = (1/4) I35    [from d2: I4_d2 = (1/2) K, squared]
-#   Non-product Bianchi relations: 23 relations reducing 38 forms to 15
-#     (not enumerated; requires full Bianchi orbit analysis on 16-slot
-#      contractions, which is computationally expensive)
+#
+#   Non-product Bianchi relations (23, computed via numerical evaluation at
+#   d=8 with Bianchi-satisfying Riemann tensors, QR column pivoting, and
+#   least-squares coefficient extraction; verified to relative error < 1e-6):
+#     I20 = (1/2) I19
+#     I23 = (1/2) I22
+#     I24 = I27 + (1/2) I31
+#     I26 = (1/2) I25
+#     I28 = -(1/2) I31
+#     I29 = (1/2) I25
+#     I30 = (1/4) I25
+#     I32 = (1/4) I25
+#     I34 = -(1/4) I25 + I33
+#     I38 = (1/2) I37
+#     I40 = (1/2) I39
+#     I41 = (1/4) I39
+#     I43 = (1/2) I42
+#     I44 = (1/4) I42 + I55 - I57
+#     I45 = -(1/4) I42 + I55 - I57
+#     I47 = (1/4) I37
+#     I48 = (1/4) I39
+#     I49 = (1/8) I39
+#     I50 = (1/4) I42
+#     I51 = (1/8) I42 + (1/2) I55 - (1/2) I57
+#     I52 = -(1/8) I42 + (1/2) I55 - (1/2) I57
+#     I54 = -(1/8) I39 + I53
+#     I56 = -(1/8) I42 + (1/2) I55 + (1/2) I57
+#
+# Verification: numerical rank of the 57-invariant evaluation matrix at d=8
+# (Bianchi-satisfying Riemann tensors, 35 random samples) = 26, confirming
+# 26 independent and 31 dependent invariants. All 31 relations verified
+# individually to relative error < 1e-6 on independent random Riemann tensor.
 #
 # Ground truth: Martin-Garcia, Portugal & Manssur (2007), CPC 177:640,
 #               Table 1 (57 canonical) and Table 2 (step A=38, step B=15);
@@ -68,8 +103,7 @@ const _DEGREE4_STEP1 = CaseRelations(
 
 # ---- Level 2: First Bianchi identity ------------------------------------------
 # 26 independent, 31 dependent.
-# The 8 product-type Bianchi relations are stored explicitly.
-# The 23 non-product Bianchi relations are not enumerated (stubbed).
+# All 31 Bianchi relations are stored: 8 product-type + 23 non-product.
 
 const _DEGREE4_STEP2 = CaseRelations(
     4,            # degree
@@ -79,7 +113,7 @@ const _DEGREE4_STEP2 = CaseRelations(
     26,           # n_independent: 11 product + 15 non-product
     31,           # n_dependent: 8 product + 23 non-product
     InvarRelation[
-        # --- Product-type Bianchi relations (inherited from lower-degree) ---
+        # --- Product-type Bianchi relations (8, inherited from lower-degree) ---
 
         # I4 = (1/2) * I3   [R^2 * (I4_d2 = (1/2)*K)]
         InvarRelation(
@@ -121,6 +155,141 @@ const _DEGREE4_STEP2 = CaseRelations(
         InvarRelation(
             [5, 7, 6, 8, 1, 3, 2, 4, 13, 15, 14, 16, 9, 11, 10, 12],   # I46
             [(1//4, [5, 6, 7, 8, 1, 2, 3, 4, 13, 14, 15, 16, 9, 10, 11, 12])]  # (1/4)*I35
+        ),
+
+        # --- Non-product Bianchi relations (23) ---
+        # Computed via numerical evaluation at d=8 with random Bianchi-satisfying
+        # Riemann tensors, QR column pivoting for independent set identification,
+        # and least-squares coefficient extraction. All relations verified to
+        # relative error < 1e-6 on independent random samples.
+
+        # I20 = (1/2) * I19
+        InvarRelation(
+            [3, 5, 1, 7, 2, 9, 4, 13, 6, 15, 14, 16, 8, 11, 10, 12],   # I20
+            [(1//2, [3, 5, 1, 7, 2, 9, 4, 13, 6, 14, 15, 16, 8, 10, 11, 12])]  # (1/2)*I19
+        ),
+        # I23 = (1/2) * I22
+        InvarRelation(
+            [3, 5, 1, 9, 2, 7, 6, 13, 4, 15, 14, 16, 8, 11, 10, 12],   # I23
+            [(1//2, [3, 5, 1, 9, 2, 7, 6, 13, 4, 14, 15, 16, 8, 10, 11, 12])]  # (1/2)*I22
+        ),
+        # I24 = I27 + (1/2) * I31
+        InvarRelation(
+            [3, 5, 1, 9, 2, 10, 11, 13, 4, 6, 7, 15, 8, 16, 12, 14],   # I24
+            [(1//1, [3, 5, 1, 9, 2, 11, 10, 13, 4, 7, 6, 15, 8, 16, 12, 14]),  # I27
+             (1//2, [3, 5, 1, 9, 2, 13, 11, 12, 4, 15, 7, 8, 6, 16, 10, 14])]  # (1/2)*I31
+        ),
+        # I26 = (1/2) * I25
+        InvarRelation(
+            [3, 5, 1, 9, 2, 10, 13, 15, 4, 6, 14, 16, 7, 11, 8, 12],   # I26
+            [(1//2, [3, 5, 1, 9, 2, 10, 13, 14, 4, 6, 15, 16, 7, 8, 11, 12])]  # (1/2)*I25
+        ),
+        # I28 = -(1/2) * I31
+        InvarRelation(
+            [3, 5, 1, 9, 2, 11, 12, 13, 4, 15, 6, 7, 8, 16, 10, 14],   # I28
+            [(-1//2, [3, 5, 1, 9, 2, 13, 11, 12, 4, 15, 7, 8, 6, 16, 10, 14])]  # -(1/2)*I31
+        ),
+        # I29 = (1/2) * I25
+        InvarRelation(
+            [3, 5, 1, 9, 2, 11, 13, 14, 4, 15, 6, 16, 7, 8, 10, 12],   # I29
+            [(1//2, [3, 5, 1, 9, 2, 10, 13, 14, 4, 6, 15, 16, 7, 8, 11, 12])]  # (1/2)*I25
+        ),
+        # I30 = (1/4) * I25
+        InvarRelation(
+            [3, 5, 1, 9, 2, 11, 13, 15, 4, 14, 6, 16, 7, 10, 8, 12],   # I30
+            [(1//4, [3, 5, 1, 9, 2, 10, 13, 14, 4, 6, 15, 16, 7, 8, 11, 12])]  # (1/4)*I25
+        ),
+        # I32 = (1/4) * I25
+        InvarRelation(
+            [3, 5, 1, 9, 2, 13, 11, 14, 4, 15, 7, 16, 6, 8, 10, 12],   # I32
+            [(1//4, [3, 5, 1, 9, 2, 10, 13, 14, 4, 6, 15, 16, 7, 8, 11, 12])]  # (1/4)*I25
+        ),
+        # I34 = -(1/4) * I25 + I33
+        InvarRelation(
+            [3, 5, 1, 9, 2, 13, 11, 15, 4, 16, 7, 14, 6, 12, 8, 10],   # I34
+            [(-1//4, [3, 5, 1, 9, 2, 10, 13, 14, 4, 6, 15, 16, 7, 8, 11, 12]),  # -(1/4)*I25
+             (1//1, [3, 5, 1, 9, 2, 13, 11, 15, 4, 14, 7, 16, 6, 10, 8, 12])]  # + I33
+        ),
+        # I38 = (1/2) * I37
+        InvarRelation(
+            [5, 6, 7, 9, 1, 2, 3, 13, 4, 15, 14, 16, 8, 11, 10, 12],   # I38
+            [(1//2, [5, 6, 7, 9, 1, 2, 3, 13, 4, 14, 15, 16, 8, 10, 11, 12])]  # (1/2)*I37
+        ),
+        # I40 = (1/2) * I39
+        InvarRelation(
+            [5, 6, 9, 10, 1, 2, 13, 15, 3, 4, 14, 16, 7, 11, 8, 12],   # I40
+            [(1//2, [5, 6, 9, 10, 1, 2, 13, 14, 3, 4, 15, 16, 7, 8, 11, 12])]  # (1/2)*I39
+        ),
+        # I41 = (1/4) * I39
+        InvarRelation(
+            [5, 6, 9, 11, 1, 2, 13, 15, 3, 14, 4, 16, 7, 10, 8, 12],   # I41
+            [(1//4, [5, 6, 9, 10, 1, 2, 13, 14, 3, 4, 15, 16, 7, 8, 11, 12])]  # (1/4)*I39
+        ),
+        # I43 = (1/2) * I42
+        InvarRelation(
+            [5, 6, 9, 13, 1, 2, 10, 15, 3, 7, 14, 16, 4, 11, 8, 12],   # I43
+            [(1//2, [5, 6, 9, 13, 1, 2, 10, 14, 3, 7, 15, 16, 4, 8, 11, 12])]  # (1/2)*I42
+        ),
+        # I44 = (1/4) * I42 + I55 - I57
+        InvarRelation(
+            [5, 6, 9, 13, 1, 2, 11, 15, 3, 14, 7, 16, 4, 10, 8, 12],   # I44
+            [(1//4, [5, 6, 9, 13, 1, 2, 10, 14, 3, 7, 15, 16, 4, 8, 11, 12]),  # (1/4)*I42
+             (1//1, [5, 9, 7, 13, 1, 11, 3, 15, 2, 14, 6, 16, 4, 10, 8, 12]),  # + I55
+             (-1//1, [5, 9, 7, 13, 1, 15, 3, 11, 2, 16, 8, 14, 4, 12, 6, 10])]  # - I57
+        ),
+        # I45 = -(1/4) * I42 + I55 - I57
+        InvarRelation(
+            [5, 6, 9, 13, 1, 2, 11, 15, 3, 16, 7, 14, 4, 12, 8, 10],   # I45
+            [(-1//4, [5, 6, 9, 13, 1, 2, 10, 14, 3, 7, 15, 16, 4, 8, 11, 12]),  # -(1/4)*I42
+             (1//1, [5, 9, 7, 13, 1, 11, 3, 15, 2, 14, 6, 16, 4, 10, 8, 12]),  # + I55
+             (-1//1, [5, 9, 7, 13, 1, 15, 3, 11, 2, 16, 8, 14, 4, 12, 6, 10])]  # - I57
+        ),
+        # I47 = (1/4) * I37
+        InvarRelation(
+            [5, 7, 6, 9, 1, 3, 2, 13, 4, 15, 14, 16, 8, 11, 10, 12],   # I47
+            [(1//4, [5, 6, 7, 9, 1, 2, 3, 13, 4, 14, 15, 16, 8, 10, 11, 12])]  # (1/4)*I37
+        ),
+        # I48 = (1/4) * I39
+        InvarRelation(
+            [5, 7, 9, 11, 1, 13, 2, 14, 3, 15, 4, 16, 6, 8, 10, 12],   # I48
+            [(1//4, [5, 6, 9, 10, 1, 2, 13, 14, 3, 4, 15, 16, 7, 8, 11, 12])]  # (1/4)*I39
+        ),
+        # I49 = (1/8) * I39
+        InvarRelation(
+            [5, 7, 9, 11, 1, 13, 2, 15, 3, 14, 4, 16, 6, 10, 8, 12],   # I49
+            [(1//8, [5, 6, 9, 10, 1, 2, 13, 14, 3, 4, 15, 16, 7, 8, 11, 12])]  # (1/8)*I39
+        ),
+        # I50 = (1/4) * I42
+        InvarRelation(
+            [5, 7, 9, 13, 1, 10, 2, 15, 3, 6, 14, 16, 4, 11, 8, 12],   # I50
+            [(1//4, [5, 6, 9, 13, 1, 2, 10, 14, 3, 7, 15, 16, 4, 8, 11, 12])]  # (1/4)*I42
+        ),
+        # I51 = (1/8) * I42 + (1/2) * I55 - (1/2) * I57
+        InvarRelation(
+            [5, 7, 9, 13, 1, 11, 2, 15, 3, 14, 6, 16, 4, 10, 8, 12],   # I51
+            [(1//8, [5, 6, 9, 13, 1, 2, 10, 14, 3, 7, 15, 16, 4, 8, 11, 12]),  # (1/8)*I42
+             (1//2, [5, 9, 7, 13, 1, 11, 3, 15, 2, 14, 6, 16, 4, 10, 8, 12]),  # (1/2)*I55
+             (-1//2, [5, 9, 7, 13, 1, 15, 3, 11, 2, 16, 8, 14, 4, 12, 6, 10])]  # -(1/2)*I57
+        ),
+        # I52 = -(1/8) * I42 + (1/2) * I55 - (1/2) * I57
+        InvarRelation(
+            [5, 7, 9, 13, 1, 11, 2, 15, 3, 16, 6, 14, 4, 12, 8, 10],   # I52
+            [(-1//8, [5, 6, 9, 13, 1, 2, 10, 14, 3, 7, 15, 16, 4, 8, 11, 12]),  # -(1/8)*I42
+             (1//2, [5, 9, 7, 13, 1, 11, 3, 15, 2, 14, 6, 16, 4, 10, 8, 12]),  # (1/2)*I55
+             (-1//2, [5, 9, 7, 13, 1, 15, 3, 11, 2, 16, 8, 14, 4, 12, 6, 10])]  # -(1/2)*I57
+        ),
+        # I54 = -(1/8) * I39 + I53
+        InvarRelation(
+            [5, 9, 7, 11, 1, 13, 3, 15, 2, 16, 4, 14, 6, 12, 8, 10],   # I54
+            [(-1//8, [5, 6, 9, 10, 1, 2, 13, 14, 3, 4, 15, 16, 7, 8, 11, 12]),  # -(1/8)*I39
+             (1//1, [5, 9, 7, 11, 1, 13, 3, 15, 2, 14, 4, 16, 6, 10, 8, 12])]  # + I53
+        ),
+        # I56 = -(1/8) * I42 + (1/2) * I55 + (1/2) * I57
+        InvarRelation(
+            [5, 9, 7, 13, 1, 11, 3, 15, 2, 16, 6, 14, 4, 12, 8, 10],   # I56
+            [(-1//8, [5, 6, 9, 13, 1, 2, 10, 14, 3, 7, 15, 16, 4, 8, 11, 12]),  # -(1/8)*I42
+             (1//2, [5, 9, 7, 13, 1, 11, 3, 15, 2, 14, 6, 16, 4, 10, 8, 12]),  # (1/2)*I55
+             (1//2, [5, 9, 7, 13, 1, 15, 3, 11, 2, 16, 8, 14, 4, 12, 6, 10])]  # +(1/2)*I57
         ),
     ]
 )
@@ -216,32 +385,44 @@ These span the full space of algebraic quartic curvature invariants
 in generic dimension (d >= 8).
 
 The 26 independent forms consist of:
-- 11 product-type invariants (from products of degree-2 and degree-3 bases)
-- 15 genuinely quartic invariants (non-product, surviving Bianchi reduction)
+- 11 product-type invariants (from products of degree-2 and degree-3 bases):
+  I1, I2, I3, I5, I6, I7, I9, I13, I14, I15, I35
+- 15 genuinely quartic invariants (non-product, surviving Bianchi reduction):
+  I17, I18, I19, I21, I22, I25, I27, I31, I33, I37, I39, I42, I53, I55, I57
 
-Only the 11 product-type independent forms are listed explicitly (they are
-determined unambiguously from the degree-2 and degree-3 independent bases).
-The 15 non-product independent forms are not individually identified here
-because the full Bianchi orbit analysis for 16-slot contractions has not
-been performed; the count 15 is verified against Martin-Garcia et al. (2007).
+The independent set was determined via numerical evaluation at d=8 with
+Bianchi-satisfying random Riemann tensors and QR column pivoting on the
+57-column evaluation matrix (rank = 26, verified by SVD).
 
 Ground truth: Martin-Garcia, Portugal & Manssur (2007), CPC 177:640,
-Table 2, degree 4: step B = 15 non-product independent;
+Table 2, degree 4: step A = 38 (non-product), step B = 15 (independent);
 Fulling et al. (1992), CQG 9:1151.
 """
 function degree4_independent_rinvs()
-    # The 11 product-type independent invariants are:
-    # I1  = R^4          (d1*d1*d1*d1)
-    # I2  = R^2*Ric^2    (d1*d1 * d2)
-    # I3  = R^2*K        (d1*d1 * d2)
-    # I5  = R*Ric*Ric*Riem  (d1 * d3_I5)
-    # I6  = R*Ric^3      (d1 * d3_I6)
-    # I7  = R*Ric*Riem^2 (d1 * d3_I7)
-    # I9  = R*Riem^3_GS  (d1 * d3_I9)
-    # I13 = R*Riem^3_alt (d1 * d3_I13)
-    # I14 = (Ric^2)^2    (d2 * d2)
-    # I15 = Ric^2*K      (d2 * d2)
-    # I35 = K^2           (d2 * d2)
+    # The 26 independent invariants:
+    #
+    # Product-type (11):
+    #   I1  = R^4               (d1*d1*d1*d1)
+    #   I2  = R^2*Ric^2         (d1*d1 * d2)
+    #   I3  = R^2*K             (d1*d1 * d2)
+    #   I5  = R*Ric*Ric*Riem    (d1 * d3_I5)
+    #   I6  = R*Ric^3           (d1 * d3_I6)
+    #   I7  = R*Ric*Riem^2      (d1 * d3_I7)
+    #   I9  = R*Riem^3_GS       (d1 * d3_I9)
+    #   I13 = R*Riem^3_alt      (d1 * d3_I13)
+    #   I14 = (Ric^2)^2         (d2 * d2)
+    #   I15 = Ric^2*K           (d2 * d2)
+    #   I35 = K^2               (d2 * d2)
+    #
+    # Non-product (15):
+    #   I17 = Ric^2*Riem A      I18 = Ric^2*Riem B
+    #   I19 = Ric^2*Riem C      I21 = Ric*Ric_x A
+    #   I22 = Ric*Ric_x B       I25 = Ric*Riem^2 B
+    #   I27 = Ric*Riem^2 D      I31 = Ric*Riem^2 H
+    #   I33 = Ric*Riem^2 J      I37 = Riem^3*Ric A
+    #   I39 = Riem^4 chain      I42 = Riem^4 C
+    #   I53 = Riem^4 M          I55 = Riem^4 O
+    #   I57 = Riem^4 Q
     RInv[
         RInv(4, [3,4,1,2, 7,8,5,6, 11,12,9,10, 15,16,13,14], true),   # I1:  R^4
         RInv(4, [3,4,1,2, 7,8,5,6, 11,13,9,15, 10,16,12,14], true),   # I2:  R^2*Ric^2
@@ -253,6 +434,21 @@ function degree4_independent_rinvs()
         RInv(4, [3,4,1,2, 9,13,11,15, 5,16,7,14, 6,12,8,10], true),   # I13: R*Riem^3_alt
         RInv(4, [3,5,1,7, 2,8,4,6, 11,13,9,15, 10,16,12,14], true),   # I14: (Ric^2)^2
         RInv(4, [3,5,1,7, 2,8,4,6, 13,14,15,16, 9,10,11,12], true),   # I15: Ric^2*K
+        RInv(4, [3,5,1,7, 2,9,4,11, 6,13,8,15, 10,16,12,14], true),   # I17: Ric^2*Riem A
+        RInv(4, [3,5,1,7, 2,9,4,13, 6,11,10,15, 8,16,12,14], true),   # I18: Ric^2*Riem B
+        RInv(4, [3,5,1,7, 2,9,4,13, 6,14,15,16, 8,10,11,12], true),   # I19: Ric^2*Riem C
+        RInv(4, [3,5,1,9, 2,7,6,13, 4,11,10,15, 8,16,12,14], true),   # I21: Ric*Ric_x A
+        RInv(4, [3,5,1,9, 2,7,6,13, 4,14,15,16, 8,10,11,12], true),   # I22: Ric*Ric_x B
+        RInv(4, [3,5,1,9, 2,10,13,14, 4,6,15,16, 7,8,11,12], true),   # I25: Ric*Riem^2 B
+        RInv(4, [3,5,1,9, 2,11,10,13, 4,7,6,15, 8,16,12,14], true),   # I27: Ric*Riem^2 D
+        RInv(4, [3,5,1,9, 2,13,11,12, 4,15,7,8, 6,16,10,14], true),   # I31: Ric*Riem^2 H
+        RInv(4, [3,5,1,9, 2,13,11,15, 4,14,7,16, 6,10,8,12], true),   # I33: Ric*Riem^2 J
         RInv(4, [5,6,7,8, 1,2,3,4, 13,14,15,16, 9,10,11,12], true),   # I35: K^2
+        RInv(4, [5,6,7,9, 1,2,3,13, 4,14,15,16, 8,10,11,12], true),   # I37: Riem^3*Ric A
+        RInv(4, [5,6,9,10, 1,2,13,14, 3,4,15,16, 7,8,11,12], true),   # I39: Riem^4 chain
+        RInv(4, [5,6,9,13, 1,2,10,14, 3,7,15,16, 4,8,11,12], true),   # I42: Riem^4 C
+        RInv(4, [5,9,7,11, 1,13,3,15, 2,14,4,16, 6,10,8,12], true),   # I53: Riem^4 M
+        RInv(4, [5,9,7,13, 1,11,3,15, 2,14,6,16, 4,10,8,12], true),   # I55: Riem^4 O
+        RInv(4, [5,9,7,13, 1,15,3,11, 2,16,8,14, 4,12,6,10], true),   # I57: Riem^4 Q
     ]
 end

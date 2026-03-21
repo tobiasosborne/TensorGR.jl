@@ -40,7 +40,7 @@
         @test cr2.step == 2
         @test cr2.n_independent == 26
         @test cr2.n_dependent == 31
-        @test length(cr2.relations) == 8  # 8 product-type Bianchi relations
+        @test length(cr2.relations) == 31  # 8 product-type + 23 non-product Bianchi
     end
 
     # ---- Bianchi relations: verify product-type relations ----
@@ -115,7 +115,7 @@
     # ---- degree4_independent_rinvs ----
     @testset "degree4_independent_rinvs" begin
         rinvs = degree4_independent_rinvs()
-        @test length(rinvs) == 11  # 11 explicitly listed product-type independent
+        @test length(rinvs) == 26  # 11 product-type + 15 non-product
 
         # All should be canonical
         @test all(r -> r.canonical, rinvs)
@@ -132,7 +132,7 @@
         end
 
         # All should be distinct (pairwise non-equivalent)
-        for i in 1:11, j in i+1:11
+        for i in 1:26, j in i+1:26
             @test rinvs[i].contraction != rinvs[j].contraction
         end
     end
@@ -164,24 +164,21 @@
             @test is_independent_rinv(r, 1) == true
         end
 
-        # The 8 product-type dependent forms at Level 2
-        I4 = RInv(4, [3,4,1,2, 7,8,5,6, 13,15,14,16, 9,11,10,12], true)
-        I8 = RInv(4, [3,4,1,2, 7,9,5,13, 6,15,14,16, 8,11,10,12], true)
-        I10 = RInv(4, [3,4,1,2, 9,10,13,15, 5,6,14,16, 7,11,8,12], true)
-        I11 = RInv(4, [3,4,1,2, 9,11,13,15, 5,14,6,16, 7,10,8,12], true)
-        I12 = RInv(4, [3,4,1,2, 9,13,11,15, 5,14,7,16, 6,10,8,12], true)
-        I16 = RInv(4, [3,5,1,7, 2,8,4,6, 13,15,14,16, 9,11,10,12], true)
-        I36 = RInv(4, [5,6,7,8, 1,2,3,4, 13,15,14,16, 9,11,10,12], true)
-        I46 = RInv(4, [5,7,6,8, 1,3,2,4, 13,15,14,16, 9,11,10,12], true)
+        canonical = degree4_canonical_rinvs()
+        independent = degree4_independent_rinvs()
+        indep_set = Set([r.contraction for r in independent])
 
-        @test is_independent_rinv(I4, 2) == false
-        @test is_independent_rinv(I8, 2) == false
-        @test is_independent_rinv(I10, 2) == false
-        @test is_independent_rinv(I11, 2) == false
-        @test is_independent_rinv(I12, 2) == false
-        @test is_independent_rinv(I16, 2) == false
-        @test is_independent_rinv(I36, 2) == false
-        @test is_independent_rinv(I46, 2) == false
+        # All 31 dependent forms should be not independent at Level 2
+        cr2 = get_invar_relations(4, "0_0_0_0", 2)
+        for rel in cr2.relations
+            dep = RInv(4, rel.lhs, true)
+            @test is_independent_rinv(dep, 2) == false
+        end
+
+        # All 26 independent forms should be independent at Level 2
+        for r in independent
+            @test is_independent_rinv(r, 2) == true
+        end
     end
 
     # ---- list_invar_cases includes degree-4 ----
@@ -304,6 +301,75 @@
                     rhs_expr = to_tensor_expr(rhs_rinv; registry=reg, metric=:g)
                     @test isempty(free_indices(rhs_expr))
                 end
+            end
+        end
+    end
+
+    # ---- Non-product Bianchi relations: spot checks ----
+    @testset "Non-product Bianchi: I20 = (1/2)*I19" begin
+        cr2 = get_invar_relations(4, "0_0_0_0", 2)
+        canonical = degree4_canonical_rinvs()
+        # I20 is the 9th relation (8 product + 1st non-product)
+        rel = cr2.relations[9]
+        @test rel.lhs == canonical[20].contraction
+        @test length(rel.rhs) == 1
+        @test rel.rhs[1][1] == 1//2
+        @test rel.rhs[1][2] == canonical[19].contraction
+    end
+
+    @testset "Non-product Bianchi: I44 = (1/4)*I42 + I55 - I57" begin
+        cr2 = get_invar_relations(4, "0_0_0_0", 2)
+        canonical = degree4_canonical_rinvs()
+        # I44 is the 22nd relation (8 + 14th non-product)
+        rel = cr2.relations[22]
+        @test rel.lhs == canonical[44].contraction
+        @test length(rel.rhs) == 3
+        @test rel.rhs[1] == (1//4, canonical[42].contraction)
+        @test rel.rhs[2] == (1//1, canonical[55].contraction)
+        @test rel.rhs[3] == (-1//1, canonical[57].contraction)
+    end
+
+    @testset "Non-product Bianchi: I49 = (1/8)*I39" begin
+        cr2 = get_invar_relations(4, "0_0_0_0", 2)
+        canonical = degree4_canonical_rinvs()
+        # I49 is the 26th relation (8 + 18th non-product)
+        rel = cr2.relations[26]
+        @test rel.lhs == canonical[49].contraction
+        @test length(rel.rhs) == 1
+        @test rel.rhs[1][1] == 1//8
+        @test rel.rhs[1][2] == canonical[39].contraction
+    end
+
+    @testset "Non-product Bianchi: I56 = -(1/8)*I42 + (1/2)*I55 + (1/2)*I57" begin
+        cr2 = get_invar_relations(4, "0_0_0_0", 2)
+        canonical = degree4_canonical_rinvs()
+        # I56 is the 31st (last) relation
+        rel = cr2.relations[31]
+        @test rel.lhs == canonical[56].contraction
+        @test length(rel.rhs) == 3
+        @test rel.rhs[1] == (-1//8, canonical[42].contraction)
+        @test rel.rhs[2] == (1//2, canonical[55].contraction)
+        @test rel.rhs[3] == (1//2, canonical[57].contraction)
+    end
+
+    # ---- All 31 dependent LHS contractions are among the 57 canonical forms ----
+    @testset "All 31 dependent LHS are canonical degree-4 forms" begin
+        cr2 = get_invar_relations(4, "0_0_0_0", 2)
+        canonical = degree4_canonical_rinvs()
+        canonical_set = Set([r.contraction for r in canonical])
+        for rel in cr2.relations
+            @test rel.lhs in canonical_set
+        end
+    end
+
+    # ---- All RHS contractions are independent forms ----
+    @testset "All RHS contractions are from independent set" begin
+        cr2 = get_invar_relations(4, "0_0_0_0", 2)
+        independent = degree4_independent_rinvs()
+        indep_set = Set([r.contraction for r in independent])
+        for rel in cr2.relations
+            for (coeff, contraction) in rel.rhs
+                @test contraction in indep_set
             end
         end
     end
