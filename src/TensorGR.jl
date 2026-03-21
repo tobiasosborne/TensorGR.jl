@@ -190,6 +190,7 @@ include("metric_affine/brauer.jl")
 include("hamiltonian/adm.jl")
 include("hamiltonian/poisson.jl")
 include("hamiltonian/constraints.jl")
+include("hamiltonian/dof.jl")
 
 # Layer 5.5: Bimetric gravity
 include("bimetric/registration.jl")
@@ -565,6 +566,7 @@ export ADMDecomposition, define_adm!
 export hamiltonian_constraint, momentum_constraint
 export CanonicalPair, adm_canonical_pair, fundamental_bracket, PoissonBracketResult
 export ConstraintClassification, classify_constraints, count_dof, gauge_generators
+export DOFSummary, dof_count, dof_summary, dof_from_classification
 
 # Exports: Bimetric gravity
 export BimetricSetup, define_bimetric!, bimetric_field_equations
