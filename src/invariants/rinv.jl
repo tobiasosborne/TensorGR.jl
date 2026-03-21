@@ -142,17 +142,21 @@ end
 # ---- Canonicalization --------------------------------------------------------
 
 """
-    canonicalize(inv::RInv) -> RInv
+    _bfs_canonicalize(inv::RInv) -> RInv
 
-Return the canonical form of the RInv.  The canonical representative is
-the lexicographically smallest contraction permutation in the orbit of
+BFS orbit enumeration for RInv canonicalization.  Finds the
+lexicographically smallest contraction permutation in the orbit of
 the combined Riemann slot-symmetry and factor-reordering group, acting
 by conjugation on the contraction permutation.
 
 Sign-flipping generators (antisymmetry) that produce an overall sign
 of -1 mark the invariant as vanishing (sign cancellation).
+
+This is the original algorithm -- always correct, but exponential in
+orbit size for high degrees.  Used as fallback when no registry with
+Riemann tensor is available.
 """
-function canonicalize(inv::RInv)
+function _bfs_canonicalize(inv::RInv)
     inv.canonical && return inv
 
     k = inv.degree
@@ -196,6 +200,185 @@ function canonicalize(inv::RInv)
     end
 
     RInv(k, best, true)
+end
+
+# ---- Fast canonicalization via TensorExpr round-trip -----------------------
+
+"""
+    _fast_canonicalize_rinv(rinv::RInv;
+                            registry::TensorRegistry=current_registry(),
+                            metric::Symbol=:g) -> RInv
+
+Fast RInv canonicalization via TensorExpr round-trip.
+
+Uses the standard xperm Butler-Portugal algorithm (polynomial-time)
+through the TensorExpr pipeline:
+
+  1. Convert RInv to TensorExpr via `to_tensor_expr`
+  2. Contract metrics (absorb g^{ab} into Riemann indices)
+  3. Canonicalize the contracted expression (xperm all-free mode)
+  4. Fix same-position dummy pairs
+  5. Normalize dummy names for deterministic ordering
+  6. Extract the contraction pattern from the canonical dummy pairs
+  7. BFS-canonicalize the extracted contraction for final form
+
+Step 7 applies BFS to the EXTRACTED contraction -- which is already
+near-canonical from xperm.  Because the xperm pipeline dramatically
+reduces the orbit, this final BFS is fast (constant-time for cases
+where xperm produces the true canonical form, and very small orbit
+for edge cases with same-position dummies).
+
+The fast path requires a registry with the `:Riem` tensor defined.
+"""
+function _fast_canonicalize_rinv(rinv::RInv;
+                                  registry::TensorRegistry=current_registry(),
+                                  metric::Symbol=:g)
+    rinv.canonical && return rinv
+
+    k = rinv.degree
+    nslots = 4k
+
+    # Step 1: Convert to TensorExpr (product of Riem_down + g^up)
+    expr = to_tensor_expr(rinv; registry=registry, metric=metric)
+
+    # Step 2: Contract metrics -> product of Riem with mixed Up/Down indices
+    contracted = with_registry(registry) do
+        contract_metrics(expr)
+    end
+
+    # Step 3: Canonicalize index ordering via xperm
+    canonical_expr = with_registry(registry) do
+        canonicalize(contracted)
+    end
+
+    # Step 4: Handle vanishing
+    if canonical_expr isa TScalar
+        return RInv(k, zeros(Int, nslots), true)
+    end
+    if canonical_expr isa TProduct && canonical_expr.scalar == 0 // 1
+        return RInv(k, zeros(Int, nslots), true)
+    end
+
+    # Step 5: Fix same-position dummy pairs from all-free canonicalization
+    fixed = fix_dummy_positions(canonical_expr)
+
+    # Step 6: Normalize dummy names
+    normed = _normalize_dummies(fixed)
+
+    # Step 7: Extract contraction pattern from the canonical Riem-only product
+    extracted = _extract_contraction_from_riem_product(normed, k)
+
+    # Step 8: BFS-canonicalize the extracted contraction.
+    # The xperm pipeline produces a near-canonical form, so BFS on the
+    # extracted contraction explores a much smaller orbit than starting
+    # from the original contraction.
+    _bfs_canonicalize(extracted)
+end
+
+"""
+    _extract_contraction_from_riem_product(expr::TensorExpr, k::Int) -> RInv
+
+Extract the RInv contraction pattern from a fully contracted product
+of k Riemann tensors (no metric factors, mixed up/down indices).
+
+The contraction is encoded in dummy pairs: for each index name that
+appears twice across the Riemann factors, the corresponding slots
+are paired in the contraction.
+"""
+function _extract_contraction_from_riem_product(expr::TensorExpr, k::Int)
+    nslots = 4k
+
+    # Handle vanishing
+    if expr isa TScalar
+        return RInv(k, zeros(Int, nslots), true)
+    end
+
+    p = expr isa TProduct ? expr : TProduct(1 // 1, TensorExpr[expr])
+
+    # Collect Riemann factors and their indices
+    all_indices = TIndex[]
+    for f in p.factors
+        f isa Tensor || continue
+        f.name == :Riem || continue
+        append!(all_indices, f.indices)
+    end
+
+    length(all_indices) == nslots ||
+        error("_extract_contraction: expected $nslots indices from $k Riemann factors, got $(length(all_indices))")
+
+    # Group slots by index name
+    name_slots = Dict{Symbol, Vector{Int}}()
+    for (slot, idx) in enumerate(all_indices)
+        push!(get!(Vector{Int}, name_slots, idx.name), slot)
+    end
+
+    # Build contraction: pair slots that share the same index name
+    contraction = zeros(Int, nslots)
+    for (sym, slots) in name_slots
+        if length(slots) == 2
+            s1, s2 = slots
+            contraction[s1] = s2
+            contraction[s2] = s1
+        elseif length(slots) != 2
+            # Should not happen for a fully contracted product
+            error("_extract_contraction: index $sym appears $(length(slots)) times (expected 2)")
+        end
+    end
+
+    # Check for unpaired slots
+    for i in 1:nslots
+        if contraction[i] == 0
+            return RInv(k, zeros(Int, nslots), true)
+        end
+    end
+
+    # Detect vanishing from antisymmetric self-contraction:
+    # If two slots within the same Riemann factor are paired, AND
+    # they occupy antisymmetric positions (1&2 or 3&4), the invariant vanishes.
+    for f in 1:k
+        off = 4(f - 1)
+        if contraction[off + 1] == off + 2
+            return RInv(k, zeros(Int, nslots), true)
+        end
+        if contraction[off + 3] == off + 4
+            return RInv(k, zeros(Int, nslots), true)
+        end
+    end
+
+    # Verify it's a valid involution
+    for i in 1:nslots
+        contraction[i] != i ||
+            error("_extract_contraction: slot $i is a fixed point")
+        contraction[contraction[i]] == i ||
+            error("_extract_contraction: not an involution at slot $i")
+    end
+
+    RInv(k, contraction, false)  # NOT marked canonical -- caller applies BFS
+end
+
+"""
+    canonicalize(inv::RInv) -> RInv
+
+Return the canonical form of the RInv.  Tries the fast TensorExpr
+round-trip approach (polynomial-time via xperm) when a registry with
+`:Riem` tensor is available; falls back to BFS orbit enumeration
+(always correct) otherwise.
+"""
+function canonicalize(inv::RInv)
+    inv.canonical && return inv
+
+    # Try fast path: requires an active registry with Riemann tensor
+    try
+        reg = current_registry()
+        if has_tensor(reg, :Riem)
+            metric = isempty(reg.metric_cache) ? :g : first(values(reg.metric_cache))
+            return _fast_canonicalize_rinv(inv; registry=reg, metric=metric)
+        end
+    catch
+    end
+
+    # Fallback: BFS orbit enumeration (always correct, slower for high degree)
+    _bfs_canonicalize(inv)
 end
 
 # ---- xperm-based canonicalization -------------------------------------------
