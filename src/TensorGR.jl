@@ -30,6 +30,7 @@ include("algebra/ibp.jl")
 include("algebra/collect_tensors.jl")
 include("algebra/ansatz.jl")
 include("algebra/all_contractions.jl")
+include("algebra/invar_lagrangian.jl")
 include("algebra/trace.jl")
 include("algebra/symmetrize.jl")
 include("algebra/young.jl")
@@ -292,6 +293,7 @@ export symmetrize, antisymmetrize, impose_symmetry
 export YoungTableau, young_shape, young_symmetrize, young_project
 export all_contractions, contraction_ansatz, filter_independent_contractions
 export solve_tensors
+export invariant_lagrangian
 
 # Exports: Scalar algebra
 export scalar_expand, scalar_collect, scalar_subst, scalar_cancel

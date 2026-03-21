@@ -86,6 +86,8 @@ using TensorGR
     include("test_contraction_filtering.jl")
     # Ground truth: contraction counts (Nutma 2014)
     include("test_ground_truth_contractions.jl")
+    # Invariant Lagrangian construction
+    include("test_invar_lagrangian.jl")
     # Ground truth: quadratic Riemann invariants (Fulling et al. 1992)
     include("test_quadratic_riemann_invariants.jl")
     # symmetrize_covds: scalar optimization, covd tag preservation
