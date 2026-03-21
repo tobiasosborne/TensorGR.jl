@@ -358,4 +358,6 @@ using TensorGR
     include("test_ppn_poisson.jl")
     # InvSimplify database-driven simplification
     include("test_inv_simplify.jl")
+    # Grassmann parity (graded tensor)
+    include("test_graded_tensor.jl")
 end
