@@ -159,6 +159,7 @@ include("invariants/db/dual.jl")
 include("invariants/db/differential_2.jl")
 include("invariants/db/differential_4.jl")
 include("invariants/inv_simplify.jl")
+include("invariants/symh.jl")
 
 # Layer 5.5: Feynman rules (graviton vertices, propagators)
 include("feynman/types.jl")
@@ -503,6 +504,10 @@ export degree4_canonical_rinvs, degree4_independent_rinvs
 export degree5_7_canonical_count, degree5_7_independent_count
 export dual_independent_rinvs, pontryagin_rinv_canonical
 export inv_simplify
+# Exports: SymH (unified symmetry handler)
+export AbstractSymmetry, MonotermSym, MultitermSym, SymH
+export riemann_symh, n_independent_components, is_monoterm_only
+export to_symmetry_spec, to_xperm_generators
 export DiffInvariantEntry, diff_invariant, list_diff_invariants, diff_invariant_count
 export define_lambda_spinor!, lambda_spinor_expr
 export define_weyl_spinor!, define_ricci_spinor!, define_curvature_spinors!

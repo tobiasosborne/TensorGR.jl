@@ -360,4 +360,6 @@ using TensorGR
     include("test_ppn_poisson.jl")
     # InvSimplify database-driven simplification
     include("test_inv_simplify.jl")
+    # SymH unified symmetry handler
+    include("test_symh.jl")
 end
