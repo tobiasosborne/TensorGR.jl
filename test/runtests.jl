@@ -328,6 +328,8 @@ using TensorGR
     include("test_primary_constraints.jl")
     # Poincare gauge theory action
     include("test_pgt_action.jl")
+    # Validation: Levi-Civita limit (T=0, Q=0 recovers GR)
+    include("test_levi_civita_limit.jl")
     # Invar Level 6: dual invariant product relations
     include("test_invar_level6.jl")
     # Secondary constraint generation (Dirac algorithm)
