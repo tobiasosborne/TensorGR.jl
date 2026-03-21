@@ -336,6 +336,8 @@ using TensorGR
     include("test_secondary_constraints.jl")
     # Constraint classification (first-class vs second-class)
     include("test_constraint_classification.jl")
+    # DOF counting formula (Dirac algorithm)
+    include("test_dof_counting.jl")
     # PPN Poisson equation solver
     include("test_ppn_poisson.jl")
 end
