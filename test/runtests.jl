@@ -346,4 +346,6 @@ using TensorGR
     include("test_dof_counting.jl")
     # PPN Poisson equation solver
     include("test_ppn_poisson.jl")
+    # InvSimplify database-driven simplification
+    include("test_inv_simplify.jl")
 end
