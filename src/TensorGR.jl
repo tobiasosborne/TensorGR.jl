@@ -149,6 +149,7 @@ include("invariants/simplify_levels.jl")
 include("invariants/riemann_simplify.jl")
 include("invariants/database.jl")
 include("invariants/db/degree2.jl")
+include("invariants/db/degree3.jl")
 
 # Layer 5.5: Feynman rules (graviton vertices, propagators)
 include("feynman/types.jl")
@@ -482,6 +483,7 @@ export differential_bianchi, contracted_bianchi
 # Exports: Invar precomputed database (Epic 3)
 export InvarRelation, CaseRelations, get_invar_relations, list_invar_cases, is_independent_rinv
 export degree2_canonical_rinvs, degree2_independent_rinvs
+export degree3_canonical_rinvs, degree3_independent_rinvs
 export define_lambda_spinor!, lambda_spinor_expr
 export define_weyl_spinor!, define_ricci_spinor!, define_curvature_spinors!
 export irreducible_decompose
