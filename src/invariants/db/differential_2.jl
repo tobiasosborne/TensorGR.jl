@@ -252,6 +252,8 @@ total derivative order.
 Currently implemented:
 - Order 4 (2 derivatives, 1 curvature): 4 independent invariants
   (3 non-total-derivative + 1 total derivative)
+- Order 6 (4 derivatives + 1 curvature, or 2 derivatives + 2 curvature):
+  6 independent invariants (5 non-total-derivative + 1 total derivative)
 
 The count is dimension-independent for dim >= 4. In lower dimensions,
 some invariants become dependent through dimension-specific identities
@@ -260,8 +262,10 @@ some invariants become dependent through dimension-specific identities
 function diff_invariant_count(order::Int; dim::Union{Int,Nothing}=nothing)
     if order == 4
         return 4
+    elseif order == 6
+        return 6
     end
-    error("diff_invariant_count: order $order not yet implemented (available: 4)")
+    error("diff_invariant_count: order $order not yet implemented (available: 4, 6)")
 end
 
 """
