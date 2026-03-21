@@ -52,6 +52,7 @@ include("spinors/np_equations.jl")
 include("spinors/ghp_equations.jl")
 include("spinors/space_spinors.jl")
 include("spinors/sen_connection.jl")
+include("spinors/ashtekar_variables.jl")
 
 # Layer 2.6: Tetrad/frame bundle
 include("tetrads/frame_bundle.jl")
@@ -271,6 +272,8 @@ export define_spinor_structure!, @spinor_manifold
 export define_space_spinors!, space_spin_metric_expr, soldering_form_expr
 export space_spinor_completeness, space_spin_up, space_spin_down, is_space_spinor_index
 export define_sen_connection!, sen_connection_expr, sen_covd, sen_covd_expr, sen_curvature_expr
+export define_ashtekar_variables!, ashtekar_connection_expr, densitized_triad_expr
+export ashtekar_curvature_expr, gauss_constraint_expr
 export define_frame_bundle!, frame_up, frame_down, is_frame_index
 export set_vanishing!
 export current_registry, with_registry

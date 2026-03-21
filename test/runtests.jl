@@ -126,6 +126,8 @@ using TensorGR
     include("test_space_spinors.jl")
     # Sen connection on spatial SU(2) spinors
     include("test_sen_connection.jl")
+    # Ashtekar-Barbero connection and densitized triad
+    include("test_ashtekar_variables.jl")
     # Frame bundle (Lorentz VBundle for tetrads)
     include("test_frame_bundle.jl")
     # xIdeal: Petrov classification
