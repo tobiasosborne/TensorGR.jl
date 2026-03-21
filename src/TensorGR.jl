@@ -183,6 +183,7 @@ include("fermions/gamma.jl")
 include("fermions/traces.jl")
 include("fermions/fierz.jl")
 include("fermions/charge_conjugation.jl")
+include("fermions/graded.jl")
 
 # Layer 5.5: Metric-affine gravity
 include("metric_affine/connection.jl")
@@ -560,6 +561,9 @@ export ppn_nordtvedt_eta, ppn_geodetic_factor, ppn_observational_bounds
 export GammaMatrix, gamma5, clifford_relation, gamma_trace
 export Gamma5, gamma5_trace, gamma5_anticommutator, gamma5_squared
 export gamma_chain_trace, trace_identity_2, trace_identity_4, slash
+
+# Exports: Grassmann parity
+export register_grassmann_field!, is_grassmann, grassmann_parity, grassmann_sign
 
 # Exports: Metric-affine gravity
 export AffineConnection, define_affine_connection!
