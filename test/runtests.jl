@@ -350,6 +350,8 @@ using TensorGR
     include("test_dof_counting.jl")
     # Validation: GR Hamiltonian (2 propagating DOF)
     include("test_gr_hamiltonian.jl")
+    # Validation: Proca Hamiltonian (3 propagating DOF)
+    include("test_proca_hamiltonian.jl")
     # PPN Poisson equation solver
     include("test_ppn_poisson.jl")
     # InvSimplify database-driven simplification
