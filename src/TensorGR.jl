@@ -145,6 +145,7 @@ include("algebra/ddi_rules.jl")
 include("invariants/rinv.jl")
 include("invariants/dual_rinv.jl")
 include("invariants/simplify_levels.jl")
+include("invariants/riemann_simplify.jl")
 
 # Layer 5.5: Feynman rules (graviton vertices, propagators)
 include("feynman/types.jl")
@@ -469,6 +470,7 @@ export RInv, canonicalize_rinv, are_equivalent, rinv_symmetry_group
 export DualRInv, left_dual, right_dual, double_dual, pontryagin_rinv
 export to_tensor_expr, from_tensor_expr
 export simplify_level1, simplify_level2, simplify_level3, simplify_level4
+export simplify_level5, simplify_level6, riemann_simplify
 export is_riemann_monomial, count_riemann_degree
 export apply_bianchi_cyclic, bianchi_relation
 export differential_bianchi, contracted_bianchi

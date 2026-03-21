@@ -164,6 +164,8 @@ using TensorGR
     include("test_rinv.jl")
     include("test_rinv_canonicalize.jl")
     include("test_dual_rinv.jl")
+    # RiemannSimplify top-level (Invar Epic 2)
+    include("test_riemann_simplify.jl")
     # Feynman diagram types
     include("test_feynman_types.jl")
     # PPN metric ansatz
