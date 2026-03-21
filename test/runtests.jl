@@ -320,6 +320,8 @@ using TensorGR
     include("test_invar_level6.jl")
     # Secondary constraint generation (Dirac algorithm)
     include("test_secondary_constraints.jl")
+    # Constraint classification (first-class vs second-class)
+    include("test_constraint_classification.jl")
     # PPN Poisson equation solver
     include("test_ppn_poisson.jl")
 end
