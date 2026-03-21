@@ -168,6 +168,8 @@ using TensorGR
     include("test_dual_rinv.jl")
     # RiemannSimplify top-level (Invar Epic 2)
     include("test_riemann_simplify.jl")
+    # Invar precomputed database (Epic 3)
+    include("test_invar_database.jl")
     # Feynman diagram types
     include("test_feynman_types.jl")
     # PPN metric ansatz
