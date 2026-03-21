@@ -180,6 +180,8 @@ using TensorGR
     include("test_invar_validation_degree3.jl")
     # Invar degree-4 algebraic database
     include("test_invar_degree4.jl")
+    # Invar degrees 5-7 algebraic database
+    include("test_invar_degree5_7.jl")
     # Invar differential invariant database (4 derivatives)
     include("test_invar_differential_4.jl")
     # Feynman diagram types
