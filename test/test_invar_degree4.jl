@@ -312,4 +312,34 @@
     @testset "_algebraic_case_key(4) == \"0_0_0_0\"" begin
         @test TensorGR._algebraic_case_key(4) == "0_0_0_0"
     end
+
+    # ---- Orbit-based completeness verification ----
+    @testset "Orbit-based completeness: 57 forms cover all 2,027,025 involutions" begin
+        rinvs = degree4_canonical_rinvs()
+        total_orbit = 0
+        for rinv in rinvs
+            gens = TensorGR._rinv_slot_generators(4)
+            orbit = Dict{Vector{Int}, Int}()
+            orbit[rinv.contraction] = +1
+            queue = [rinv.contraction]
+            while !isempty(queue)
+                sigma = popfirst!(queue)
+                current_sign = orbit[sigma]
+                for (g, gsign) in gens
+                    sigma_new = TensorGR._conjugate_contraction(sigma, g)
+                    new_sign = current_sign * gsign
+                    if !haskey(orbit, sigma_new)
+                        orbit[sigma_new] = new_sign
+                        push!(queue, sigma_new)
+                    end
+                end
+            end
+            total_orbit += length(orbit)
+        end
+        expected = prod(1:2:15)  # 15!! = 2,027,025
+        @test total_orbit <= expected  # orbit sum must not exceed total
+        @test total_orbit == 1095440   # known non-vanishing total
+        vanishing = expected - total_orbit
+        @test vanishing == 931585      # known vanishing total
+    end
 end

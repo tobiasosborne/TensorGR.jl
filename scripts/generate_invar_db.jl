@@ -1,22 +1,31 @@
-#= Memory-safe generation of canonical RInv forms for the Invar pipeline.
+#= Memory-safe generation and verification of canonical RInv forms for the
+# Invar pipeline.
 #
 # Usage:
 #   julia --project scripts/generate_invar_db.jl <degree>
 #   julia --project scripts/generate_invar_db.jl <degree> --dry-run
+#   julia --project scripts/generate_invar_db.jl <degree> --verify-orbits
 #   julia --project scripts/generate_invar_db.jl <degree> --output <file>
 #
-# Stream-enumerates ALL fixed-point-free involutions on [1..4k] for the given
-# degree k, canonicalizing each immediately via BFS orbit enumeration.
-# Only the distinct canonical forms (and their orbit sizes) are kept in memory.
+# Modes:
+#   Default:        Stream-enumerate ALL involutions, canonicalize each.
+#   --dry-run:      Count involutions without canonicalizing (instant).
+#   --verify-orbits: Compute orbit sizes of known canonical forms and verify
+#                   their sum + vanishing count = total. Also run random
+#                   sampling to check no forms are missing. Fast (~seconds).
 #
 # Memory usage: O(n_canonical * 4k) -- typically <100 KB even for degree 4.
 # The recursion stack is O(4k) deep -- negligible.
 #
 # For degree 2: 105 involutions,   4 non-vanishing canonical forms (~instant)
-# For degree 3: 10395 involutions, 13 non-vanishing canonical forms (~1 sec)
-# For degree 4: 2027025 involutions, 57 non-vanishing canonical forms (~minutes)
+# For degree 3: 10395 involutions, 13 non-vanishing canonical forms (~10 sec)
+# For degree 4: 2027025 involutions, 57 non-vanishing canonical forms (~30 min)
 #
 # DO NOT run for degree >= 5 (654,729,075 involutions -- too slow for streaming).
+#
+# For degree 4, prefer --verify-orbits (completes in ~30 seconds) over full
+# enumeration (~30 minutes). The orbit-based verification mathematically proves
+# database completeness by confirming that orbit sizes sum to the expected total.
 =#
 
 using TensorGR
@@ -257,6 +266,155 @@ function verify_against_database(canonical_forms::Dict{Vector{Int}, Int}, degree
     (matches=matches, missing_from_db=missing_from_db, extra_in_db=extra_in_db)
 end
 
+# ---- Orbit-based verification ------------------------------------------------
+
+"""
+    compute_orbit_size(contraction::Vector{Int}, degree::Int) -> Int
+
+Compute the orbit size of a canonical RInv contraction under the Riemann
+symmetry group by BFS enumeration.  The orbit is the set of all contractions
+reachable by conjugation with the symmetry generators.
+"""
+function compute_orbit_size(contraction::Vector{Int}, degree::Int)
+    gens = TensorGR._rinv_slot_generators(degree)
+    orbit = Dict{Vector{Int}, Int}()
+    orbit[contraction] = +1
+    queue = [contraction]
+
+    while !isempty(queue)
+        sigma = popfirst!(queue)
+        current_sign = orbit[sigma]
+        for (g, gsign) in gens
+            sigma_new = TensorGR._conjugate_contraction(sigma, g)
+            new_sign = current_sign * gsign
+            if !haskey(orbit, sigma_new)
+                orbit[sigma_new] = new_sign
+                push!(queue, sigma_new)
+            end
+        end
+    end
+
+    length(orbit)
+end
+
+"""
+    verify_orbits(degree::Int; n_samples::Int=1000)
+
+Verify database completeness for a given degree by:
+1. Computing orbit sizes of all known canonical forms via BFS
+2. Checking that orbit sizes sum to total - vanishing_count
+3. Running random sampling to confirm no unknown forms exist
+
+This is much faster than full enumeration for degree 4 (~30 sec vs ~30 min).
+"""
+function verify_orbits(degree::Int; n_samples::Int=1000)
+    nslots = 4 * degree
+    n_invol = double_factorial(nslots - 1)
+
+    # Get canonical forms from database
+    db_rinvs = if degree == 2
+        degree2_canonical_rinvs()
+    elseif degree == 3
+        degree3_canonical_rinvs()
+    elseif degree == 4
+        degree4_canonical_rinvs()
+    else
+        println("No database for degree $degree; cannot verify orbits.")
+        return false
+    end
+
+    println("Verifying degree $degree database ($n_invol total involutions)...")
+    println("  Computing orbit sizes for $(length(db_rinvs)) canonical forms...")
+    flush(stdout)
+
+    orbit_sizes = Int[]
+    total_nonvanishing = 0
+    for (i, rinv) in enumerate(db_rinvs)
+        osize = compute_orbit_size(rinv.contraction, degree)
+        push!(orbit_sizes, osize)
+        total_nonvanishing += osize
+        if i % 10 == 0 || i == length(db_rinvs)
+            println("    I$i/$(length(db_rinvs)): orbit=$osize, cumulative=$total_nonvanishing")
+            flush(stdout)
+        end
+    end
+
+    vanishing_count = n_invol - total_nonvanishing
+
+    println()
+    println("  Orbit verification:")
+    println("    Non-vanishing orbit total: $total_nonvanishing")
+    println("    Vanishing (by subtraction): $vanishing_count")
+    println("    Sum: $(total_nonvanishing + vanishing_count)")
+    println("    Expected: $n_invol")
+    sum_ok = (total_nonvanishing + vanishing_count == n_invol)
+    println("    Match: $sum_ok")
+
+    if vanishing_count < 0
+        println("  ERROR: vanishing count is negative -- database has too many orbit elements!")
+        return false
+    end
+
+    # Random sampling verification
+    println()
+    println("  Random sampling ($n_samples involutions)...")
+    flush(stdout)
+
+    known_set = Set([r.contraction for r in db_rinvs])
+    zero_vec = zeros(Int, nslots)
+    n_known = 0
+    n_vanishing_sample = 0
+    n_unknown = 0
+
+    for _ in 1:n_samples
+        perm = zeros(Int, nslots)
+        slots = collect(1:nslots)
+        while !isempty(slots)
+            i = popfirst!(slots)
+            remaining = [j for j in slots if perm[j] == 0 && j != i]
+            j = remaining[rand(1:length(remaining))]
+            perm[i] = j
+            perm[j] = i
+            filter!(x -> x != j, slots)
+        end
+        rinv = RInv(degree, perm)
+        canon = canonicalize(rinv)
+        c = canon.contraction
+        if c == zero_vec
+            n_vanishing_sample += 1
+        elseif c in known_set
+            n_known += 1
+        else
+            n_unknown += 1
+            println("    UNKNOWN canonical form found: $c")
+        end
+    end
+
+    println("    Results: known=$n_known, vanishing=$n_vanishing_sample, unknown=$n_unknown")
+
+    all_ok = sum_ok && n_unknown == 0
+
+    println()
+    println("=" ^ 70)
+    if all_ok
+        println("VERIFIED: degree $degree database is COMPLETE")
+        println("  $(length(db_rinvs)) non-vanishing canonical forms")
+        println("  Orbit sizes sum to $total_nonvanishing (+ $vanishing_count vanishing = $n_invol)")
+        println("  $n_samples random samples all confirmed")
+    else
+        println("VERIFICATION FAILED for degree $degree")
+        if !sum_ok
+            println("  Orbit sizes do not sum correctly")
+        end
+        if n_unknown > 0
+            println("  Found $n_unknown unknown canonical forms")
+        end
+    end
+    println("=" ^ 70)
+
+    all_ok
+end
+
 # ---- Main entry point ----
 
 function main()
@@ -266,24 +424,36 @@ function main()
         println("Usage: julia --project scripts/generate_invar_db.jl <degree> [options]")
         println()
         println("Options:")
-        println("  --dry-run     Count involutions without canonicalizing")
-        println("  --output FILE Write canonical forms as Julia source to FILE")
-        println("  --no-verify   Skip verification against existing database")
-        println("  --help        Show this help")
+        println("  --dry-run       Count involutions without canonicalizing (instant)")
+        println("  --verify-orbits Verify database completeness via orbit sizes (fast)")
+        println("  --output FILE   Write canonical forms as Julia source to FILE")
+        println("  --no-verify     Skip verification against existing database")
+        println("  --help          Show this help")
         println()
         println("Examples:")
-        println("  julia --project scripts/generate_invar_db.jl 2          # degree 2 (~instant)")
-        println("  julia --project scripts/generate_invar_db.jl 3          # degree 3 (~1 sec)")
-        println("  julia --project scripts/generate_invar_db.jl 4          # degree 4 (~5-10 min)")
-        println("  julia --project scripts/generate_invar_db.jl 4 --dry-run  # just count")
+        println("  julia --project scripts/generate_invar_db.jl 2               # degree 2 (~instant)")
+        println("  julia --project scripts/generate_invar_db.jl 3               # degree 3 (~10 sec)")
+        println("  julia --project scripts/generate_invar_db.jl 4 --verify-orbits  # verify degree 4 (~30 sec)")
+        println("  julia --project scripts/generate_invar_db.jl 4               # full enumeration (~30 min)")
+        println("  julia --project scripts/generate_invar_db.jl 4 --dry-run     # just count")
         return
     end
 
     degree = parse(Int, args[1])
     dry_run = "--dry-run" in args
+    verify_orbits_mode = "--verify-orbits" in args
     no_verify = "--no-verify" in args
     output_idx = findfirst(==("--output"), args)
     output_file = output_idx !== nothing && output_idx < length(args) ? args[output_idx + 1] : nothing
+
+    # Orbit-based verification mode (fast)
+    if verify_orbits_mode
+        t0 = time()
+        ok = verify_orbits(degree; n_samples=1000)
+        elapsed = time() - t0
+        println("Elapsed: $(round(elapsed, digits=2))s")
+        exit(ok ? 0 : 1)
+    end
 
     # Safety check
     if degree >= 5

@@ -326,6 +326,37 @@ end
         @test db_forms == non_zero_forms
     end
 
+    # ---- Orbit-based completeness verification ----
+    @testset "Orbit-based completeness: degree 2" begin
+        # Compute orbit sizes for all 4 canonical forms
+        rinvs = degree2_canonical_rinvs()
+        total_orbit = 0
+        for rinv in rinvs
+            gens = TensorGR._rinv_slot_generators(2)
+            orbit = Dict{Vector{Int}, Int}()
+            orbit[rinv.contraction] = +1
+            queue = [rinv.contraction]
+            while !isempty(queue)
+                sigma = popfirst!(queue)
+                current_sign = orbit[sigma]
+                for (g, gsign) in gens
+                    sigma_new = TensorGR._conjugate_contraction(sigma, g)
+                    new_sign = current_sign * gsign
+                    if !haskey(orbit, sigma_new)
+                        orbit[sigma_new] = new_sign
+                        push!(queue, sigma_new)
+                    end
+                end
+            end
+            total_orbit += length(orbit)
+        end
+        expected = prod(1:2:7)  # 7!! = 105
+        @test total_orbit <= expected
+        vanishing = expected - total_orbit
+        @test vanishing == 45  # known from exhaustive enumeration
+        @test total_orbit == 60
+    end
+
     # ---- Error on missing data ----
     @testset "Missing data throws KeyError" begin
         @test_throws KeyError get_invar_relations(99, "0_0", 1)
