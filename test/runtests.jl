@@ -174,6 +174,8 @@ using TensorGR
     include("test_invar_degree3.jl")
     # Invar dual invariant database
     include("test_invar_dual.jl")
+    # Invar differential invariant database (2 derivatives)
+    include("test_invar_differential.jl")
     # Feynman diagram types
     include("test_feynman_types.jl")
     # PPN metric ansatz
