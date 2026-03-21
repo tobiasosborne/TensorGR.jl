@@ -122,6 +122,8 @@ using TensorGR
     include("test_soldering_form.jl")
     # Spinor structure one-liner setup
     include("test_spinor_setup.jl")
+    # SU(2) spatial spinors (spin metric + soldering form)
+    include("test_space_spinors.jl")
     # Frame bundle (Lorentz VBundle for tetrads)
     include("test_frame_bundle.jl")
     # xIdeal: Petrov classification

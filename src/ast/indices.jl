@@ -124,11 +124,13 @@ const _TANGENT_ALPHABET = Symbol[Symbol(c) for c in 'a':'z']
 const _SL2C_ALPHABET = [:A, :B, :C, :D, :E, :F]
 const _SL2C_DOT_ALPHABET = [:Ap, :Bp, :Cp, :Dp, :Ep, :Fp]
 const _LORENTZ_ALPHABET = [:I, :J, :K, :L, :M, :N]
+const _SU2_ALPHABET = [:P, :Q, :R, :S, :T, :U]
 
 function _vbundle_alphabet(vbundle::Symbol)
     vbundle === :SL2C     && return _SL2C_ALPHABET
     vbundle === :SL2C_dot && return _SL2C_DOT_ALPHABET
     vbundle === :Lorentz  && return _LORENTZ_ALPHABET
+    vbundle === :SU2      && return _SU2_ALPHABET
     _TANGENT_ALPHABET
 end
 

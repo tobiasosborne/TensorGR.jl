@@ -50,6 +50,7 @@ include("spinors/spin_commutator.jl")
 include("spinors/ghp.jl")
 include("spinors/np_equations.jl")
 include("spinors/ghp_equations.jl")
+include("spinors/space_spinors.jl")
 
 # Layer 2.6: Tetrad/frame bundle
 include("tetrads/frame_bundle.jl")
@@ -266,6 +267,8 @@ export is_spinor_index, is_dotted, conjugate_index
 export define_spin_metric!, spin_metric
 export define_soldering_form!, to_spinor_indices, to_tensor_indices
 export define_spinor_structure!, @spinor_manifold
+export define_space_spinors!, space_spin_metric_expr, soldering_form_expr
+export space_spinor_completeness, space_spin_up, space_spin_down, is_space_spinor_index
 export define_frame_bundle!, frame_up, frame_down, is_frame_index
 export set_vanishing!
 export current_registry, with_registry
