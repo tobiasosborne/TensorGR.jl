@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-21 (Session 9)
+# HANDOFF — 2026-03-22 (Session 10)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -13,70 +13,57 @@
 7. **TESTING**: Targeted only, or full suite in background.
 8. **REPEAT RULES**: Repeat occasionally to maintain focus.
 9. **DO NOT UNDERESTIMATE**: This is deeply nontrivial.
+10. **NO PARALLEL AGENTS**: Julia precompilation cache conflicts. Run agents sequentially only.
 
 **Corollary**: Review xAct source (at `reference/xAct/`) BEFORE changing core modules.
-**Max 2-3 subagents at a time.** Checkpoint regularly.
-**USE MAX THINKING (opus) for all subagents.** Medium effort missed a bimetric sign bug last session.
+**Max 2-3 subagents at a time (sequential).** Checkpoint regularly.
+**USE MAX THINKING (opus) for all subagents.** Medium effort missed a bimetric sign bug (session 8) AND a generator conjugation bug (session 10).
 **WSL2 MEMORY**: Never enumerate large combinatorial sets in memory. Use streaming/chunked processing.
 
 ---
 
 ## Current State
 
-- **298 of 355 issues closed** (37 closed this session + 3 new issues created)
-- **Full test suite: 370,224+ tests, ALL PASS** (verified this session)
+- **~306 of 355 issues closed** (8 closed this session: 4 new code + 4 already-done)
+- **Full test suite: 370,465 tests, ALL PASS** (verified this session)
 - All pushed to `master`, no uncommitted work
 - `bd stats` for live counts, `bd ready` for available work
 
 ---
 
-## What Was Done This Session (37 issues closed, 8 epics completed)
+## What Was Done This Session (8 issues closed)
 
-### Invar Pipeline (Epic 2, 3, 6 — ALL CLOSED)
-- **riemann_simplify**: Top-level 6-level orchestrator (21 tests)
-- **Invar database**: Complete infrastructure + data for degrees 2-7
-  - Degree 2: 4 canonical, 3 independent, 1 Bianchi relation (134 tests)
-  - Degree 3: 13 canonical, 8 independent, 5 Bianchi relations (695 tests)
-  - Degree 4: 57 canonical, 26 independent, ALL 31 Bianchi relations computed via numerical SVD
-  - Degrees 5-7: Counts verified (75/409/2247 independent) from Garcia-Parrado & Martin-Garcia 2007
-  - Dual invariants: degrees 2-5, Pontryagin density independent
-  - Differential invariants: orders 4 and 6 (10 entries total)
-  - **inv_simplify**: Database-driven fast-path lookup with fallback
-  - **xAct parser**: Mathematica Invar.m parser, cross-check confirms ALL degrees 2-7 match
-  - **Generation script**: Memory-safe streaming enumeration with --verify-orbits mode
-  - **Fast canonicalization**: xperm TensorExpr round-trip (~17% speedup for degree 4)
-- Validation: Gauss-Bonnet, degree-2 independence, degree-3 independence (8 invariants), Weyl completeness
+### TInvar Pipeline (Invar Epic 4 — 3 issues closed)
+- **TGR-5lp.2: TRInv struct + canonicalization** (~300 LOC in `src/invariants/trinv.jl`)
+  - `TRInv` type: partial involution for tensorial Riemann monomials (free indices = fixed points)
+  - Canonicalization via `xperm_canonical_perm_ext` with proper free/dummy separation
+  - Right-coset P·S algorithm with slot-space generators (Renato convention)
+  - Inter-factor exchange via bubble-sort generators (adjacent transpositions)
+  - to/from TensorExpr, to/from RInv conversions
+  - **Critical bug caught during review**: generator conjugation was WRONG for `canonical_perm_ext` direct calls. The existing `_canonicalize_product` conjugates because it calls `xperm_canonical_perm` (which internally inverts the perm). Direct `_ext` calls need unconjugated slot-space generators for right-coset computation. Medium thinking would have missed this.
+  - 45 tests
+- **TGR-5lp.3: First Bianchi cyclic reduction**
+  - `bianchi_cyclic_trinv`: applies R_{a[bcd]}=0 to TRInv by conjugating contraction by cyclic permutation π·σ·π⁻¹
+  - `bianchi_relations_trinv`: generates all Bianchi linear relations among canonical TRInvs
+  - 12 tests
+- **TGR-5lp.4: Second Bianchi differential reduction**
+  - `apply_bianchi2_tensorial`: applies ∇_{[a}R_{bc]de}=0 to TDeriv-wrapped Riemann factors
+  - `has_diff_riemann`, `diff_riemann_factor_indices` for detecting differential monomials
+  - Works at TensorExpr level (TDeriv nodes), not TRInv level
+  - 18 tests
 
-### Invar Pipeline (Epics 4, 5 — IN PROGRESS)
-- **TInvar design doc**: Proposes TRInv partial involution + xperm canonical_perm_ext
-- **SymManipulator design doc**: Proposes SymH type hierarchy, 5-phase plan
-- **SymH type implemented**: MonotermSym, MultitermSym, riemann_symh(), n_independent_components (68 tests)
+### SymManipulator (Invar Epic 5 — 2 issues closed)
+- **TGR-4zb.2**: Already implemented in session 9 (closed as done)
+- **TGR-4zb.3: SymH canonicalization** (~150 LOC added to `src/invariants/symh.jl`)
+  - `canonicalize_symh`: monoterm via xperm + multi-term reduction stub
+  - `symmetrize_symh`: Young projector P = (1/|G|) Σ s·σ(expr)
+  - `verify_symh`: checks monoterm symmetries hold for a tensor
+  - 6 tests (74 total SymH tests)
 
-### Spatial Spinors (SU(2) / Loop Quantum Gravity)
-- **define_space_spinors!**: SU(2) VBundle, eps_space, tau soldering form (69 tests)
-- **Sen connection**: Gamma_sen, F_sen curvature, metricity/compatibility rules (58 tests)
-- **Ashtekar-Barbero variables**: A^i_a connection, E^a_i densitized triad, F^i_{ab} curvature, Gauss constraint (67 tests)
-- **Space spinors design doc**: Full design including Ashtekar variables
-
-### Hamiltonian Analysis (Epic CLOSED)
-- **classify_constraints**: First-class vs second-class with DOF formula (30 tests)
-- **DOF counting**: DOFSummary, dof_count, dof_summary pipeline (54 tests)
-- **GR validation**: 2 DOF verified via full pipeline (24 tests)
-- **Proca validation**: 3 DOF, Maxwell comparison, Stückelberg (23 tests)
-
-### Other Features
-- **invariant_lagrangian**: Most general Lagrangian at orders 0/2/4 with Gauss-Bonnet DDI (47 tests)
-- **Metric-affine validation**: Levi-Civita limit (32 tests), Einstein-Cartan (38 tests)
-- **Fermion design doc**: Recommends is_grassmann registry flag + Grassmann-aware sort
-- **GradedTensor**: register_grassmann_field!, grassmann_parity, grassmann_sign (24 tests)
-- **Invar database design doc**: Recommends lazy-loaded Julia source files (Option E)
-
-### Design Documents Created
-- `docs/design/invar_database_design.md` — Database format comparison (DuckDB vs Julia source)
-- `docs/design/tinvar_design.md` — Tensorial invariant canonicalization
-- `docs/design/symmanipulator_design.md` — SymH type hierarchy (966 lines)
-- `docs/design/space_spinors_design.md` — SU(2) spatial spinors + Ashtekar
-- `docs/design/fermion_design.md` — Grassmann algebra + fermion field types
+### Already-Done Issues (3 closed)
+- **TGR-adi**: Space spinors (already implemented session 9)
+- **TGR-3up**: Sen connection (already implemented session 9)
+- **TGR-x9t**: Ashtekar-Barbero variables (already implemented session 9)
 
 ---
 
@@ -88,12 +75,17 @@
 - **symmetrize** takes `Vector{Symbol}` not `Vector{TIndex}`
 
 ### New this session
-- **RInv BFS orbit canonicalization** is too slow for degree ≥ 4 (~0.1s per involution). The xperm TensorExpr round-trip (to_tensor_expr → canonicalize → from_tensor_expr) provides modest speedup but doesn't solve the fundamental conjugation problem. For degree 4, full enumeration (2M involutions) takes ~55 hours via BFS. Solved by computing Bianchi relations directly on known canonical forms via numerical SVD instead.
-- **xAct doesn't solve conjugation either**: It uses standard left-action canonicalization via ToCanonical[]. The conjugation problem σ→g·σ·g⁻¹ is fundamentally different from xperm's left-action g·σ.
-- **WSL2 memory**: Never store millions of items in memory. Use streaming enumeration (generate → process → discard).
-- **Integralis uses DuckDB** for integral storage, but invariant relations are frozen math — static Julia source files are simpler and have zero dependencies.
-- **Garcia-Parrado & Martin-Garcia 2007 Table 1** is the ground truth for canonical form counts. MaxIndex in Invar.m counts NON-PRODUCT forms only.
-- **Degree-4 Bianchi relations**: All 31 computed via numerical SVD at d=8 with random Bianchi-satisfying Riemann tensors. Rank verified = 26. All coefficients are clean rationals.
+- **xperm convention for canonical_perm_ext**: Perm is in Renato notation (slot→name). Generators must be SLOT-SPACE (not conjugated) for right-coset P·S computation. The existing `_canonicalize_product` uses a DIFFERENT code path (canonical_perm wrapper which inverts internally), so its conjugation pattern does NOT apply to direct `_ext` calls. This is a deep convention trap.
+- **No parallel agents**: Julia precompilation cache conflicts on WSL2 cause failures when multiple agents run Julia simultaneously. Always run agents sequentially.
+- **Multi-term symmetries (Bianchi) can't be verified at TensorExpr level**: The simplify pipeline doesn't know about multi-term identities. Verification requires component computation or the Invar pipeline.
+- **TensorProperties constructor**: Uses keyword args: `TensorProperties(name=:T, manifold=:M4, rank=(0,2), symmetries=[...])`. NOT positional args.
+- **Many session-9 issues were not properly closed in beads**: Space spinors, Sen connection, Ashtekar variables, and SymH type were all implemented but left open.
+
+### Previous sessions (still relevant)
+- **RInv BFS orbit canonicalization** is too slow for degree ≥ 4
+- **WSL2 memory**: Never store millions of items in memory
+- **Garcia-Parrado & Martin-Garcia 2007 Table 1** is the ground truth for canonical form counts
+- **Degree-4 Bianchi relations**: All 31 computed via numerical SVD
 
 ---
 
@@ -105,17 +97,18 @@ bd stats    # project health
 ```
 
 **P2 (implementation):**
-- TGR-4zb.3: SymManipulator: SymH canonicalization
-- TGR-5lp.2: TInvar: tensorial Riemann monomial canonicalization
+- TGR-5lp.5: TInvar: tensorial DDI reduction (dimension-dependent, architecturally heavier)
+- TGR-4zb.4: SymManipulator: SymH arithmetic
 - TGR-u19: BH-Pert2: radial source assembly (check deps exist first!)
+- TGR-ah2: Full Invar parity: exhaustive canonical forms degrees 4-7
 
 **P3 (implementation):**
-- TGR-2jh.3: Dirac field with kinetic term
+- TGR-2jh.1: Research: fermion field types
 - TGR-bm6.1: Schwarzschild 2+2 decomposition
 
 **Epics still open:**
-- Invar Epic 4 (TInvar) — design doc ready
-- Invar Epic 5 (SymManipulator) — SymH type done, canonicalization next
+- Invar Epic 4 (TInvar) — TRInv + Bianchi done, DDI next
+- Invar Epic 5 (SymManipulator) — SymH type + canonicalization done, arithmetic next
 - FullSimplification (xTras)
 - Tetrad/xCoba
 - Fermion Fields — GradedTensor done, Dirac field next
