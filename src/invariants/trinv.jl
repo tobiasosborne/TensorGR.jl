@@ -643,6 +643,96 @@ function bianchi_relations_trinv(trinvs::Vector{TRInv})
     unique_rels
 end
 
+# ---- Second Bianchi identity (differential) ----------------------------------
+
+"""
+    apply_bianchi2_tensorial(expr::TensorExpr, factor_idx::Int;
+                              registry::TensorRegistry=current_registry()) -> TensorExpr
+
+Apply the second Bianchi identity ∇_{[a} R_{bc]de} = 0 to the
+`factor_idx`-th factor of a TProduct, which must be a TDeriv wrapping
+a Riemann tensor: `∂_a R_{bcde}`.
+
+The identity ∇_a R_{bcde} + ∇_b R_{cade} + ∇_c R_{abde} = 0 means:
+
+    ∂_a R_{bcde} = -∂_b R_{cade} - ∂_c R_{abde}
+
+The derivative index `a` is antisymmetrized with the first pair `b,c`
+of the Riemann tensor, producing two new terms where the derivative
+index cycles through positions (a,b,c).
+
+Returns the sum of the two substituted terms (canonicalized).
+"""
+function apply_bianchi2_tensorial(expr::TensorExpr, factor_idx::Int;
+                                   registry::TensorRegistry=current_registry())
+    expr isa TProduct || return expr
+
+    factors = collect(expr.factors)
+    (1 <= factor_idx <= length(factors)) ||
+        error("apply_bianchi2_tensorial: factor_idx $factor_idx out of range")
+
+    f = factors[factor_idx]
+
+    # The target factor must be TDeriv wrapping a Riemann tensor
+    f isa TDeriv || return expr
+    f.arg isa Tensor || return expr
+    f.arg.name == :Riem || return expr
+    length(f.arg.indices) == 4 || return expr
+
+    deriv_idx = f.index        # a
+    covd = f.covd
+    b, c, d, e = f.arg.indices # R_{bcde}
+
+    # Second Bianchi: ∂_a R_{bcde} = -∂_b R_{cade} - ∂_c R_{abde}
+    term1_factor = TDeriv(b, Tensor(:Riem, [c, deriv_idx, d, e]), covd)
+    term2_factor = TDeriv(c, Tensor(:Riem, [deriv_idx, b, d, e]), covd)
+
+    other_factors = TensorExpr[factors[i] for i in eachindex(factors) if i != factor_idx]
+
+    t1 = tproduct(-expr.scalar, vcat(other_factors, TensorExpr[term1_factor]))
+    t2 = tproduct(-expr.scalar, vcat(other_factors, TensorExpr[term2_factor]))
+
+    result = tsum(TensorExpr[t1, t2])
+
+    with_registry(registry) do
+        canonicalize(result)
+    end
+end
+
+"""
+    has_diff_riemann(expr::TensorExpr) -> Bool
+
+Check whether an expression contains any covariant derivative of a
+Riemann tensor (i.e., `TDeriv(_, Tensor(:Riem, _), _)`).
+"""
+function has_diff_riemann(expr::TDeriv)
+    (expr.arg isa Tensor && expr.arg.name == :Riem) || has_diff_riemann(expr.arg)
+end
+has_diff_riemann(::Tensor) = false
+has_diff_riemann(::TScalar) = false
+function has_diff_riemann(p::TProduct)
+    any(has_diff_riemann, p.factors)
+end
+function has_diff_riemann(s::TSum)
+    any(has_diff_riemann, s.terms)
+end
+
+"""
+    diff_riemann_factor_indices(p::TProduct) -> Vector{Int}
+
+Return the indices of factors in a TProduct that are TDeriv wrapping
+a Riemann tensor (candidates for second Bianchi application).
+"""
+function diff_riemann_factor_indices(p::TProduct)
+    idxs = Int[]
+    for (i, f) in enumerate(p.factors)
+        if f isa TDeriv && f.arg isa Tensor && f.arg.name == :Riem
+            push!(idxs, i)
+        end
+    end
+    idxs
+end
+
 # ---- Display -----------------------------------------------------------------
 
 function Base.show(io::IO, t::TRInv)

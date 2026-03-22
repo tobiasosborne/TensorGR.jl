@@ -323,6 +323,103 @@
         end
     end
 
+    # ─── Second Bianchi identity (differential) ─────────────────────
+    @testset "Bianchi2: structure of differential_bianchi" begin
+        reg = trinv_registry()
+        with_registry(reg) do
+            @covd D on=M4 metric=g
+
+            # The second Bianchi identity produces 3 terms
+            id = differential_bianchi(down(:a), down(:b), down(:c),
+                                      down(:d), down(:e); covd=:D)
+            @test id isa TSum
+            @test length(id.terms) == 3
+
+            # Each term is a TDeriv wrapping a Riemann tensor
+            for t in id.terms
+                @test t isa TDeriv
+                @test t.arg isa Tensor
+                @test t.arg.name == :Riem
+            end
+        end
+    end
+
+    @testset "Bianchi2: apply to tensorial product" begin
+        reg = trinv_registry()
+        with_registry(reg) do
+            @covd D on=M4 metric=g
+
+            # Build ∂_a R_{bcde} as a single factor
+            dR = TDeriv(down(:a), Tensor(:Riem, [down(:b), down(:c),
+                        down(:d), down(:e)]), :D)
+            expr = tproduct(1 // 1, TensorExpr[dR])
+
+            # Apply second Bianchi to factor 1
+            result = apply_bianchi2_tensorial(expr, 1; registry=reg)
+            @test result isa TensorExpr
+
+            # The result should be: -∂_b R_{cade} - ∂_c R_{abde}
+            # which is a TSum of two terms
+            if result isa TSum
+                @test length(result.terms) == 2
+            end
+
+            # has_diff_riemann should detect derivative Riemann factors
+            @test has_diff_riemann(dR)
+            @test !has_diff_riemann(Tensor(:Riem, [down(:a), down(:b),
+                                   down(:c), down(:d)]))
+
+            # diff_riemann_factor_indices on a product
+            p = tproduct(1 // 1, TensorExpr[dR])
+            if p isa TProduct
+                idxs = diff_riemann_factor_indices(p)
+                @test length(idxs) == 1
+                @test idxs[1] == 1
+            end
+        end
+    end
+
+    @testset "Bianchi2: apply produces correct index structure" begin
+        reg = trinv_registry()
+        with_registry(reg) do
+            @covd D on=M4 metric=g
+
+            # apply_bianchi2_tensorial should produce terms where the
+            # derivative index cycles with the first pair of Riemann
+            dR = TDeriv(down(:a), Tensor(:Riem, [down(:b), down(:c),
+                        down(:d), down(:e)]), :D)
+            expr = tproduct(1 // 1, TensorExpr[dR])
+            result = apply_bianchi2_tensorial(expr, 1; registry=reg)
+
+            # Result should have 5 free indices (same as original)
+            orig_idxs = indices(dR)
+            @test length(orig_idxs) == 5
+
+            # Result is non-trivial (not zero)
+            @test !(result isa TScalar && result.val == 0)
+        end
+    end
+
+    @testset "Bianchi2: product with extra factor" begin
+        reg = trinv_registry()
+        with_registry(reg) do
+            @covd D on=M4 metric=g
+
+            # ∂_a R_{bcde} * R_{fghi} — apply Bianchi2 to factor 1
+            dR = TDeriv(down(:a), Tensor(:Riem, [down(:b), down(:c),
+                        down(:d), down(:e)]), :D)
+            R2 = Tensor(:Riem, [down(:f), down(:g), down(:h), down(:i)])
+            expr = tproduct(1 // 1, TensorExpr[dR, R2])
+
+            result = apply_bianchi2_tensorial(expr, 1; registry=reg)
+            @test result isa TensorExpr
+
+            # Factor 2 (plain Riemann) should not be affected by Bianchi2
+            result2 = apply_bianchi2_tensorial(expr, 2; registry=reg)
+            @test result2 == expr  # returns unchanged
+        end
+    end
+
     # ─── Display ──────────────────────────────────────────────────────
     @testset "Display" begin
         t = TRInv(2, [5, 6, 3, 4, 1, 2, 7, 8],

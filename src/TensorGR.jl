@@ -508,6 +508,7 @@ export dual_independent_rinvs, pontryagin_rinv_canonical
 export inv_simplify
 # Exports: TRInv (tensorial Riemann monomials)
 export TRInv, from_tensor_expr_trinv, bianchi_cyclic_trinv, bianchi_relations_trinv
+export apply_bianchi2_tensorial, has_diff_riemann, diff_riemann_factor_indices
 # Exports: SymH (unified symmetry handler)
 export AbstractSymmetry, MonotermSym, MultitermSym, SymH
 export riemann_symh, n_independent_components, is_monoterm_only
