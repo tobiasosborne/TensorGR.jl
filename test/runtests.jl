@@ -362,6 +362,8 @@ using TensorGR
     include("test_inv_simplify.jl")
     # SymH unified symmetry handler
     include("test_symh.jl")
+    # TRInv: tensorial Riemann monomial canonicalization
+    include("test_trinv.jl")
     # Grassmann parity (graded tensor)
     include("test_graded_tensor.jl")
 end
