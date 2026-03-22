@@ -208,4 +208,108 @@
         @test n_independent_components(symh, 4) == 4    # 4*3*2/6
         @test n_independent_components(symh, 5) == 10   # 5*4*3/6
     end
+
+    # ── SymH canonicalization ────────────────────────────────────────
+    @testset "canonicalize_symh: monoterm" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+
+            # Riemann tensor: canonicalize via SymH should match
+            # standard canonicalize
+            R = Tensor(:Riem, [down(:c), down(:a), down(:b), down(:d)])
+            symh = riemann_symh()
+
+            csymh = canonicalize_symh(R, symh; registry=reg)
+            cstd = canonicalize(R)
+
+            @test csymh == cstd
+        end
+    end
+
+    @testset "canonicalize_symh: symmetric tensor" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            register_tensor!(reg, TensorProperties(
+                name=:T, manifold=:M4, rank=(0,2),
+                symmetries=[Symmetric(1, 2)]))
+
+            T_ba = Tensor(:T, [down(:b), down(:a)])
+            symh = SymH(Symmetric(1, 2), 2)
+
+            result = canonicalize_symh(T_ba, symh; registry=reg)
+            expected = canonicalize(T_ba)
+            @test result == expected
+        end
+    end
+
+    # ── symmetrize_symh ──────────────────────────────────────────────
+    @testset "symmetrize_symh: symmetric projection" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            register_tensor!(reg, TensorProperties(
+                name=:V, manifold=:M4, rank=(0,2),
+                symmetries=SymmetrySpec[]))
+
+            V = Tensor(:V, [down(:a), down(:b)])
+            symh = SymH(Symmetric(1, 2), 2)
+
+            # Symmetrizing V_{ab} should give (V_{ab} + V_{ba})/2
+            result = symmetrize_symh(V, symh; registry=reg)
+            @test result isa TensorExpr
+
+            # The group has order 2: {id, (12)}, so the projector is
+            # P(V_{ab}) = (1/2)(V_{ab} + V_{ba})
+            # After simplification this should be a sum of two terms
+            # with coefficient 1/2 each
+        end
+    end
+
+    @testset "symmetrize_symh: antisymmetric projection" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            register_tensor!(reg, TensorProperties(
+                name=:V, manifold=:M4, rank=(0,2),
+                symmetries=SymmetrySpec[]))
+
+            V = Tensor(:V, [down(:a), down(:b)])
+            symh = SymH(AntiSymmetric(1, 2), 2)
+
+            result = symmetrize_symh(V, symh; registry=reg)
+            @test result isa TensorExpr
+        end
+    end
+
+    # ── verify_symh ──────────────────────────────────────────────────
+    @testset "verify_symh: Riemann" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+
+            R = Tensor(:Riem, [down(:a), down(:b), down(:c), down(:d)])
+            symh = riemann_symh()
+
+            # Riemann tensor should satisfy its own symmetry
+            @test verify_symh(R, symh; registry=reg)
+        end
+    end
+
+    @testset "verify_symh: wrong symmetry" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+
+            R = Tensor(:Riem, [down(:a), down(:b), down(:c), down(:d)])
+            # Fully symmetric SymH — Riemann is NOT fully symmetric
+            wrong_symh = SymH(FullySymmetric(1, 2, 3, 4), 4)
+
+            @test !verify_symh(R, wrong_symh; registry=reg)
+        end
+    end
 end
