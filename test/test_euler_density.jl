@@ -1,6 +1,7 @@
 using Test
 using TensorGR
-using TensorGR: lovelock_lagrangian, free_indices
+using TensorGR: lovelock_lagrangian, free_indices, _build_lovelock_from_delta,
+                 _restricted_perms, _perm_sign
 
 @testset "EulerDensity: Arbitrary Dimension" begin
 
@@ -365,6 +366,40 @@ end
         end
     end
 
+    # ── Coset transversal: L_2 from general algorithm matches fast path ─
+    @testset "coset L_2 == fast-path Gauss-Bonnet" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g registry=reg
+            define_curvature_tensors!(reg, :M4, :g)
+
+            # Build L_2 via coset algorithm (bypasses fast path)
+            L2_coset = _build_lovelock_from_delta(2, reg)
+            @test L2_coset isa TSum
+            @test length(L2_coset.terms) == 6  # 4!/2^2
+
+            s = simplify(L2_coset; registry=reg)
+            @test s isa TSum
+            @test length(s.terms) == 3  # R² - 4Ric² + Riem²
+
+            # Verify coefficients match Gauss-Bonnet
+            coeffs = Dict{Symbol, Rational{Int}}()
+            for t in s.terms
+                str = string(t)
+                if count("Riem", str) >= 2
+                    coeffs[:Riem] = t isa TProduct ? t.scalar : 1 // 1
+                elseif occursin("Ric", str) && !occursin("RicScalar", str) && !occursin("Riem", str)
+                    coeffs[:Ric] = t isa TProduct ? t.scalar : 1 // 1
+                elseif count("RicScalar", str) >= 2
+                    coeffs[:RicScalar] = t isa TProduct ? t.scalar : 1 // 1
+                end
+            end
+            @test coeffs[:Riem] == 1 // 1
+            @test coeffs[:Ric] == -4 // 1
+            @test coeffs[:RicScalar] == 1 // 1
+        end
+    end
+
     # ── d=2 in existing test (from test_xact_ground_truth.jl) ────────
     @testset "d=2 regression: well-formed scalar" begin
         reg = TensorRegistry()
@@ -379,6 +414,70 @@ end
             fi = free_indices(E2)
             @test isempty(fi)
         end
+    end
+
+end
+
+@testset "Coset Transversal Helpers" begin
+
+    # ── Restricted permutation counts: n!/2^p ──────────────────────
+    @testset "restricted_perms counts" begin
+        @test length(_restricted_perms(2, 1)) == 1
+        @test length(_restricted_perms(4, 2)) == 6
+        @test length(_restricted_perms(6, 3)) == 90
+        @test length(_restricted_perms(8, 4)) == 2520
+    end
+
+    # ── Constraint property: σ(2i-1) < σ(2i) ──────────────────────
+    @testset "restricted_perms constraint holds" begin
+        for sigma in _restricted_perms(6, 3)
+            @test sigma[1] < sigma[2]
+            @test sigma[3] < sigma[4]
+            @test sigma[5] < sigma[6]
+        end
+    end
+
+    # ── Permutation sign sanity ────────────────────────────────────
+    @testset "perm_sign" begin
+        @test _perm_sign([1, 2, 3, 4]) == 1
+        @test _perm_sign([2, 1, 3, 4]) == -1
+        @test _perm_sign([2, 1, 4, 3]) == 1
+        @test _perm_sign([3, 4, 1, 2]) == 1
+    end
+
+end
+
+@testset "Quartic Lovelock (d=8)" begin
+
+    @testset "d=8: E_8 structure" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M8 dim=8 metric=g registry=reg
+            define_curvature_tensors!(reg, :M8, :g)
+
+            E8 = euler_density(:g; dim=8, registry=reg)
+            @test isempty(free_indices(E8))
+            @test E8 isa TSum
+            @test length(E8.terms) == 2520  # 8!/2^4
+
+            s = simplify(E8; registry=reg)
+            @test s isa TSum
+
+            # Each term must be quartic in curvature
+            for t in s.terms
+                str = string(t)
+                n_riem = count("Riem[", str)
+                n_ric = count("Ric[", str)
+                n_rs = count("RicScalar", str)
+                @test n_riem + n_ric + n_rs == 4
+            end
+        end
+    end
+
+    # E_8 should simplify to zero via quartic DDIs in d=8, but quartic DDI
+    # rules are not yet implemented — skipped until then.
+    @testset "d=8 in d=8: E_8 topological (DDI zero)" begin
+        @test_skip "quartic DDI rules not yet implemented"
     end
 
 end

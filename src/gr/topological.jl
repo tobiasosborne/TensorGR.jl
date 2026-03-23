@@ -63,8 +63,8 @@ Special cases:
 - d odd: returns `TScalar(0//1)` (Euler density vanishes in odd dimensions)
 - d=2: `E₂ = R` (Ricci scalar)
 - d=4: `E₄ = R² - 4 R_{ab}R^{ab} + R_{abcd}R^{abcd}` (Gauss-Bonnet, fast path)
-- d=6: cubic Lovelock `L₃` (8-term expression)
-- d≥8: general Lovelock `L_{d/2}` via generalized Kronecker delta
+- d=6: cubic Lovelock `L₃` (10 terms after simplification)
+- d≥8: general Lovelock `L_{d/2}` via coset transversal (`d!/2^{d/2}` raw terms)
 
 References:
 - Lovelock (1971), J. Math. Phys. 12, 498
@@ -155,9 +155,9 @@ The `dim` keyword specifies the manifold dimension (used only for the DDI
 vanishing check: L_p = 0 when 2p > dim). If `dim=0` (default), it is
 looked up from the registry.
 
-Note: for large `order` (≥ 4), the generalized delta expansion produces
-`(2p)!` terms before simplification. This is exact but computationally
-expensive. Use `simplify` to reduce the result.
+For `order ≥ 3`, the coset transversal produces `(2p)!/2^p` pre-simplify terms
+by exploiting Riemann antisymmetry (e.g., 90 terms for cubic Lovelock instead
+of 720, 2520 for quartic instead of 40320). Use `simplify` to reduce.
 
 References:
 - Lovelock (1971), J. Math. Phys. 12, 498
@@ -207,70 +207,89 @@ end
 """
     _build_lovelock_from_delta(p::Int, registry::TensorRegistry) -> TensorExpr
 
-Build the Lovelock Lagrangian of order p using the generalized Kronecker delta:
+Build the Lovelock Lagrangian of order p via coset transversal over the
+within-pair swap subgroup `H = (Z₂)^p` of `S_{2p}`.
 
-`L_p = (1/2^p) δ^{a₁b₁ ⋯ aₚbₚ}_{c₁d₁ ⋯ cₚdₚ} R^{c₁d₁}_{a₁b₁} ⋯ R^{cₚdₚ}_{aₚbₚ}`
+The Riemann antisymmetry `R_{abcd} = -R_{bacd}` absorbs the within-pair index
+swaps, reducing the sum from `(2p)!` to `(2p)!/2^p` terms. The `1/2^p`
+Lovelock prefactor exactly cancels the coset multiplicity, giving unit
+coefficient per representative.
 
-The generalized delta is expanded via the Leibniz formula (sum over permutations
-of S_{2p} with signs), producing a sum of signed products of ordinary Kronecker
-deltas. Each term is multiplied by the product of p Riemann tensors. The delta
-contractions select specific index pairings of the Riemanns, yielding all
-possible Riemann contraction structures with the correct combinatorial weights.
+Term counts: p=3 → 90 (was 720), p=4 → 2520 (was 40320).
 
-The overall factor is 1/2^p from the Lovelock definition.
+References:
+- Lovelock (1971), J. Math. Phys. 12, 498
+- xTras (Nutma, arXiv:1308.3493) §4: TransversalInSymmetricGroup
 """
 function _build_lovelock_from_delta(p::Int, registry::TensorRegistry)
     used = Set{Symbol}()
 
-    # Generate 2p upper index names (delta upper = Riemann lower indices)
-    up_names = Symbol[]
+    # Only 2p index names needed (each appears once Up, once Down across Riemanns)
+    idx = Symbol[]
     for _ in 1:(2p)
         s = fresh_index(used)
         push!(used, s)
-        push!(up_names, s)
+        push!(idx, s)
     end
 
-    # Generate 2p lower index names (delta lower = Riemann upper indices)
-    down_names = Symbol[]
-    for _ in 1:(2p)
-        s = fresh_index(used)
-        push!(used, s)
-        push!(down_names, s)
-    end
+    perms = _restricted_perms(2p, p)
 
-    # Delta tensor name from registry
-    delta_name = isempty(registry.delta_cache) ? :delta :
-                 first(values(registry.delta_cache))
+    terms = TensorExpr[]
+    for sigma in perms
+        sgn = _perm_sign(sigma)
 
-    # Expand generalized delta via Leibniz formula:
-    # delta^{up_1...up_{2p}}_{dn_1...dn_{2p}} =
-    #   sum_{sigma in S_{2p}} sign(sigma) * prod_{i=1}^{2p} delta^{up_i}_{dn_{sigma(i)}}
-    perms = _permutations_with_sign(2p)
-    delta_terms = TensorExpr[]
-    for (perm, sgn) in perms
-        factors = TensorExpr[]
-        for i in 1:(2p)
-            push!(factors, Tensor(delta_name, [up(up_names[i]), down(down_names[perm[i]])]))
+        # Build p Riemann factors with contracted indices
+        # Riemann i: upper = idx[2i-1], idx[2i]; lower = idx[σ(2i-1)], idx[σ(2i)]
+        riem_factors = TensorExpr[]
+        for i in 1:p
+            u1 = idx[2i - 1]
+            u2 = idx[2i]
+            l1 = idx[sigma[2i - 1]]
+            l2 = idx[sigma[2i]]
+            push!(riem_factors, Tensor(:Riem, [up(u1), up(u2), down(l1), down(l2)]))
         end
-        push!(delta_terms, tproduct(Rational{Int}(sgn), factors))
-    end
-    gdelta = tsum(delta_terms)
 
-    # Build the product of p Riemann tensors:
-    # R^{dn₁dn₂}_{up₁up₂} * R^{dn₃dn₄}_{up₃up₄} * ⋯ * R^{dn_{2p-1}dn_{2p}}_{up_{2p-1}up_{2p}}
-    riem_factors = TensorExpr[]
-    for i in 1:p
-        a_i = up_names[2i - 1]
-        b_i = up_names[2i]
-        c_i = down_names[2i - 1]
-        d_i = down_names[2i]
-        push!(riem_factors, Tensor(:Riem, [up(c_i), up(d_i), down(a_i), down(b_i)]))
+        push!(terms, tproduct(Rational{Int}(sgn), riem_factors))
     end
-    riem_product = tproduct(1 // 1, riem_factors)
 
-    # L_p = (1/2^p) * gdelta * riem_product
-    coeff = 1 // (2^p)
-    tproduct(coeff, TensorExpr[gdelta, riem_product])
+    tsum(terms)
+end
+
+# ── Restricted permutation generator ────────────────────────────────
+
+"""
+    _restricted_perms(n::Int, p::Int) -> Vector{Vector{Int}}
+
+Generate all permutations σ of `{1,…,n}` satisfying `σ(2i-1) < σ(2i)` for
+each `i = 1,…,p`. These are coset representatives of `S_n / (Z₂)^p` (the
+within-pair swap subgroup). Returns `n!/2^p` permutations.
+"""
+function _restricted_perms(n::Int, p::Int)
+    result = Vector{Vector{Int}}()
+    _rp_build!(result, Int[], trues(n), n, p)
+    result
+end
+
+function _rp_build!(result::Vector{Vector{Int}},
+                    current::Vector{Int}, avail::BitVector,
+                    n::Int, p::Int)
+    pos = length(current) + 1
+    if pos > n
+        push!(result, copy(current))
+        return
+    end
+    for val in 1:n
+        @inbounds avail[val] || continue
+        # At even positions 2,4,...,2p enforce σ(2i-1) < σ(2i) to select coset reps
+        if iseven(pos) && pos ÷ 2 <= p && val <= @inbounds current[end]
+            continue
+        end
+        push!(current, val)
+        @inbounds avail[val] = false
+        _rp_build!(result, current, avail, n, p)
+        pop!(current)
+        @inbounds avail[val] = true
+    end
 end
 
 """Look up manifold dimension from registry (first registered manifold)."""

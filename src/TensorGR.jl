@@ -440,7 +440,7 @@ export schouten_to_ricci, ricci_to_schouten
 export tfricci_expr, ricci_to_tfricci
 export to_riemann, to_ricci
 export riemann_to_christoffel, kretschmann_expr
-export pontryagin_density, euler_density, chern_simons_action
+export pontryagin_density, euler_density, chern_simons_action, lovelock_lagrangian
 
 # Exports: Exterior calculus
 export define_form!, form_degree
