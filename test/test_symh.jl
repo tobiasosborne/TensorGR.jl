@@ -312,4 +312,78 @@
             @test !verify_symh(R, wrong_symh; registry=reg)
         end
     end
+
+    # ── SymH Arithmetic ──────────────────────────────────────────────
+
+    @testset "symh_product: Riem⊗Riem" begin
+        riem = riemann_symh()
+        prod = symh_product(riem, riem)
+
+        @test prod.nslots == 8
+        @test length(prod.monoterm) == 6   # 3 from each factor
+        @test length(prod.multiterm) == 2  # Bianchi from each factor
+
+        # First factor generators act on slots 1-4, identity on 5-8
+        for m in prod.monoterm[1:3]
+            @test all(m.perm[5:8] .== 5:8)
+        end
+        # Second factor generators: identity on 1-4, act on 5-8
+        for m in prod.monoterm[4:6]
+            @test all(m.perm[1:4] .== 1:4)
+        end
+
+        # Independent components: 20 * 20 = 400 (no exchange)
+        @test n_independent_components(prod, 4) == 400
+    end
+
+    @testset "symh_product: Sym(2) ⊗ AntiSym(2)" begin
+        sym2 = SymH(FullySymmetric(1, 2), 2)
+        anti2 = SymH(FullyAntiSymmetric(1, 2), 2)
+        prod = symh_product(sym2, anti2)
+
+        @test prod.nslots == 4
+        @test length(prod.monoterm) == 2  # 1 from each
+
+        # d=3: sym2 has 6 components, anti2 has 3 → product = 18
+        @test n_independent_components(prod, 3) == 18
+    end
+
+    @testset "symh_exchange: Riem⊗Riem" begin
+        riem = riemann_symh()
+        prod = symh_product(riem, riem)
+        prod_ex = symh_exchange(prod, 4; sign=1)
+
+        @test prod_ex.nslots == 8
+        @test length(prod_ex.monoterm) == 7  # 6 + 1 exchange
+
+        # Symmetric product: 20*21/2 = 210
+        @test n_independent_components(prod_ex, 4) == 210
+
+        # Wrong nslots throws
+        @test_throws ArgumentError symh_exchange(prod, 3)
+    end
+
+    @testset "symh_trace: Riemann slots (1,3)" begin
+        riem = riemann_symh()
+        traced = symh_trace(riem, 1, 3)
+
+        @test traced.nslots == 2
+        # anti(1,2) maps 1→2,2→1: slot 1 goes to 2 (not in {1,3}) → filtered out
+        # anti(3,4) maps 3→4,4→3: slot 3 goes to 4 (not in {1,3}) → filtered out
+        # pair(1,2,3,4) maps 1→3,3→1: {1,3}→{3,1}={1,3} → kept!
+        @test length(traced.monoterm) == 1
+        # The kept generator swaps the two remaining slots → symmetric!
+        @test traced.monoterm[1].sign == 1  # pair symmetry has sign +1
+    end
+
+    @testset "symh_trace: edge cases" begin
+        # Trace of symmetric rank-2: scalar (0 slots)
+        sym2 = SymH(FullySymmetric(1, 2), 2)
+        traced = symh_trace(sym2, 1, 2)
+        @test traced.nslots == 0
+
+        # Invalid indices throw
+        @test_throws ArgumentError symh_trace(riemann_symh(), 3, 1)
+        @test_throws ArgumentError symh_trace(riemann_symh(), 0, 2)
+    end
 end

@@ -627,3 +627,117 @@ function verify_symh(expr::TensorExpr, symh::SymH;
 
     true
 end
+
+# ══════════════════════════════════════════════════════════════════════
+# SymH Arithmetic
+# ══════════════════════════════════════════════════════════════════════
+
+"""
+    symh_product(s1::SymH, s2::SymH) -> SymH
+
+Tensor product symmetry: `T₁ ⊗ T₂` has symmetry `S₁ × S₂` acting on
+disjoint slot sets. `s1` acts on slots `1:n₁`, `s2` acts on slots `n₁+1:n₁+n₂`.
+
+# Examples
+```julia
+riem = riemann_symh()                    # 4 slots
+prod = symh_product(riem, riem)          # 8 slots, Riem⊗Riem symmetry
+prod.nslots == 8
+length(prod.monoterm) == 6              # 3 from each factor
+length(prod.multiterm) == 2             # Bianchi on each factor
+```
+"""
+function symh_product(s1::SymH, s2::SymH)
+    n1, n2 = s1.nslots, s2.nslots
+    ntotal = n1 + n2
+
+    # Lift s1 generators: act on 1:n1, identity on n1+1:ntotal
+    pad_right = collect(n1+1:ntotal)
+    mono1 = [MonotermSym(vcat(m.perm, pad_right), m.sign) for m in s1.monoterm]
+
+    # Lift s2 generators: identity on 1:n1, act on n1+1:ntotal
+    pad_left = collect(1:n1)
+    mono2 = [MonotermSym(vcat(pad_left, [p + n1 for p in m.perm]), m.sign) for m in s2.monoterm]
+
+    # Lift multiterm constraints similarly
+    multi1 = [MultitermSym(ntotal, [(c, vcat(p, pad_right)) for (c, p) in mt.terms])
+              for mt in s1.multiterm]
+    multi2 = [MultitermSym(ntotal, [(c, vcat(pad_left, [pi + n1 for pi in p])) for (c, p) in mt.terms])
+              for mt in s2.multiterm]
+
+    SymH(ntotal, vcat(mono1, mono2), vcat(multi1, multi2))
+end
+
+"""
+    symh_trace(s::SymH, i::Int, j::Int) -> SymH
+
+Induced symmetry after contracting (tracing) slots `i` and `j` with a
+symmetric metric `g^{ij} = g^{ji}`.
+
+Keeps only generators compatible with the contraction: those that either
+fix both `i,j` or swap them (metric symmetry). The result acts on `n-2` slots
+with relabeled indices.
+
+# Examples
+```julia
+riem = riemann_symh()                    # 4 slots: [anti(1,2), anti(3,4), pair]
+traced = symh_trace(riem, 1, 3)          # trace slots 1,3 → Ricci-like, 2 slots
+traced.nslots == 2
+```
+"""
+function symh_trace(s::SymH, i::Int, j::Int)
+    n = s.nslots
+    (1 <= i < j <= n) || throw(ArgumentError("symh_trace: need 1 ≤ i < j ≤ n, got i=$i, j=$j, n=$n"))
+
+    remaining = [k for k in 1:n if k != i && k != j]
+    relabel = Dict(remaining[k] => k for k in eachindex(remaining))
+
+    # Keep monoterm generators that are compatible with the contraction:
+    # sigma must map {i,j} -> {i,j} (so the contraction is preserved)
+    new_mono = MonotermSym[]
+    for m in s.monoterm
+        if Set([m.perm[i], m.perm[j]]) == Set([i, j])
+            new_perm = [relabel[m.perm[k]] for k in remaining]
+            # If sigma swaps i<->j, the sign is unchanged (metric is symmetric)
+            push!(new_mono, MonotermSym(new_perm, m.sign))
+        end
+    end
+
+    # Keep multiterm constraints where ALL terms are compatible
+    new_multi = MultitermSym[]
+    for mt in s.multiterm
+        projected_terms = Tuple{Rational{Int}, Vector{Int}}[]
+        all_ok = true
+        for (c, p) in mt.terms
+            if Set([p[i], p[j]]) == Set([i, j])
+                push!(projected_terms, (c, [relabel[p[k]] for k in remaining]))
+            else
+                all_ok = false
+                break
+            end
+        end
+        all_ok && push!(new_multi, MultitermSym(n - 2, projected_terms))
+    end
+
+    SymH(n - 2, new_mono, new_multi)
+end
+
+"""
+    symh_exchange(s::SymH, n1::Int; sign::Int=1) -> SymH
+
+Add inter-factor exchange symmetry for identical tensors in a product.
+Swaps the slot blocks `1:n1` ↔ `n1+1:2n1` with the given sign.
+Use `sign=+1` for bosonic (symmetric) exchange, `sign=-1` for fermionic.
+
+Requires `s.nslots == 2*n1` (two identical factors).
+"""
+function symh_exchange(s::SymH, n1::Int; sign::Int=1)
+    s.nslots == 2 * n1 || throw(ArgumentError("symh_exchange: nslots=$(s.nslots) ≠ 2*n1=$((2*n1))"))
+    sign in (1, -1) || throw(ArgumentError("sign must be +1 or -1"))
+
+    # Exchange permutation: swap blocks [1:n1] <-> [n1+1:2n1]
+    exchange_perm = vcat(collect(n1+1:2*n1), collect(1:n1))
+    exchange_gen = MonotermSym(exchange_perm, sign)
+
+    SymH(s.nslots, vcat(s.monoterm, [exchange_gen]), copy(s.multiterm))
+end

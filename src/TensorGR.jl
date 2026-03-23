@@ -515,6 +515,7 @@ export AbstractSymmetry, MonotermSym, MultitermSym, SymH
 export riemann_symh, n_independent_components, is_monoterm_only
 export to_symmetry_spec, to_xperm_generators
 export canonicalize_symh, symmetrize_symh, verify_symh
+export symh_product, symh_trace, symh_exchange
 export DiffInvariantEntry, diff_invariant, list_diff_invariants, diff_invariant_count
 export define_lambda_spinor!, lambda_spinor_expr
 export define_weyl_spinor!, define_ricci_spinor!, define_curvature_spinors!
