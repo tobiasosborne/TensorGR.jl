@@ -31,3 +31,6 @@ reports/*.toc
 reference/ground_truth/*.djvu
 reference/ground_truth/*.pdf
 !reference/ground_truth/xact_papers/
+
+# Beads / Dolt files (added by bd init)
+.beads-credential-key
