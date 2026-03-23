@@ -161,6 +161,7 @@ include("invariants/db/differential_4.jl")
 include("invariants/inv_simplify.jl")
 include("invariants/symh.jl")
 include("invariants/trinv.jl")
+include("algebra/full_simplify.jl")
 
 # Layer 5.5: Feynman rules (graviton vertices, propagators)
 include("feynman/types.jl")
@@ -307,7 +308,7 @@ export symmetry_generators
 # Exports: Algebra
 export tproduct, tsum, contract_metrics, canonicalize, expand_derivatives
 export expand_products, distribute_derivs_over_sums, flatten_metric_derivs, collect_terms, ibp, ibp_product, fix_dummy_positions, normalize_field_positions
-export simplify
+export simplify, full_simplify
 export collect_tensors, remove_constants, remove_tensors, index_collect
 export make_ansatz
 export abstract_trace, make_traceless
