@@ -195,8 +195,8 @@
             @test_throws ArgumentError invariant_lagrangian(3; registry=reg)
             @test_throws ArgumentError invariant_lagrangian(5; registry=reg)
 
-            # Order 6+ not yet implemented
-            @test_throws ArgumentError invariant_lagrangian(6; registry=reg)
+            # Order 8+ not yet implemented
+            @test_throws ArgumentError invariant_lagrangian(8; registry=reg)
         end
     end
 
@@ -268,7 +268,120 @@
     end
 
     # ------------------------------------------------------------------
-    # 9. dim=nothing gives generic-dimension result (same as no DDI)
+    # 9. Order 6, generic dimension: 8 cubic invariants
+    # ------------------------------------------------------------------
+    @testset "Order 6, generic dim: 8 cubic invariants" begin
+        reg = lagrangian_registry()
+        with_registry(reg) do
+            L6 = invariant_lagrangian(6; registry=reg)
+
+            @test L6 isa TSum
+            @test length(L6.terms) == 8
+
+            for t in L6.terms
+                @test isempty(free_indices(t))
+            end
+
+            # Verify 8 distinct coefficients c1..c8
+            coeffs = Symbol[]
+            walk(L6) do node
+                if node isa TScalar && node.val isa Symbol
+                    push!(coeffs, node.val)
+                end
+                node
+            end
+            @test Set(unique(coeffs)) == Set([Symbol(:c, i) for i in 1:8])
+        end
+    end
+
+    # ------------------------------------------------------------------
+    # 10. Order 6, d=4: 7 invariants (cubic DDI)
+    # ------------------------------------------------------------------
+    @testset "Order 6, d=4: 7 invariants (cubic DDI)" begin
+        reg = lagrangian_registry(dim=4)
+        with_registry(reg) do
+            L6 = invariant_lagrangian(6; dim=4, registry=reg)
+
+            @test L6 isa TSum
+            @test length(L6.terms) == 7
+
+            for t in L6.terms
+                @test isempty(free_indices(t))
+            end
+        end
+    end
+
+    # ------------------------------------------------------------------
+    # 11. Order 6, d=3: 4 invariants (Weyl vanishes)
+    # ------------------------------------------------------------------
+    @testset "Order 6, d=3: 4 invariants (Weyl vanishes)" begin
+        reg = lagrangian_registry()
+        with_registry(reg) do
+            L6 = invariant_lagrangian(6; dim=3, registry=reg)
+
+            @test L6 isa TSum
+            @test length(L6.terms) == 4
+        end
+    end
+
+    # ------------------------------------------------------------------
+    # 12. Order 6, d=2: 1 invariant (only R³)
+    # ------------------------------------------------------------------
+    @testset "Order 6, d=2: 1 invariant (R^3)" begin
+        reg = lagrangian_registry()
+        with_registry(reg) do
+            L6 = invariant_lagrangian(6; dim=2, registry=reg)
+
+            # Single term: c1 * R³
+            @test L6 isa TProduct
+            str = string(L6)
+            @test count("RicScalar", str) == 3
+        end
+    end
+
+    # ------------------------------------------------------------------
+    # 13. Order 6 invariant content: verify tensor structure
+    # ------------------------------------------------------------------
+    @testset "Order 6 invariant content" begin
+        reg = lagrangian_registry()
+        with_registry(reg) do
+            L6 = invariant_lagrangian(6; registry=reg)
+
+            has_R3 = false          # RicScalar³
+            has_R_Ric2 = false      # R × Ric²
+            has_R_Riem2 = false     # R × Riem²
+            has_Ric3 = false        # Ric³ (no R or Riem)
+            has_Riem3 = false       # Riem³
+
+            for t in L6.terms
+                str = string(t)
+                n_rs = count("RicScalar", str)
+                n_ric = count(r"Ric\[", str)
+                n_riem = count(r"Riem\[", str)
+
+                if n_rs == 3 && n_ric == 0 && n_riem == 0
+                    has_R3 = true
+                elseif n_rs >= 1 && n_ric >= 2 && n_riem == 0
+                    has_R_Ric2 = true
+                elseif n_rs >= 1 && n_riem >= 2
+                    has_R_Riem2 = true
+                elseif n_ric >= 3 && n_rs == 0 && n_riem == 0
+                    has_Ric3 = true
+                elseif n_riem >= 3
+                    has_Riem3 = true
+                end
+            end
+
+            @test has_R3
+            @test has_R_Ric2
+            @test has_R_Riem2
+            @test has_Ric3
+            @test has_Riem3
+        end
+    end
+
+    # ------------------------------------------------------------------
+    # 14. dim=nothing gives generic-dimension result (same as no DDI)
     # ------------------------------------------------------------------
     @testset "dim=nothing gives generic-dimension basis" begin
         reg = lagrangian_registry()
