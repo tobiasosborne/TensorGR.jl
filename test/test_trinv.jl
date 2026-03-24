@@ -496,6 +496,55 @@
         end
     end
 
+    @testset "tinvar_simplify: tensorial expression in d=3" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M3 dim=3 metric=g registry=reg
+            define_curvature_tensors!(reg, :M3, :g)
+
+            used = Set{Symbol}()
+            a = fresh_index(used); push!(used, a)
+            b = fresh_index(used); push!(used, b)
+            c = fresh_index(used); push!(used, c)
+            d = fresh_index(used); push!(used, d)
+            e = fresh_index(used); push!(used, e)
+
+            # R_{a}^{bcd} R_{bcd}^{e} in d=3
+            expr = Tensor(:Riem, [down(a), up(b), up(c), up(d)]) *
+                   Tensor(:Riem, [down(b), down(c), down(d), up(e)])
+            result = tinvar_simplify(expr; registry=reg, dim=3, metric=:g)
+
+            # In d=3, Weyl vanishes → no Riem in result
+            str = string(result)
+            @test !occursin("Riem", str)
+            @test !occursin("Weyl", str)
+
+            # Should have 2 free indices
+            @test length(free_indices(result)) == 2
+        end
+    end
+
+    @testset "tinvar_simplify: scalar in d=4" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g registry=reg
+            define_curvature_tensors!(reg, :M4, :g)
+
+            used = Set{Symbol}()
+            a = fresh_index(used); push!(used, a)
+            b = fresh_index(used); push!(used, b)
+            c = fresh_index(used); push!(used, c)
+            d = fresh_index(used); push!(used, d)
+
+            K = Tensor(:Riem, [down(a), down(b), down(c), down(d)]) *
+                Tensor(:Riem, [up(a), up(b), up(c), up(d)])
+            result = tinvar_simplify(K; registry=reg, dim=4, metric=:g)
+
+            @test !occursin("Riem", string(result))
+            @test isempty(free_indices(result))
+        end
+    end
+
     @testset "apply_ddi_tensorial: Riem unchanged in d=4" begin
         reg = TensorRegistry()
         with_registry(reg) do

@@ -989,3 +989,73 @@ function _parse_trinv_sum(expr::TensorExpr,
 
     result
 end
+
+# ══════════════════════════════════════════════════════════════════════
+# TInvarSimplify: top-level tensorial invariant simplification
+# ══════════════════════════════════════════════════════════════════════
+
+"""
+    tinvar_simplify(expr::TensorExpr;
+                     registry=current_registry(),
+                     dim::Union{Int,Nothing}=nothing,
+                     metric::Symbol=:g,
+                     covd::Union{Symbol,Nothing}=nothing) -> TensorExpr
+
+Comprehensive simplification for tensorial Riemann expressions.
+
+Applies the following pipeline in sequence:
+1. **Canonicalization**: Butler-Portugal canonical ordering via xperm
+2. **Metric contraction**: contract metrics and curvature traces
+3. **CovD commutation**: sort covariant derivatives (if `covd` specified),
+   producing Riemann commutator terms + differential Bianchi
+4. **DDI reduction**: dimensionally-dependent identities (if `dim` specified),
+   including Weyl vanishing (d≤3) and Gauss-Bonnet (d=4)
+5. **Collect terms**: combine equivalent terms
+
+Returns the simplified expression in terms of independent tensorial monomials.
+
+# Examples
+```julia
+reg = TensorRegistry()
+@manifold M4 dim=4 metric=g registry=reg
+define_curvature_tensors!(reg, :M4, :g)
+
+# Simplify R_{a}^{bcd} R_{bcd}^{e}
+used = Set{Symbol}()
+a, b, c, d, e = [fresh_index(used) for _ in 1:5]
+for s in [a,b,c,d,e]; push!(used, s); end
+
+expr = Tensor(:Riem, [down(a), up(b), up(c), up(d)]) *
+       Tensor(:Riem, [down(b), down(c), down(d), up(e)])
+result = tinvar_simplify(expr; registry=reg, dim=4)
+```
+
+See also: [`apply_ddi_tensorial`](@ref), [`canonicalize`](@ref),
+[`simplify`](@ref), [`full_simplify`](@ref)
+"""
+function tinvar_simplify(expr::TensorExpr;
+                          registry::TensorRegistry=current_registry(),
+                          dim::Union{Int,Nothing}=nothing,
+                          metric::Symbol=:g,
+                          covd::Union{Symbol,Nothing}=nothing)
+    with_registry(registry) do
+        result = expr
+
+        # Phase 1: Standard simplify (canonicalize + metric contraction + curvature contraction)
+        skw = Dict{Symbol,Any}(:registry => registry)
+        if covd !== nothing
+            skw[:commute_covds_name] = covd
+        end
+        result = simplify(result; pairs(skw)...)
+
+        # Phase 2: Tensorial DDI reduction (Weyl vanishing, Ricci trace, scalar DDIs)
+        if dim !== nothing
+            result = apply_ddi_tensorial(result, dim; registry=registry, metric=metric)
+        end
+
+        # Phase 3: Final simplify to collect terms after DDI substitution
+        result = simplify(result; registry=registry)
+
+        result
+    end
+end

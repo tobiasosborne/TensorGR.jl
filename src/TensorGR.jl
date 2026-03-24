@@ -511,6 +511,7 @@ export inv_simplify
 export TRInv, from_tensor_expr_trinv, bianchi_cyclic_trinv, bianchi_relations_trinv
 export apply_bianchi2_tensorial, has_diff_riemann, diff_riemann_factor_indices
 export generate_tensorial_ddi, apply_ddi_tensorial, ddi_reduces_trinv
+export tinvar_simplify
 # Exports: SymH (unified symmetry handler)
 export AbstractSymmetry, MonotermSym, MultitermSym, SymH
 export riemann_symh, n_independent_components, is_monoterm_only
