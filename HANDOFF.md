@@ -135,6 +135,14 @@ bd stats    # project health
 - Index-Free Notation (2 of 4 children remain)
 - BH-Pert2 (all 7 genuinely open)
 
+**Research/Infrastructure:**
+- TensorGR.jl-6e8: Collect all papers using xAct (full corpus download)
+  - Spec'd out with 7 search sources, download pipeline, dedup logic
+  - Scale estimate: ~1,355 unique papers on INSPIRE (union of all xAct subpackage fulltext searches), ~1,500-2,000 total including Scholar/ADS/theses
+  - Core paper citation counts: xPerm (215), xPert (246), xTras (280)
+  - Estimated ~3-4 GB of PDFs
+  - Uses playwright-cli + INSPIRE/ADS/Semantic Scholar APIs + ArXiv bulk download
+
 ---
 
 ## Physics Ground Truth
