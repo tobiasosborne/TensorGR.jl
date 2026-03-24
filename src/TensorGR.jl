@@ -159,6 +159,7 @@ include("invariants/db/dual.jl")
 include("invariants/db/differential_2.jl")
 include("invariants/db/differential_4.jl")
 include("invariants/inv_simplify.jl")
+include("invariants/enumerate.jl")
 include("invariants/symh.jl")
 include("invariants/trinv.jl")
 include("algebra/full_simplify.jl")
@@ -507,6 +508,8 @@ export degree4_canonical_rinvs, degree4_independent_rinvs
 export degree5_7_canonical_count, degree5_7_independent_count
 export dual_independent_rinvs, pontryagin_rinv_canonical
 export inv_simplify
+# Exports: Independent basis enumeration
+export enumerate_independent_rinvs, enumerate_live_canonical_rinvs
 # Exports: TRInv (tensorial Riemann monomials)
 export TRInv, from_tensor_expr_trinv, bianchi_cyclic_trinv, bianchi_relations_trinv
 export apply_bianchi2_tensorial, has_diff_riemann, diff_riemann_factor_indices
