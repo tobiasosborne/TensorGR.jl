@@ -428,4 +428,91 @@
         @test occursin("degree=2", s)
         @test occursin("rank=4", s)
     end
+
+    # ── Tensorial DDI Reduction ──────────────────────────────────────
+
+    @testset "ddi_reduces_trinv: threshold checks" begin
+        riem4 = TRInv(1, [1,2,3,4], [1,2,3,4], [Down,Down,Down,Down])
+
+        # Riemann rank-4 in d≤3: Weyl vanishes
+        @test ddi_reduces_trinv(riem4, 2)
+        @test ddi_reduces_trinv(riem4, 3)
+        @test !ddi_reduces_trinv(riem4, 4)
+
+        # Scalar Riem² in d=4: Gauss-Bonnet
+        riem2_scalar = TRInv(2, [5,6,7,8, 1,2,3,4], Int[], IndexPosition[], true)
+        @test ddi_reduces_trinv(riem2_scalar, 4)
+        @test !ddi_reduces_trinv(riem2_scalar, 5)
+    end
+
+    @testset "apply_ddi_tensorial: Weyl vanishes in d=3" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M3 dim=3 metric=g registry=reg
+            define_curvature_tensors!(reg, :M3, :g)
+
+            used = Set{Symbol}()
+            a = fresh_index(used); push!(used, a)
+            b = fresh_index(used); push!(used, b)
+            c = fresh_index(used); push!(used, c)
+            d = fresh_index(used); push!(used, d)
+
+            riem = Tensor(:Riem, [down(a), down(b), down(c), down(d)])
+            result = apply_ddi_tensorial(riem, 3; registry=reg, metric=:g)
+
+            # Should not contain Riem or Weyl
+            str = string(result)
+            @test !occursin("Riem", str)
+            @test !occursin("Weyl", str)
+
+            # Should contain Ric and/or RicScalar
+            @test occursin("Ric", str)
+
+            # Should have 4 free indices
+            @test length(free_indices(result)) == 4
+        end
+    end
+
+    @testset "apply_ddi_tensorial: Gauss-Bonnet in d=4" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g registry=reg
+            define_curvature_tensors!(reg, :M4, :g)
+
+            used = Set{Symbol}()
+            a = fresh_index(used); push!(used, a)
+            b = fresh_index(used); push!(used, b)
+            c = fresh_index(used); push!(used, c)
+            d = fresh_index(used); push!(used, d)
+
+            # Kretschner scalar
+            K = Tensor(:Riem, [down(a), down(b), down(c), down(d)]) *
+                Tensor(:Riem, [up(a), up(b), up(c), up(d)])
+            result = apply_ddi_tensorial(K, 4; registry=reg, metric=:g)
+
+            str = string(result)
+            @test !occursin("Riem", str)  # Kretschner eliminated
+            @test occursin("Ric", str)    # replaced by Ric terms
+        end
+    end
+
+    @testset "apply_ddi_tensorial: Riem unchanged in d=4" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g registry=reg
+            define_curvature_tensors!(reg, :M4, :g)
+
+            used = Set{Symbol}()
+            a = fresh_index(used); push!(used, a)
+            b = fresh_index(used); push!(used, b)
+            c = fresh_index(used); push!(used, c)
+            d = fresh_index(used); push!(used, d)
+
+            riem = Tensor(:Riem, [down(a), down(b), down(c), down(d)])
+            result = apply_ddi_tensorial(riem, 4; registry=reg, metric=:g)
+
+            # Riem should remain (no tensorial DDI in d=4 for single Riemann)
+            @test occursin("Riem", string(result))
+        end
+    end
 end

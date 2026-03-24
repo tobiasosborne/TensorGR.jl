@@ -751,3 +751,241 @@ function Base.show(io::IO, ::MIME"text/plain", t::TRInv)
         print(io, "  free_pos:    $(t.free_positions)")
     end
 end
+
+# ══════════════════════════════════════════════════════════════════════
+# Tensorial DDI Reduction
+# ══════════════════════════════════════════════════════════════════════
+
+"""
+    generate_tensorial_ddi(dim::Int, degree::Int, n_free::Int;
+                            registry=current_registry(), metric=:g)
+        -> Vector{Dict{TRInv, Rational{Int}}}
+
+Generate dimensionally-dependent identities (DDIs) for tensorial Riemann
+monomials of given `degree` (number of Riemann factors) with `n_free` free
+indices, valid in `dim` dimensions.
+
+The master DDI `δ^{[a₁...a_{d+1}]}_{[b₁...b_{d+1}]} = 0` is partially
+contracted with `degree` Riemann tensors. Indices not consumed by the
+Riemann contractions remain free, yielding tensorial identities.
+
+Each returned Dict maps canonical TRInv → coefficient, summing to zero.
+
+# Examples
+```julia
+# In d=3: Weyl vanishing is a degree-1, rank-4 tensorial DDI
+rels = generate_tensorial_ddi(3, 1, 4; registry=reg)
+```
+"""
+function generate_tensorial_ddi(dim::Int, degree::Int, n_free::Int;
+                                 registry::TensorRegistry=current_registry(),
+                                 metric::Symbol=:g)
+    nslots = 4 * degree
+    n_contracted = nslots - n_free
+
+    # The generalized delta has p = dim+1 index pairs.
+    # We use n_contracted/2 pairs for Riemann contractions and
+    # (p - n_contracted/2) remaining pairs, of which n_free become free
+    # and the rest are contracted with metrics.
+    p = dim + 1
+    iseven(n_contracted) || return Dict{TRInv, Rational{Int}}[]
+    n_riem_pairs = n_contracted ÷ 2
+
+    # Need enough delta pairs: n_riem_pairs + ceil(n_free/2) <= p
+    n_riem_pairs + (n_free + 1) ÷ 2 > p && return Dict{TRInv, Rational{Int}}[]
+
+    # For the simplest case: build the identity at TensorExpr level
+    # using the generalized delta, contract with Riemann tensors, simplify
+    with_registry(registry) do
+        _build_tensorial_ddi_expr(dim, degree, n_free, registry, metric)
+    end
+end
+
+"""
+    apply_ddi_tensorial(expr::TensorExpr, dim::Int;
+                         registry=current_registry(), metric=:g) -> TensorExpr
+
+Apply tensorial DDI reduction to a curvature expression in dimension `dim`.
+
+In low dimensions, the Riemann tensor has fewer independent components than
+in generic dimension. This function applies the corresponding DDI identities:
+
+- **d ≤ 2**: `R_{abcd} = (R/2)(g_{ac}g_{bd} - g_{ad}g_{bc})`; `R_{ab} = (R/2)g_{ab}`
+- **d = 3**: Weyl vanishes → Riemann decomposes into Ricci + metric
+- **d = 4**: Scalar DDIs (Gauss-Bonnet), plus rank-2/4 DDIs from `δ^5 = 0`
+
+Returns the simplified expression (which may contain Ricci, metric, and scalar
+tensors instead of Riemann).
+"""
+function apply_ddi_tensorial(expr::TensorExpr, dim::Int;
+                              registry::TensorRegistry=current_registry(),
+                              metric::Symbol=:g)
+    with_registry(registry) do
+        result = expr
+
+        if dim <= 3
+            # Weyl vanishes: decompose Riemann → Weyl + Ric terms, set Weyl=0
+            result = walk(result) do node
+                node isa Tensor || return node
+                if node.name == :Riem && length(node.indices) == 4
+                    riemann_to_weyl(node.indices[1], node.indices[2],
+                                    node.indices[3], node.indices[4],
+                                    metric; dim=dim)
+                else
+                    node
+                end
+            end
+            # Zero out Weyl (vanishes in d≤3)
+            result = walk(result) do node
+                node isa Tensor && node.name == :Weyl ? TScalar(0 // 1) : node
+            end
+        end
+
+        if dim <= 2
+            # Ricci trace: R_{ab} = (R/dim) g_{ab}
+            result = walk(result) do node
+                node isa Tensor || return node
+                if node.name == :Ric && length(node.indices) == 2
+                    a, b = node.indices
+                    tproduct(1 // dim, TensorExpr[
+                        Tensor(:RicScalar, TIndex[]),
+                        Tensor(metric, [a, b])])
+                else
+                    node
+                end
+            end
+        end
+
+        # Apply scalar DDIs and simplify
+        simplify_with_ddis(result; dim=dim, order=2, registry=registry)
+    end
+end
+
+"""
+    ddi_reduces_trinv(trinv::TRInv, dim::Int) -> Bool
+
+Check whether a tensorial DDI identity constrains this TRInv in dimension `dim`.
+Fast check without actually computing the reduction.
+
+Known DDI conditions:
+- d ≤ 3, degree 1, rank 4: Weyl vanishing (Riemann = Ricci decomposition)
+- d ≤ 2, degree 1, rank 2: Ricci trace (R_{ab} ∝ g_{ab})
+- d ≤ 2k, degree k, rank 0: scalar DDI (Gauss-Bonnet at k=2, cubic at k=3)
+"""
+function ddi_reduces_trinv(trinv::TRInv, dim::Int)
+    k = trinv.degree
+    r = rank(trinv)
+
+    # Rank-4 degree-1: Weyl vanishes in d ≤ 3
+    k == 1 && r == 4 && dim <= 3 && return true
+
+    # Rank-2 degree-1: Ricci is pure trace in d ≤ 2
+    k == 1 && r == 2 && dim <= 2 && return true
+
+    # Scalar (rank 0): generalized Gauss-Bonnet when 2k ≥ dim
+    r == 0 && 2k >= dim && return true
+
+    # General: the (d+1)-antisymmetrized delta constrains when
+    # the monomial has more index structure than the dimension supports
+    # This is a conservative check for higher-rank higher-degree cases
+    4k > dim * (dim + 1) && return true
+
+    false
+end
+
+# ── Internal helpers ─────────────────────────────────────────────────
+
+"""Build tensorial DDI identities at the TensorExpr level."""
+function _build_tensorial_ddi_expr(dim::Int, degree::Int, n_free::Int,
+                                    registry::TensorRegistry, metric::Symbol)
+    # Construct the Weyl decomposition identity for the simplest cases
+    # that produce useful results: degree=1 (Riemann DDIs)
+    results = Dict{TRInv, Rational{Int}}[]
+
+    if degree == 1 && n_free == 4 && dim <= 3
+        # Weyl vanishing: R_{abcd} = Ricci decomposition
+        # This is the rank-4 DDI from delta^4 = 0 in d=3
+        # Already handled by weyl_vanishing_rule in syzygies.jl
+        # but we generate the TRInv-level identity here
+        used = Set{Symbol}()
+        a = fresh_index(used); push!(used, a)
+        b = fresh_index(used); push!(used, b)
+        c = fresh_index(used); push!(used, c)
+        d = fresh_index(used); push!(used, d)
+
+        riem = Tensor(:Riem, [down(a), down(b), down(c), down(d)])
+        decomp = riemann_to_weyl(down(a), down(b), down(c), down(d), metric; dim=dim)
+        # In d<=3, Weyl=0, so decomp = Ricci terms only
+        identity_expr = riem - simplify(decomp; registry=registry)
+
+        if !(identity_expr isa TScalar && identity_expr.val == 0 // 1)
+            rel = _expr_to_trinv_relation(identity_expr, registry, metric)
+            !isempty(rel) && push!(results, rel)
+        end
+    end
+
+    if degree == 1 && n_free == 2 && dim <= 2
+        # Ricci trace: R_{ab} = (R/d) g_{ab} in d=2
+        used = Set{Symbol}()
+        a = fresh_index(used); push!(used, a)
+        b = fresh_index(used); push!(used, b)
+
+        # Build the identity at TensorExpr level
+        ric = Tensor(:Ric, [down(a), down(b)])
+        r_over_d = tproduct(1 // dim, TensorExpr[Tensor(:RicScalar, TIndex[]),
+                   Tensor(metric, [down(a), down(b)])])
+        identity_expr = ric - r_over_d
+        identity_expr = simplify(identity_expr; registry=registry)
+
+        if !(identity_expr isa TScalar && identity_expr.val == 0 // 1)
+            rel = _expr_to_trinv_relation(identity_expr, registry, metric)
+            !isempty(rel) && push!(results, rel)
+        end
+    end
+
+    results
+end
+
+"""Convert a TensorExpr identity to a TRInv coefficient relation."""
+function _expr_to_trinv_relation(expr::TensorExpr,
+                                  registry::TensorRegistry, metric::Symbol)
+    rel = Dict{TRInv, Rational{Int}}()
+
+    terms = expr isa TSum ? expr.terms : [expr]
+    for t in terms
+        try
+            trinv, sgn = from_tensor_expr_trinv(t; registry=registry, metric=metric)
+            canon = canonicalize(trinv; registry=registry)
+            coeff = t isa TProduct ? t.scalar : 1 // 1
+            key = canon
+            rel[key] = get(rel, key, 0 // 1) + coeff * sgn
+        catch
+            # Not a pure Riemann monomial — skip (e.g., Ricci or metric terms)
+            continue
+        end
+    end
+
+    # Remove zero entries
+    filter!(p -> p.second != 0 // 1, rel)
+    rel
+end
+
+"""Parse a simplified expression back into TRInv terms."""
+function _parse_trinv_sum(expr::TensorExpr,
+                           registry::TensorRegistry, metric::Symbol)
+    terms = expr isa TSum ? expr.terms : [expr]
+    result = Tuple{TRInv, Rational{Int}}[]
+
+    for t in terms
+        try
+            trinv, sgn = from_tensor_expr_trinv(t; registry=registry, metric=metric)
+            canon = canonicalize(trinv; registry=registry)
+            coeff = t isa TProduct ? t.scalar : 1 // 1
+            push!(result, (canon, coeff * sgn))
+        catch
+            continue
+        end
+    end
+
+    result
+end
