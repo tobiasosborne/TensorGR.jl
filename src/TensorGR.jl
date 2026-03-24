@@ -56,6 +56,7 @@ include("spinors/ashtekar_variables.jl")
 
 # Layer 2.6: Tetrad/frame bundle
 include("tetrads/frame_bundle.jl")
+include("tetrads/anholonomy.jl")
 
 # Layer 2.6: Scalar algebra
 include("scalar/algebra.jl")
@@ -280,6 +281,7 @@ export define_sen_connection!, sen_connection_expr, sen_covd, sen_covd_expr, sen
 export define_ashtekar_variables!, ashtekar_connection_expr, densitized_triad_expr
 export ashtekar_curvature_expr, gauss_constraint_expr
 export define_frame_bundle!, frame_up, frame_down, is_frame_index
+export define_anholonomy!, anholonomy_expr, has_anholonomy, get_anholonomy_name
 export set_vanishing!
 export current_registry, with_registry
 

@@ -130,6 +130,8 @@ using TensorGR
     include("test_ashtekar_variables.jl")
     # Frame bundle (Lorentz VBundle for tetrads)
     include("test_frame_bundle.jl")
+    # Anholonomy coefficients (tetrad structure constants)
+    include("test_anholonomy.jl")
     # xIdeal: Petrov classification
     include("test_petrov_invariants.jl")
     include("test_petrov_classify.jl")
