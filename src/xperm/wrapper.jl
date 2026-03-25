@@ -51,35 +51,37 @@ function xperm_schreier_sims(base_hint::Vector{Int32}, generators::Vector{Perm},
     newGS_ptr = Libc.malloc(m * n * sizeof(Cint))
     newGS_ref = Ref{Ptr{Cint}}(Ptr{Cint}(newGS_ptr))
 
-    ccall(
-        (:schreier_sims, _libxperm_path),
-        Cvoid,
-        (Ptr{Cint}, Cint, Ptr{Cint}, Cint, Cint,
-         Ptr{Cint}, Ptr{Cint}, Ptr{Ptr{Cint}}, Ptr{Cint}, Ptr{Cint}),
-        base_hint, bl, GS, m, n,
-        newbase, nbl, newGS_ref, nm, num
-    )
+    try
+        ccall(
+            (:schreier_sims, _libxperm_path),
+            Cvoid,
+            (Ptr{Cint}, Cint, Ptr{Cint}, Cint, Cint,
+             Ptr{Cint}, Ptr{Cint}, Ptr{Ptr{Cint}}, Ptr{Cint}, Ptr{Cint}),
+            base_hint, bl, GS, m, n,
+            newbase, nbl, newGS_ref, nm, num
+        )
 
-    # Extract results
-    result_bl = Int(nbl[])
-    result_m = Int(nm[])
-    result_base = newbase[1:result_bl]
+        # Extract results
+        result_bl = Int(nbl[])
+        result_m = Int(nm[])
+        result_base = newbase[1:result_bl]
 
-    # Copy SGS from C-allocated memory into Julia arrays
-    result_sgs = Vector{Perm}(undef, result_m)
-    gs_ptr = newGS_ref[]
-    for i in 1:result_m
-        pdata = Vector{Int32}(undef, n)
-        for j in 1:n
-            pdata[j] = unsafe_load(gs_ptr, (i-1)*n + j)
+        # Copy SGS from C-allocated memory into Julia arrays
+        result_sgs = Vector{Perm}(undef, result_m)
+        gs_ptr = newGS_ref[]
+        for i in 1:result_m
+            pdata = Vector{Int32}(undef, n)
+            for j in 1:n
+                pdata[j] = unsafe_load(gs_ptr, (i-1)*n + j)
+            end
+            result_sgs[i] = Perm(pdata)
         end
-        result_sgs[i] = Perm(pdata)
+
+        return result_base, result_sgs
+    finally
+        # Free C-allocated memory (note: ccall may have realloc'd the pointer)
+        Libc.free(newGS_ref[])
     end
-
-    # Free C-allocated memory
-    Libc.free(newGS_ref[])
-
-    return result_base, result_sgs
 end
 
 """
