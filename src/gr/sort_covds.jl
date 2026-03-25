@@ -56,9 +56,12 @@ function _commute_one_pass(expr::TDeriv, covd::Symbol, reg::TensorRegistry)
         if outer_idx.name > inner_idx.name
             # [∇_a, ∇_b] T = ∇_a(∇_b(T)) - ∇_b(∇_a(T))
             # So ∇_a(∇_b(T)) = ∇_b(∇_a(T)) + [∇_a, ∇_b] T
-            swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd)
             commutator = _commutator_term(outer_idx, inner_idx, inner.arg, covd, reg)
-            return swapped + commutator
+            if commutator !== nothing
+                swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd)
+                return swapped + commutator
+            end
+            # commutator is nothing → can't sort (non-Tensor arg), leave unsorted
         end
     end
 
@@ -87,9 +90,11 @@ function _commute_specific_pair(expr::TDeriv, covd::Symbol,
         outer_idx = expr.index
         inner_idx = inner.index
         if outer_idx.name == idx_a && inner_idx.name == idx_b
-            swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd)
             commutator = _commutator_term(outer_idx, inner_idx, inner.arg, covd, reg)
-            return swapped + commutator
+            if commutator !== nothing
+                swapped = TDeriv(inner_idx, TDeriv(outer_idx, inner.arg, expr.covd), expr.covd)
+                return swapped + commutator
+            end
         end
     end
     TDeriv(expr.index, inner, expr.covd)
@@ -335,11 +340,15 @@ function _symmetrize_covds_walk(expr::TDeriv, covd::Symbol, reg::TensorRegistry)
         end
 
         # Tensor case: ∇_a(∇_b(T)) = ½(∇_a∇_b + ∇_b∇_a)(T) + ½[∇_a,∇_b](T)
-        original = TDeriv(outer_idx, TDeriv(inner_idx, body, inner.covd), expr.covd)
-        swapped  = TDeriv(inner_idx, TDeriv(outer_idx, body, expr.covd), inner.covd)
-        sym_part = (1 // 2) * (original + swapped)
-        comm_part = (1 // 2) * _commutator_term(outer_idx, inner_idx, body, covd, reg)
-        return sym_part + comm_part
+        comm = _commutator_term(outer_idx, inner_idx, body, covd, reg)
+        if comm !== nothing
+            original = TDeriv(outer_idx, TDeriv(inner_idx, body, inner.covd), expr.covd)
+            swapped  = TDeriv(inner_idx, TDeriv(outer_idx, body, expr.covd), inner.covd)
+            sym_part = (1 // 2) * (original + swapped)
+            comm_part = (1 // 2) * comm
+            return sym_part + comm_part
+        end
+        # Can't compute commutator for non-Tensor body — leave unsorted
     end
     TDeriv(expr.index, inner, expr.covd)
 end
@@ -367,7 +376,11 @@ For each index on T, adds a Riemann curvature term.
 """
 function _commutator_term(a::TIndex, b::TIndex, tensor::TensorExpr,
                            covd::Symbol, reg::TensorRegistry)
-    tensor isa Tensor || return ZERO  # only handle bare tensors for now
+    # Only handle bare Tensor arguments. For products, sums, or nested derivatives
+    # the Leibniz rule is needed, which is not yet implemented. Returning nothing
+    # signals to callers that the swap should be skipped (rather than producing
+    # incorrect zero commutator terms).
+    tensor isa Tensor || return nothing
 
     used = Set{Symbol}()
     push!(used, a.name, b.name)
