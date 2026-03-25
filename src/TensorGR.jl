@@ -415,6 +415,8 @@ export SourceContribution, SecondOrderSource, assemble_source
 export SourcedMasterEquation, second_order_rw, second_order_zerilli
 export GaugeInvariantVariable, gauge_invariant_variable, is_gauge_invariant_at_zero
 export EVEN_SECTORS, ODD_SECTORS
+export EnergyFluxFormula, energy_flux_formula, flux_mode_count
+export quadrupole_flux_scaling, second_order_flux_scaling
 export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
 

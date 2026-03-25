@@ -311,3 +311,101 @@ function is_gauge_invariant_at_zero(gv::GaugeInvariantVariable)
     # Therefore Ψ^{GI} = Ψ^{bare} + 0 = Ψ^{bare}
     gv.correction_order == 2
 end
+
+# ── Gravitational wave energy flux ───────────────────────────────────
+
+"""
+    EnergyFluxFormula
+
+The gravitational wave energy flux at infinity, expanded to second order.
+
+At first order:
+    dE^{(1)}/dt = Σ_{l,m} 1/(64π) [|∂ψ^{Z}_{lm}/∂t|² + (spectral terms)]
+
+At second order, corrections include:
+    dE^{(2)}/dt = Σ_{l,m} 1/(32π) Re[∂ψ^{(1)*}/∂t · ∂ψ^{(2)}/∂t]
+                + Σ_{l,m} [quadratic-in-first-order tail terms]
+
+# Fields
+- `lmax::Int` -- maximum l in the sum
+- `order::Int` -- perturbation order (1 or 2)
+- `normalization::Rational{Int}` -- 1//(64π) for first order
+"""
+struct EnergyFluxFormula
+    lmax::Int
+    order::Int
+    normalization::Rational{Int}
+end
+
+function Base.show(io::IO, ef::EnergyFluxFormula)
+    print(io, "dE^{(", ef.order, ")}/dt (lmax=", ef.lmax, ")")
+end
+
+"""
+    energy_flux_formula(; lmax=2, order=1) -> EnergyFluxFormula
+
+Construct the energy flux formula at the specified perturbation order.
+
+# First order (order=1)
+The standard multipolar energy flux:
+    dE/dt = Σ_{l≥2,m} 1/(64π) |∂ψ_{lm}/∂t|²
+
+where the sum runs over both even (Zerilli) and odd (RW) parities.
+
+# Second order (order=2)
+Includes cross-terms between first and second-order solutions,
+following Campanelli & Lousto (1999) Eq 25.
+
+Ground truth: The l=2 (quadrupole) contribution dominates at leading order.
+"""
+function energy_flux_formula(; lmax::Int=2, order::Int=1)
+    order in (1, 2) || error("energy_flux_formula: order must be 1 or 2")
+    lmax >= 2 || error("energy_flux_formula: lmax must be >= 2")
+    norm = order == 1 ? 1 // 64 : 1 // 32
+    EnergyFluxFormula(lmax, order, norm)
+end
+
+"""
+    flux_mode_count(ef::EnergyFluxFormula) -> Int
+
+Count the number of (l,m,parity) modes contributing to the flux.
+For each l: 2l+1 values of m, times 2 parities (even + odd, for l >= 2).
+"""
+function flux_mode_count(ef::EnergyFluxFormula)
+    n = 0
+    for l in 2:ef.lmax
+        n += 2 * (2l + 1)  # (2l+1) m-values × 2 parities
+    end
+    n
+end
+
+"""
+    quadrupole_flux_scaling(mass_ratio::Real) -> Float64
+
+The leading-order energy flux scales as the square of the mass quadrupole
+moment. For a system with symmetric mass ratio η = m₁m₂/(m₁+m₂)²:
+
+    dE/dt ∝ η²
+
+This is the dominant scaling for equal-mass (η=1/4) and extreme-mass-ratio
+(η → 0) systems.
+
+For second-order corrections (Campanelli & Lousto 1999):
+    dE^{(2)}/dt ∝ η³
+
+so the ratio dE^{(2)}/dE^{(1)} ∝ η, which is small for extreme mass ratios.
+"""
+function quadrupole_flux_scaling(mass_ratio::Real)
+    # η = mass_ratio for symmetric mass ratio
+    # Leading order: η²
+    mass_ratio^2
+end
+
+"""
+    second_order_flux_scaling(mass_ratio::Real) -> Float64
+
+The second-order correction to the energy flux scales as η³.
+"""
+function second_order_flux_scaling(mass_ratio::Real)
+    mass_ratio^3
+end
