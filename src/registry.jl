@@ -213,6 +213,13 @@ function unregister_tensor!(reg::TensorRegistry, name::Symbol)
         end
     end
     delete!(reg.tensors, name)
+    # Invalidate caches referencing this tensor
+    for (k, v) in reg.metric_cache
+        v == name && delete!(reg.metric_cache, k)
+    end
+    for (k, v) in reg.delta_cache
+        v == name && delete!(reg.delta_cache, k)
+    end
     nothing
 end
 
