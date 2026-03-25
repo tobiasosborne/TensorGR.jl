@@ -141,6 +141,7 @@ include("components/ctensor.jl")
 include("components/metric_compute.jl")
 include("components/values.jl")
 include("components/to_basis.jl")
+include("components/evaluate.jl")
 include("components/symbolic_metric.jl")
 
 # Layer 5.5: xIdeal — spacetime classification (Petrov, Segre, energy conditions)
@@ -502,6 +503,7 @@ export metric_einstein, metric_weyl, metric_kretschmann
 export ComponentStore, set_component!, get_component, independent_components
 export BasisProperties, define_basis!, get_basis, basis_change
 export to_basis, component_array, to_ctensor
+export evaluate_components, prepare_values
 
 # Exports: Symbolic components
 export SymbolicMetric, symbolic_diagonal_metric, symbolic_metric, sym_deriv

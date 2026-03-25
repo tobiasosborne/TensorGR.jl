@@ -399,4 +399,6 @@ using TensorGR
     include("test_trinv.jl")
     # Grassmann parity (graded tensor)
     include("test_graded_tensor.jl")
+    # Component evaluation (evaluate_components, prepare_values)
+    include("test_evaluate_components.jl")
 end
