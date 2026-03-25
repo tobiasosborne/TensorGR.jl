@@ -261,3 +261,193 @@ Useful for estimating computational cost.
 function count_coupling_modes(l::Int, m::Int, lmax::Int)
     length(source_coupling_modes(l, m, lmax))
 end
+
+# ══════════════════════════════════════════════════════════════════════
+# Regge-Wheeler and Zerilli master equations
+# ══════════════════════════════════════════════════════════════════════
+
+"""
+    MasterEquation
+
+Represents a wave equation of the form:
+
+    [-∂²/∂t² + ∂²/∂r*² - V(r)] ψ_{lm} = S_{lm}
+
+in tortoise coordinate r* = r + 2M ln(r/2M - 1).
+
+# Fields
+- `parity::Symbol` -- `:odd` (Regge-Wheeler) or `:even` (Zerilli)
+- `l::Int` -- angular momentum quantum number
+- `potential::Function` -- V(r, M, l) -> potential value
+- `potential_name::Symbol` -- `:RW` or `:Zerilli`
+"""
+struct MasterEquation
+    parity::Symbol
+    l::Int
+    potential::Function
+    potential_name::Symbol
+end
+
+function Base.show(io::IO, eq::MasterEquation)
+    print(io, eq.potential_name, " master equation (l=", eq.l,
+          ", ", eq.parity, " parity)")
+end
+
+# ── Regge-Wheeler (odd parity) ────────────────────────────────────────
+
+"""
+    regge_wheeler_potential(r, M, l) -> Rational or symbolic
+
+The Regge-Wheeler potential for odd-parity perturbations:
+
+    V_RW(r) = (1 - 2M/r) [l(l+1)/r² - 6M/r³]
+
+This is the effective potential in the wave equation for the
+Cunningham-Price-Moncrief master variable.
+
+# Arguments
+- `r` -- radial coordinate (must be > 2M for exterior)
+- `M` -- black hole mass
+- `l::Int` -- angular momentum quantum number (l >= 2)
+
+# Ground truth
+Regge & Wheeler, Phys. Rev. 108, 1063 (1957).
+"""
+function regge_wheeler_potential(r, M, l::Int)
+    f = 1 - 2M / r  # Schwarzschild factor
+    f * (l * (l + 1) / r^2 - 6M / r^3)
+end
+
+"""
+    regge_wheeler_equation(l; source=nothing) -> MasterEquation
+
+Construct the Regge-Wheeler master equation for angular momentum `l`.
+
+    [-∂²/∂t² + ∂²/∂r*² - V_RW(r)] ψ^{RW}_{lm} = S^{odd}_{lm}
+
+At first order (source=nothing), the RHS is zero. At second order,
+the source S^{odd} comes from mode-coupled products of first-order
+perturbations.
+
+# Example
+```julia
+eq = regge_wheeler_equation(2)
+V = eq.potential(10.0, 1.0, 2)  # evaluate potential at r=10, M=1
+```
+"""
+function regge_wheeler_equation(l::Int; source=nothing)
+    l >= 2 || error("regge_wheeler_equation: l must be >= 2, got $l")
+    MasterEquation(:odd, l, regge_wheeler_potential, :RW)
+end
+
+# ── Zerilli (even parity) ─────────────────────────────────────────────
+
+"""
+    zerilli_potential(r, M, l) -> Rational or symbolic
+
+The Zerilli potential for even-parity perturbations:
+
+    V_Z(r) = f(r) · [2λ²(λ+1)r³ + 6λ²Mr² + 18λM²r + 18M³]
+                     / [r³(λr + 3M)²]
+
+where f(r) = 1 - 2M/r and λ = (l-1)(l+2)/2.
+
+# Ground truth
+Zerilli, Phys. Rev. D 2, 2141 (1970).
+Brizuela, Martin-Garcia & Tiglio, PRD 80, 024021 (2009), Eq 4.12.
+"""
+function zerilli_potential(r, M, l::Int)
+    f = 1 - 2M / r
+    lambda = (l - 1) * (l + 2) / 2
+    numerator = 2lambda^2 * (lambda + 1) * r^3 +
+                6lambda^2 * M * r^2 +
+                18lambda * M^2 * r +
+                18M^3
+    denominator = r^3 * (lambda * r + 3M)^2
+    f * numerator / denominator
+end
+
+"""
+    zerilli_equation(l; source=nothing) -> MasterEquation
+
+Construct the Zerilli master equation for angular momentum `l`.
+
+    [-∂²/∂t² + ∂²/∂r*² - V_Z(r)] ψ^{Z}_{lm} = S^{even}_{lm}
+
+# Example
+```julia
+eq = zerilli_equation(2)
+V = eq.potential(10.0, 1.0, 2)  # evaluate potential at r=10, M=1
+```
+"""
+function zerilli_equation(l::Int; source=nothing)
+    l >= 2 || error("zerilli_equation: l must be >= 2, got $l")
+    MasterEquation(:even, l, zerilli_potential, :Zerilli)
+end
+
+# ── Tortoise coordinate ───────────────────────────────────────────────
+
+"""
+    tortoise_coordinate(r, M) -> Float64
+
+Compute the tortoise coordinate r* = r + 2M ln(r/(2M) - 1).
+
+Only valid for r > 2M (exterior region).
+"""
+function tortoise_coordinate(r::Real, M::Real)
+    r > 2M || error("tortoise_coordinate: r must be > 2M")
+    r + 2M * log(r / (2M) - 1)
+end
+
+"""
+    inverse_tortoise(rstar, M; tol=1e-12, maxiter=100) -> Float64
+
+Invert the tortoise coordinate: given r*, find r such that
+r* = r + 2M ln(r/(2M) - 1).
+
+Uses Newton's method starting from r₀ = max(r*, 2M + 1).
+"""
+function inverse_tortoise(rstar::Real, M::Real; tol::Real=1e-12, maxiter::Int=100)
+    # Initial guess
+    r = max(rstar, 2M + 1.0)
+    for _ in 1:maxiter
+        f = r + 2M * log(r / (2M) - 1) - rstar
+        df = r / (r - 2M)  # dr*/dr = 1/(1 - 2M/r) = r/(r-2M)
+        dr = -f / df
+        r += dr
+        abs(dr) < tol && return r
+    end
+    error("inverse_tortoise: Newton's method did not converge")
+end
+
+# ── Potential evaluation utilities ────────────────────────────────────
+
+"""
+    evaluate_potential(eq::MasterEquation, r, M) -> Number
+
+Evaluate the potential V(r) for a master equation at given r and M.
+"""
+function evaluate_potential(eq::MasterEquation, r, M)
+    eq.potential(r, M, eq.l)
+end
+
+"""
+    potential_at_horizon(eq::MasterEquation, M) -> Float64
+
+The potential at the horizon r = 2M vanishes for both RW and Zerilli:
+V(r=2M) = 0 (since f(2M) = 0).
+"""
+function potential_at_horizon(eq::MasterEquation, M)
+    # f(2M) = 0, so V(2M) = 0 for both potentials
+    0.0
+end
+
+"""
+    potential_at_infinity(eq::MasterEquation) -> Float64
+
+The potential at spatial infinity r → ∞ vanishes: V(r→∞) → 0.
+Both RW and Zerilli potentials decay as 1/r² at large r.
+"""
+function potential_at_infinity(eq::MasterEquation)
+    0.0
+end

@@ -406,6 +406,10 @@ export isaacson_average
 export second_order_einstein_source, source_is_bilinear
 export SourceModeCoupling, source_coupling_modes, count_coupling_modes
 export scalar_coupling_coefficient, vector_coupling_coefficient, tensor_coupling_coefficient
+export MasterEquation, regge_wheeler_potential, regge_wheeler_equation
+export zerilli_potential, zerilli_equation
+export tortoise_coordinate, inverse_tortoise
+export evaluate_potential, potential_at_horizon, potential_at_infinity
 export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
 
