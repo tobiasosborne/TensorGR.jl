@@ -318,6 +318,8 @@ using TensorGR
     include("test_spin_connection.jl")
     # Dirac stress-energy tensor
     include("test_dirac_stress_energy.jl")
+    # BRST differential and ghost number
+    include("test_brst.jl")
     # Bimetric linearized perturbation
     include("test_bimetric_linearize.jl")
     # Bimetric mass eigenstates diagonalization

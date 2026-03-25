@@ -196,6 +196,9 @@ include("fermions/dirac.jl")
 include("fermions/spin_connection.jl")
 include("fermions/stress_energy.jl")
 
+# Layer 5.6: Gauge fields and BRST
+include("gauge/brst.jl")
+
 # Layer 5.5: Metric-affine gravity
 include("metric_affine/connection.jl")
 include("metric_affine/torsion.jl")
@@ -598,6 +601,9 @@ export has_spin_connection, get_spin_connection_name
 export dirac_covd_expr, dirac_bar_covd_expr
 export DiracStressEnergy, define_dirac_stress_energy!, dirac_stress_energy_expr
 export dirac_stress_trace_expr, get_dirac_stress_energy
+export GaugeGroupProperties, define_gauge_group!, get_gauge_group
+export brst_gauge_field, brst_ghost, brst_anti_ghost, brst_nl_field
+export ghost_number, filter_by_ghost_number
 
 # Exports: Metric-affine gravity
 export AffineConnection, define_affine_connection!
