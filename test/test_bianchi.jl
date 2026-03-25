@@ -144,3 +144,40 @@
     end
 
 end
+
+# ── Contracted Bianchi identities (GR, not cosmology) ──
+# Ground truth: Wald (1984) eq 3.2.17; MTW eq 17.7
+@testset "Contracted Bianchi identities" begin
+    reg = TensorRegistry()
+    with_registry(reg) do
+        @manifold M4 dim=4 metric=g
+        define_metric!(reg, :g; manifold=:M4)
+
+        @testset "∇^a G_{ab} = 0 (divergence of Einstein vanishes)" begin
+            # Wald eq 3.2.17: ∇^a G_{ab} = 0
+            div_G = TDeriv(up(:a), Tensor(:Ein, [down(:a), down(:b)]))
+            result = simplify(div_G)
+            @test result == TScalar(0 // 1)
+        end
+
+        @testset "∇^b G_{ab} = 0 (second index)" begin
+            div_G2 = TDeriv(up(:b), Tensor(:Ein, [down(:a), down(:b)]))
+            result = simplify(div_G2)
+            @test result == TScalar(0 // 1)
+        end
+
+        @testset "∇^a R_{ab} = (1/2) ∇_b R" begin
+            # Wald eq 3.2.16 contracted: ∇^a R_{ab} = (1/2) ∇_b R
+            div_Ric = TDeriv(up(:a), Tensor(:Ric, [down(:a), down(:b)]))
+            result = simplify(div_Ric)
+            @test result isa TProduct
+            @test result.scalar == 1 // 2
+            @test length(result.factors) == 1
+            deriv = result.factors[1]
+            @test deriv isa TDeriv
+            @test deriv.arg isa Tensor
+            @test deriv.arg.name == :RicScalar
+            @test deriv.index == down(:b)
+        end
+    end
+end
