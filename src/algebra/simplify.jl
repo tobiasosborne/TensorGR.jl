@@ -209,11 +209,11 @@ Combine terms that differ only by scalar coefficient.
 Before comparing, each term's dummy indices are renamed to a canonical
 alphabet so that `T_{ab} X^{ab}` and `T_{cd} X^{cd}` are recognized as equal.
 """
-function collect_terms(expr::TSum)
-    _collect_terms_impl(expr, true)
+function collect_terms(expr::TSum; canonicalize_terms::Bool=true)
+    _collect_terms_impl(expr, canonicalize_terms)
 end
 
-collect_terms(expr::TensorExpr) = expr
+collect_terms(expr::TensorExpr; canonicalize_terms::Bool=true) = expr
 
 """Skip re-canonicalization when terms are already canonical (called from simplify pipeline)."""
 function _collect_terms_impl(expr::TSum, do_canonicalize::Bool)
@@ -490,12 +490,13 @@ function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
         end
     end
 
-    # Simplify inner sums trapped inside TDeriv arguments, then collect top-level
+    # Simplify inner sums trapped inside TDeriv arguments, then collect top-level.
+    # Skip re-canonicalization since canonicalize already ran earlier in this pass.
     result = collect_inner_sums(result)
     if parallel && result isa TSum && length(result.terms) >= PARALLEL_THRESHOLD
         result = _collect_terms_parallel(result)
     else
-        result = collect_terms(result)
+        result = collect_terms(result; canonicalize_terms=false)
     end
 
     rules = get_rules(reg)
