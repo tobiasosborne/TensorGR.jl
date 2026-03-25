@@ -105,24 +105,114 @@ end
 function _unify(pattern::TProduct, expr::TProduct)
     pattern.scalar == expr.scalar || return nothing
     length(pattern.factors) == length(expr.factors) || return nothing
+    # Group factors by (type, name) for order-independent matching.
+    # Within each group, try permutations (backtracking) to find consistent bindings.
+    # For the common case of distinct-name factors, each group has size 1 → O(1).
+    p_groups = _group_factors(pattern.factors)
+    e_groups = _group_factors(expr.factors)
+    Set(keys(p_groups)) == Set(keys(e_groups)) || return nothing
+    for k in keys(p_groups)
+        length(p_groups[k]) == length(e_groups[k]) || return nothing
+    end
     bindings = PatternBindings()
-    for (pf, ef) in zip(pattern.factors, expr.factors)
-        b = _unify(pf, ef)
-        b === nothing && return nothing
-        _merge_bindings!(bindings, b) || return nothing
+    for k in sort!(collect(keys(p_groups)))
+        pfs = p_groups[k]
+        efs = e_groups[k]
+        if length(pfs) == 1
+            b = _unify(pfs[1], efs[1])
+            b === nothing && return nothing
+            _merge_bindings!(bindings, b) || return nothing
+        else
+            result = _unify_group_bt(pfs, collect(efs), bindings, 1)
+            result === nothing && return nothing
+            bindings = result
+        end
     end
     bindings
 end
 
+"""Grouping key for factors: (type_tag, tensor_name, rank)."""
+function _factor_group_key(f::TensorExpr)
+    f isa Tensor && return (1, f.name, length(f.indices))
+    f isa TScalar && return (0, :_scalar, 0)
+    f isa TDeriv && return (2, :_deriv, length(indices(f)))
+    return (3, :_other, 0)
+end
+
+function _group_factors(factors)
+    groups = Dict{Any, Vector{TensorExpr}}()
+    for f in factors
+        k = _factor_group_key(f)
+        push!(get!(Vector{TensorExpr}, groups, k), f)
+    end
+    groups
+end
+
+"""Backtracking matcher: try permutations of `efs` to find consistent bindings
+with `pfs`. Only called for same-name factor groups (typically size 1-2)."""
+function _unify_group_bt(pfs::Vector{TensorExpr}, efs::Vector{TensorExpr},
+                         bindings::PatternBindings, idx::Int)
+    idx > length(pfs) && return bindings
+    for i in idx:length(efs)
+        efs[idx], efs[i] = efs[i], efs[idx]
+        b = _unify(pfs[idx], efs[idx])
+        if b !== nothing
+            merged = copy(bindings)
+            if _merge_bindings!(merged, b)
+                result = _unify_group_bt(pfs, efs, merged, idx + 1)
+                if result !== nothing
+                    efs[idx], efs[i] = efs[i], efs[idx]
+                    return result
+                end
+            end
+        end
+        efs[idx], efs[i] = efs[i], efs[idx]
+    end
+    nothing
+end
+
 function _unify(pattern::TSum, expr::TSum)
     length(pattern.terms) == length(expr.terms) || return nothing
+    # Same order-independent matching as TProduct, using backtracking within groups.
+    p_groups = _group_terms(pattern.terms)
+    e_groups = _group_terms(expr.terms)
+    Set(keys(p_groups)) == Set(keys(e_groups)) || return nothing
+    for k in keys(p_groups)
+        length(p_groups[k]) == length(e_groups[k]) || return nothing
+    end
     bindings = PatternBindings()
-    for (pt, et) in zip(pattern.terms, expr.terms)
-        b = _unify(pt, et)
-        b === nothing && return nothing
-        _merge_bindings!(bindings, b) || return nothing
+    for k in sort!(collect(keys(p_groups)))
+        pts = p_groups[k]
+        ets = e_groups[k]
+        if length(pts) == 1
+            b = _unify(pts[1], ets[1])
+            b === nothing && return nothing
+            _merge_bindings!(bindings, b) || return nothing
+        else
+            result = _unify_group_bt(pts, collect(ets), bindings, 1)
+            result === nothing && return nothing
+            bindings = result
+        end
     end
     bindings
+end
+
+"""Grouping key for TSum terms."""
+function _term_group_key(t::TensorExpr)
+    t isa TProduct && return (1, t.scalar, length(t.factors))
+    t isa Tensor && return (2, 1 // 1, length(t.indices))
+    t isa TScalar && return (0, 1 // 1, 0)
+    t isa TDeriv && return (3, 1 // 1, length(indices(t)))
+    return (4, 1 // 1, 0)
+end
+
+function _group_terms(terms)
+    groups = Dict{Any, Vector{TensorExpr}}()
+    for t in terms
+        k = _term_group_key(t)
+        push!(get!(Vector{TensorExpr}, groups, k), t)
+    end
+    groups
 end
 
 function _unify(pattern::TDeriv, expr::TDeriv)
