@@ -490,13 +490,12 @@ function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
         end
     end
 
-    # Simplify inner sums trapped inside TDeriv arguments, then collect top-level.
-    # Skip re-canonicalization since canonicalize already ran earlier in this pass.
+    # Simplify inner sums trapped inside TDeriv arguments, then collect top-level
     result = collect_inner_sums(result)
     if parallel && result isa TSum && length(result.terms) >= PARALLEL_THRESHOLD
         result = _collect_terms_parallel(result)
     else
-        result = collect_terms(result; canonicalize_terms=false)
+        result = collect_terms(result)
     end
 
     rules = get_rules(reg)
