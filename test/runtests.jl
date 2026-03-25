@@ -312,6 +312,12 @@ using TensorGR
     include("test_ma_curvature.jl")
     # Charge conjugation matrix
     include("test_charge_conjugation.jl")
+    # Dirac field registration and bilinears
+    include("test_dirac.jl")
+    # Spin connection for Dirac fields
+    include("test_spin_connection.jl")
+    # Dirac stress-energy tensor
+    include("test_dirac_stress_energy.jl")
     # Bimetric linearized perturbation
     include("test_bimetric_linearize.jl")
     # Bimetric mass eigenstates diagonalization

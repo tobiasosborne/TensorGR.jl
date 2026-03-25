@@ -192,6 +192,9 @@ include("fermions/traces.jl")
 include("fermions/fierz.jl")
 include("fermions/charge_conjugation.jl")
 include("fermions/graded.jl")
+include("fermions/dirac.jl")
+include("fermions/spin_connection.jl")
+include("fermions/stress_energy.jl")
 
 # Layer 5.5: Metric-affine gravity
 include("metric_affine/connection.jl")
@@ -587,6 +590,14 @@ export gamma_chain_trace, trace_identity_2, trace_identity_4, slash
 
 # Exports: Grassmann parity
 export register_grassmann_field!, is_grassmann, grassmann_parity, grassmann_sign
+export define_fermion!, dirac_bar, is_fermion, get_conjugate_name
+export scalar_bilinear, vector_bilinear, axial_bilinear, pseudo_bilinear
+export dirac_kinetic_expr, dirac_equation_expr
+export define_spin_connection!, spin_connection_expr
+export has_spin_connection, get_spin_connection_name
+export dirac_covd_expr, dirac_bar_covd_expr
+export DiracStressEnergy, define_dirac_stress_energy!, dirac_stress_energy_expr
+export dirac_stress_trace_expr, get_dirac_stress_energy
 
 # Exports: Metric-affine gravity
 export AffineConnection, define_affine_connection!
