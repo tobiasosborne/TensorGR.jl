@@ -95,6 +95,7 @@ include("perturbation/gauge.jl")
 include("perturbation/variation.jl")
 include("perturbation/backgrounds.jl")
 include("perturbation/isaacson.jl")
+include("perturbation/bh_second_order.jl")
 
 # Layer 4: SVT decomposition
 include("svt/fourier.jl")
@@ -402,6 +403,9 @@ export define_tensor_perturbation!, perturbation_order, background_solution!
 export gauge_transformation
 export maximally_symmetric_background!, cosmological_background!, vacuum_background!
 export isaacson_average
+export second_order_einstein_source, source_is_bilinear
+export SourceModeCoupling, source_coupling_modes, count_coupling_modes
+export scalar_coupling_coefficient, vector_coupling_coefficient, tensor_coupling_coefficient
 export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
 

@@ -254,6 +254,8 @@ using TensorGR
     include("test_chain_continuations.jl")
     # xAct ground truth: paper-verified equations (Nutma, Brizuela, Barker, Hohmann)
     include("test_xact_ground_truth.jl")
+    # BH second-order perturbation source terms
+    include("test_bh_second_order.jl")
     # Weyl and Ricci curvature spinors
     include("test_weyl_ricci_spinors.jl")
     # Newman-Penrose null tetrad
