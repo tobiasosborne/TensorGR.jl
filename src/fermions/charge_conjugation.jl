@@ -38,7 +38,7 @@ _replace_index_name(c::ChargeConjugation, ::Symbol, ::Symbol) = c
 to_expr(::ChargeConjugation) = :(ChargeConjugation())
 is_well_formed(::ChargeConjugation) = true
 _validate_walk(::ChargeConjugation, ::TensorRegistry, ::Vector{String}) = nothing
-dagger(::ChargeConjugation) = ChargeConjugation()  # C^† = -C, but dagger returns same type
+dagger(::ChargeConjugation) = tproduct(-1 // 1, TensorExpr[ChargeConjugation()])  # C^† = -C
 
 Base.show(io::IO, ::ChargeConjugation) = print(io, "C")
 to_latex(::ChargeConjugation) = "C"

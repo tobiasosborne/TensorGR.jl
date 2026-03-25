@@ -52,8 +52,13 @@
         @test occursin("self-conjugate", mc)
     end
 
-    @testset "Hermiticity" begin
+    @testset "Hermiticity: C^† = -C" begin
         C = ChargeConjugation()
-        @test dagger(C) == C
+        Cd = dagger(C)
+        # C^† = -C (anti-Hermitian, since C^{-1} = C^† = -C)
+        @test Cd isa TProduct
+        @test Cd.scalar == -1 // 1
+        @test length(Cd.factors) == 1
+        @test Cd.factors[1] isa ChargeConjugation
     end
 end

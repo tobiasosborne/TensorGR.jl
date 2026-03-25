@@ -245,12 +245,17 @@ gamma5_squared() = TScalar(1)
 
 Feynman slash notation: v̸ = γ^a v_a (contraction of vector with gamma matrix).
 
-For a vector `v` with one free Down index, returns γ^a v_a.
+For a vector `v` with one free index, returns γ contracted with v using a
+fresh dummy index (avoids index name clashes in enclosing expressions).
 """
 function slash(v::TensorExpr)
     free = free_indices(v)
     length(free) == 1 || error("slash requires a vector (1 free index), got $(length(free))")
     idx = free[1]
-    gamma = GammaMatrix(TIndex(idx.name, idx.position == Up ? Down : Up, idx.vbundle))
-    tproduct(1 // 1, TensorExpr[gamma, v])
+    # Use fresh dummy to avoid index clashes (matching the Tensor-specific method)
+    used = Set{Symbol}(i.name for i in indices(v))
+    d = fresh_index(used)
+    gamma = GammaMatrix(TIndex(d, idx.position == Up ? Down : Up, idx.vbundle))
+    v_renamed = rename_dummies(v, Dict(idx.name => d))
+    tproduct(1 // 1, TensorExpr[gamma, v_renamed])
 end
