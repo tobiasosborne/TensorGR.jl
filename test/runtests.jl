@@ -176,6 +176,7 @@ using TensorGR
     include("test_noether_charge.jl")
     include("test_symplectic_potential.jl")
     include("test_symplectic_current.jl")
+    include("test_first_law.jl")
     # DDI (dimensionally dependent identities)
     include("test_ddi_rules.jl")
     include("test_ddi_simplify.jl")
