@@ -7,13 +7,46 @@ point: each contraction may expose new contractions.
 Design: the engine walks through factors looking for metrics (g) and deltas (δ)
 that share a dummy index with another factor. When found, it removes the
 metric/delta and transfers the index.
+
+By default, only Tensor factors are contraction targets.  Call
+`contract_metrics_with_derivatives(expr)` to also contract with TDeriv
+indices (raises/lowers the derivative index, e.g. g^{ab} ∂_a → ∂^b).
+This matches xAct's AllowUpperDerivatives option (default: False).
 =#
+
+"""Check if derivative-index contraction is enabled (task-local propagation)."""
+_contract_derivatives_enabled()::Bool =
+    get(task_local_storage(), :_contract_derivatives, false)::Bool
+
+"""
+    contract_metrics_with_derivatives(expr::TensorExpr) -> TensorExpr
+
+Like `contract_metrics`, but also contracts metrics and deltas with TDeriv
+factor indices.  `g^{ab} ∂_a(T_c) → ∂^b(T_c)`.
+
+Equivalent to xAct's `AllowUpperDerivatives → True`.  The flag propagates
+through all recursive calls via task-local storage.
+"""
+function contract_metrics_with_derivatives(expr::TensorExpr)
+    if _contract_derivatives_enabled()
+        return contract_metrics(expr)
+    end
+    task_local_storage(:_contract_derivatives, true)
+    try
+        contract_metrics(expr)
+    finally
+        delete!(task_local_storage(), :_contract_derivatives)
+    end
+end
 
 """
     contract_metrics(expr::TensorExpr) -> TensorExpr
 
 Eliminate all metric and delta contractions, raising/lowering indices.
 Distributes over sums, recurses into derivatives, runs to fixed point on products.
+
+By default, only Tensor factor indices are contracted.  To also contract
+with derivative (TDeriv) indices, use `contract_metrics_with_derivatives`.
 """
 function contract_metrics(t::Tensor)
     reg = current_registry()
@@ -184,6 +217,42 @@ function _try_metric_contraction(p::TProduct, metric_idx::Int, metric::Tensor, r
         end
     end
 
+    # --- TDeriv factor: contract metric with the derivative's own index ---
+    # Guarded by _contract_derivatives_enabled() (opt-in, matches xAct default)
+    if _contract_derivatives_enabled()
+    for (j, fj) in enumerate(p.factors)
+        j == metric_idx && continue
+        fj isa TDeriv || continue
+
+        didx = fj.index
+        for (mi, midx) in enumerate(midxs)
+            if midx.name == didx.name && midx.position != didx.position && midx.vbundle == didx.vbundle
+                other_midx = midxs[3 - mi]
+                # Raise/lower the derivative index; preserve .covd and .arg
+                new_deriv = TDeriv(
+                    TIndex(other_midx.name, other_midx.position, other_midx.vbundle),
+                    fj.arg, fj.covd)
+
+                # Antisymmetric metric sign (same logic as Tensor branch)
+                antisym = _is_antisym_metric(reg, metric.name)
+                sign = antisym && mi == 1 ? -1 // 1 : 1 // 1
+
+                new_factors = TensorExpr[]
+                for (k, fk) in enumerate(p.factors)
+                    if k == metric_idx
+                        continue
+                    elseif k == j
+                        push!(new_factors, new_deriv)
+                    else
+                        push!(new_factors, fk)
+                    end
+                end
+                return tproduct(p.scalar * sign, new_factors)
+            end
+        end
+    end
+    end  # if _contract_derivatives_enabled()
+
     # Self-trace in product: g^a_a * ... → dim * ...
     if midxs[1].name == midxs[2].name &&
        midxs[1].position != midxs[2].position &&
@@ -266,6 +335,38 @@ function _try_delta_contraction(p::TProduct, delta_idx::Int, delta::Tensor, reg)
             end
         end
     end
+
+    # --- TDeriv factor: contract delta with the derivative's own index ---
+    # Guarded by _contract_derivatives_enabled() (opt-in, matches xAct default)
+    if _contract_derivatives_enabled()
+    for (j, fj) in enumerate(p.factors)
+        j == delta_idx && continue
+        fj isa TDeriv || continue
+
+        dvidx = fj.index   # the derivative's index
+        for (di, didx) in enumerate(didxs)
+            if didx.name == dvidx.name && didx.position != dvidx.position && didx.vbundle == dvidx.vbundle
+                # The other delta index replaces the contracted derivative index
+                other_didx = didxs[3 - di]
+                new_deriv = TDeriv(
+                    TIndex(other_didx.name, dvidx.position, dvidx.vbundle),
+                    fj.arg, fj.covd)
+
+                new_factors = TensorExpr[]
+                for (k, fk) in enumerate(p.factors)
+                    if k == delta_idx
+                        continue
+                    elseif k == j
+                        push!(new_factors, new_deriv)
+                    else
+                        push!(new_factors, fk)
+                    end
+                end
+                return tproduct(p.scalar, new_factors)
+            end
+        end
+    end
+    end  # if _contract_derivatives_enabled()
 
     # Self-trace: δ^a_a → dimension
     if didxs[1].name == didxs[2].name && didxs[1].position != didxs[2].position && didxs[1].vbundle == didxs[2].vbundle

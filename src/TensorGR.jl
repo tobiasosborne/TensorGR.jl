@@ -328,7 +328,7 @@ export FullySymmetric, FullyAntiSymmetric, SymmetrySpec
 export symmetry_generators
 
 # Exports: Algebra
-export tproduct, tsum, contract_metrics, canonicalize, expand_derivatives
+export tproduct, tsum, contract_metrics, contract_metrics_with_derivatives, canonicalize, expand_derivatives
 export expand_products, distribute_derivs_over_sums, flatten_metric_derivs, collect_terms, ibp, ibp_product, fix_dummy_positions, normalize_field_positions
 export simplify, full_simplify
 export collect_tensors, remove_constants, remove_tensors, index_collect
