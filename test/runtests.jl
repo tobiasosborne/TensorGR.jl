@@ -225,6 +225,8 @@ using TensorGR
     include("test_vector_spin_projectors.jl")
     # PN potential extraction
     include("test_pn_matching.jl")
+    # Worldline formalism
+    include("test_worldline.jl")
     # Antisymmetric rank-2 spin projectors
     include("test_antisym2_spin.jl")
     # Bianchi cosmology
