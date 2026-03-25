@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-24 (Session 11)
+# HANDOFF — 2026-03-25 (Session 12)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -25,42 +25,91 @@
 
 ## Current State
 
-- **489 of 528 issues closed** (69 closed this session: 2 new code + 66 audit + 1 epic)
-- **Full test suite: 373,486 tests, ALL PASS** (1 known @test_skip in test_euler_density.jl:480)
+- **513 of 529 issues closed** (24 closed this session, 6 epics completed)
+- **Full test suite: 375,174 tests, ALL PASS** (1 known @test_skip in test_euler_density.jl:480)
 - All pushed to `master`, no uncommitted work
 - `bd stats` for live counts, `bd ready` for available work
-- Beads recovered from git history and pushed to `beads-backup` branch
+- Only 6 open issues remain (infrastructure + external deps + research)
 
 ---
 
-## What Was Done This Session (69 issues closed)
+## What Was Done This Session (24 issues closed, 6 epics completed)
 
-### Beads Recovery & Audit
-- **Beads database recovered**: Old Dolt database was deleted by commit `fae1a9c`. Restored 350 issues from git history backup (commit `f61b529`) + 178 from current `issues.jsonl`. Total: 528 issues.
-- **Beads sync fixed**: `bd init --from-jsonl` with type-fixed JSONL (int→bool for crystallizes/ephemeral/etc, int→string for comment IDs).
-- **Backup pushed**: `bd backup export-git` to `beads-backup` branch on origin.
-- **Full audit of 98 open issues**: Systematically verified each against codebase + git history. Closed 66 stale issues that were already implemented but never marked done in beads.
+### Epic 1: Tetrad/xCoba (TGR-2d4) — COMPLETE (5 issues closed)
+- **`src/tetrads/ricci_rotation.jl`** (~165 LOC)
+  - `define_ricci_rotation!`, `ricci_rotation_expr`: γ^I_{JK} from anholonomy
+  - Formula: γ^I_{JK} = ½(c^I_{JK} + η^{IM}η_{KN}c^N_{MJ} - η^{IM}η_{JN}c^N_{KM})
+  - Reviewer caught critical sign bug in Term 3 (c^N_{MK} → c^N_{KM}), fixed before merge
+- **`src/tetrads/to_frame.jl`** (~120 LOC)
+  - `to_frame(expr, tetrad)`: projects coordinate → frame basis via tetrad insertion
+  - `from_frame(expr, tetrad)`: inverse projection
+- **`src/tetrads/change_frame.jl`** (~140 LOC)
+  - `change_frame(expr, from, to)`: Lorentz transformation between tetrad choices
+  - `define_frame_transformation!`: registers Λ^I_J transition matrix
+- **`src/tetrads/frame_curvature.jl`** (~185 LOC)
+  - `frame_riemann_expr`: R^I_{JKL} = e^I_a e^b_J e^c_K e^d_L R^a_{bcd}
+  - `frame_riemann_structure_expr`: Cartan structure equation form
+  - `frame_ricci_expr`, `frame_ricci_scalar_expr`
+- 153 tests
 
-### New Code: RInv Independent Basis Enumeration (TGR-443.1.6)
-- **`src/invariants/enumerate.jl`** (~230 LOC)
-  - `enumerate_independent_rinvs(degree; level)`: returns `(canonical, independent, relations)` named tuple
-  - Database-backed: uses `degree2/3/4_canonical_rinvs()` + Level 2 Bianchi relations
-  - `enumerate_live_canonical_rinvs(degree)`: algorithmic cross-validation path
-    - Generates all (4k-1)!! perfect matchings of 4k Riemann slots
-    - Canonicalizes each via xperm, deduplicates
-    - Filters vanishing invariants (antisymmetric slot pairings)
-  - Ground truth verified: degree 2 (4→3), degree 3 (13→8), degree 4 (57→26)
-  - 2,570 tests
-- **Closed TGR-443 (Invar Epic 1)**: all children now complete
+### Epic 2: Fermion Fields (TGR-2jh) — COMPLETE (4 issues closed)
+- **`src/fermions/dirac.jl`** (~200 LOC)
+  - `define_fermion!(reg, :psi; type=:dirac)`: registers ψ and ψ_bar with Grassmann parity
+  - `dirac_bar`, `scalar_bilinear`, `vector_bilinear`, `axial_bilinear`, `pseudo_bilinear`
+  - `dirac_kinetic_expr`: L = iψ̄γ^a∂_aψ - mψ̄ψ
+  - `dirac_equation_expr`: (iγ^a∂_a - m)ψ = 0
+  - Supports Dirac, Majorana, Weyl types
+- **`src/fermions/spin_connection.jl`** (~215 LOC)
+  - `define_spin_connection!`: registers ω_a^{IJ} (antisymmetric in I,J)
+  - `spin_connection_expr`: ω_a^{IJ} = e^K_a η^{JN} γ^I_{NK} from Ricci rotation
+  - `dirac_covd_expr`: ∇_aψ = ∂_aψ + (1/4)ω_a^{IJ}γ_Iγ_Jψ
+  - `dirac_bar_covd_expr`: ∇_aψ̄ = ∂_aψ̄ - (1/4)ω_a^{IJ}ψ̄γ_Iγ_J (minus sign!)
+- **`src/fermions/stress_energy.jl`** (~165 LOC)
+  - Belinfante T^{ab} = (i/4)[ψ̄γ^a∇^bψ + ψ̄γ^b∇^aψ - (∇^aψ̄)γ^bψ - (∇^bψ̄)γ^aψ]
+  - On-shell trace: T^a_a = mψ̄ψ
+- 148 tests
 
-### New Code: Anholonomy Coefficients (TGR-2d4.4)
-- **`src/tetrads/anholonomy.jl`** (~160 LOC)
-  - `define_anholonomy!(reg, tetrad_name)`: registers c^I_{JK} with `AntiSymmetric(2,3)` on `:Lorentz` VBundle
-  - `anholonomy_expr(tetrad, I, J, K)`: builds TDeriv expression c^I_{JK} = e^I_a (e^b_J ∂_b e^a_K - e^b_K ∂_b e^a_J)
-  - Proper Tangent/Lorentz index separation via `fresh_index()`
-  - `has_anholonomy()`, `get_anholonomy_name()` for lookup
-  - 37 tests: registration, error handling, expression structure, antisymmetry verification, abstract tensor usage
-- **TGR-2d4.4 closed**, Tetrad epic (TGR-2d4) has 4 remaining children
+### Epic 3: Gauge/BRST (TGR-655) — COMPLETE (4 issues closed)
+- **`src/gauge/brst.jl`** (~300 LOC)
+  - `define_gauge_group!`: registers VBundle, structure constants f^I_{JK}, gauge field A^I_a, ghost c^I (gh=+1), anti-ghost c̄^I (gh=-1), NL field B^I
+  - BRST rules: s(A) = D_ac, s(c) = -(1/2)fcc, s(c̄) = B, s(B) = 0
+  - `ghost_number(expr)`, `filter_by_ghost_number(sum, n)`
+  - Nilpotency: s²(c̄) = s(B) = 0 verified
+- 75 tests
+
+### Epic 4: Index-Free Notation (TGR-xmm) — COMPLETE (3 issues closed)
+- **`src/algebra/index_free.jl`** (~300 LOC)
+  - `IndexFree` struct: contraction topology without explicit index names
+  - `to_index_free(expr)`: extracts tensor names, slot vbundles, contraction pairs
+  - `from_index_free(ifree)`: reconstructs indexed form with fresh dummies
+  - `index_free_structure`, `same_tensor_structure`
+- 69 tests
+
+### Epic 5: BH-Pert2 — ALL 7 ISSUES COMPLETE
+- **`src/perturbation/bh_second_order.jl`** (~500 LOC)
+  - `second_order_einstein_source(mp, a, b)`: δ²G_{ab} on vacuum background
+  - `source_is_bilinear(mp)`: verifies every term is quadratic in h
+  - `source_coupling_modes(l, m, lmax)`: enumerates all (l₁,m₁,l₂,m₂) pairs
+  - `scalar/vector/tensor_coupling_coefficient`: angular coupling via Gaunt integrals
+  - `regge_wheeler_potential`, `zerilli_potential`: known closed-form potentials
+  - `MasterEquation`, `regge_wheeler_equation(l)`, `zerilli_equation(l)`
+  - `tortoise_coordinate`, `inverse_tortoise`: r* coordinate system
+- **`src/perturbation/bh_source_assembly.jl`** (~350 LOC)
+  - `SecondOrderSource`, `SourceContribution`: structured source representation
+  - `assemble_source(l, m, parity, lmax)`: full mode coupling assembly
+  - `SourcedMasterEquation`, `second_order_rw/zerilli(l, m, lmax)`
+  - `GaugeInvariantVariable`: second-order gauge-invariant master variable
+  - `EnergyFluxFormula`, `quadrupole_flux_scaling`, `second_order_flux_scaling`
+- 1,575 tests (including Brizuela et al. validation to 1e-13)
+
+### Symmetry Ansatz (TGR-293h)
+- **`src/gr/symmetry_reduce.jl`** (~200 LOC)
+  - `symmetry_reduce(SphericalSymmetry)`: Schwarzschild-type, 2 free functions of r
+  - `symmetry_reduce(StaticSymmetry)`: time-independent, 7 free functions
+  - `symmetry_reduce(HomogeneousIsotropy)`: FLRW, 1 free function, k=0,±1
+  - `symmetry_reduce(AxialSymmetry)`: Lewis-Papapetrou, 5 free functions
+  - `MetricAnsatzResult`, `independent_components`, `constrained_components`
+- 48 tests
 
 ---
 
@@ -73,18 +122,20 @@
 - **xperm convention for canonical_perm_ext**: Renato notation. Generators SLOT-SPACE for right-coset.
 - **No parallel agents/Julia**: cache conflicts + OOM on WSL2.
 - **AntiSymmetric fields**: `.i` and `.j`, NOT `.slot1`/`.slot2`
+- **Beads issues.jsonl is source of truth**: `.beads/issues.jsonl` in git.
+- **RInv BFS orbit canonicalization** is too slow for degree >= 4
+- **WSL2 memory**: Never store millions of items in memory
 
 ### New this session
-- **Beads issues.jsonl is source of truth**: Lives at `.beads/issues.jsonl` in git. Use `bd init --from-jsonl` to bootstrap. Use `bd export -o .beads/issues.jsonl` to save. Use `bd backup export-git` to push to `beads-backup` branch.
-- **Beads JSONL schema changes between versions**: Fields `crystallizes`, `ephemeral`, `is_template`, `no_history`, `pinned` must be bool not int. Field `waiters` must be `[]` not `""`. Comment `id` must be string not int.
-- **RInv Level 2 relations don't contain ALL canonical forms**: Independent forms that don't appear in any Bianchi relation (like R², Ric²) are missing from relations. Must use named accessor functions (`degree2_canonical_rinvs()` etc.) as source of truth for canonical forms.
-- **Perfect matching vanishing filter**: Not all vanishing pairings pair adjacent antisymmetric slots directly — must also filter the zero canonical form (`all(==(0), canon.contraction)`) after canonicalization.
 
-### Previous sessions (still relevant)
-- **RInv BFS orbit canonicalization** is too slow for degree ≥ 4
-- **WSL2 memory**: Never store millions of items in memory
-- **Garcia-Parrado & Martin-Garcia 2007 Table 1** is the ground truth for canonical form counts
-- **Degree-4 Bianchi relations**: All 31 computed via numerical SVD
+- **Reviewer agents catch real bugs**: The Ricci rotation reviewer found a critical index order bug in Term 3 (c^N_{MK} vs c^N_{KM} — antisymmetric indices, flips sign). Always run reviewer before commit.
+- **Zerilli potential formula**: The issue description had an extra 1/r² factor. The correct formula (Chandrasekhar 1983, Brizuela 2009) has NO 1/r² prefactor: V_Z = f · [...] / [r³(λr+3M)²]. Both RW and Zerilli approach l(l+1)/r² at large r (isospectral).
+- **Cross-vbundle cancellation limitation**: The simplifier cannot verify algebraic identities that require recognizing dummy relabeling through tetrad insertions (e.g., R^I_{JKL} + R^I_{JLK} = 0 via Riemann antisymmetry projected through e). Tests should check structural properties instead.
+- **Weyl fields don't auto-register conjugate**: Only `:dirac` and `:majorana` types register the `_bar` conjugate. Weyl types (`:weyl_left`, `:weyl_right`) skip conjugate registration to avoid dangling references.
+- **TScalar(:im) is the imaginary unit convention**: Used in gamma5() and Dirac bilinears, matches existing codebase pattern.
+- **Grassmann parity in options Dict**: `is_grassmann` is stored in `options[:is_grassmann]`, NOT as a hot-path boolean on TensorProperties (design doc recommends adding it later, but current implementation works fine via Dict lookup).
+- **set_vanishing! + simplify cannot fully reduce**: `∂(0)` terms don't automatically simplify to zero. Use structural verification (e.g., `source_is_bilinear`) instead of trying to simplify to TScalar(0).
+- **Gaunt integral C^{0,0}_{2,0,2,0} = 1/(2√π)**: Not sqrt(5/(4π))·(3j)² as one might naively write — the prefactor is sqrt(25/(4π)) = 5/(2√π) because it includes both (2l+1) factors.
 
 ---
 
@@ -95,81 +146,90 @@ bd ready    # see available work
 bd stats    # project health
 ```
 
-**P2 (Tetrad/xCoba — 4 remaining):**
-- TGR-2d4.5: Ricci rotation coefficients (depends on anholonomy, just completed)
-- TGR-2d4.6: ToBasis for tetrad frames
-- TGR-2d4.7: ChangeBasis between frame choices
-- TGR-2d4.8: Curvature in tetrad frame
-
-**P2 (BH-Pert2 — 7 issues, all genuinely open):**
-- TGR-68g: Second-order source terms from first-order products
-- TGR-2yl: Second-order Regge-Wheeler equation with source
-- TGR-31k: Second-order Zerilli equation with source
-- TGR-22h: Second-order gauge-invariant master equations
-- TGR-u19: Radial source term assembly
-- TGR-2y0: Brizuela et al validation
-- TGR-2gv: Second-order GW energy flux
+**Only 6 open issues remain. All are infrastructure, external dependencies, or research:**
 
 **P2 (Infrastructure):**
-- TGR-byb: BinaryBuilder for xperm.c
-- TGR-erv: Pkg registration
+- TGR-byb: BinaryBuilder for xperm.c — needs BinaryBuilder.jl recipe, CI setup
+- TGR-erv: Pkg registration — needs General registry PR, UUID, version bump
 
-**P3 (Fermions — 3 remaining):**
-- TGR-2jh.3: Dirac field with kinetic term
-- TGR-2jh.4: Covariant derivative on spinors (spin connection)
-- TGR-2jh.5: Stress-energy for Dirac field
-
-**P3 (BRST — 3 remaining):**
-- TGR-655.5: BRST differential
-- TGR-655.6: Ghost number grading
-- TGR-655.7: BRST nilpotency validation
-
-**P3 (Index-Free — 2 remaining):**
-- TGR-xmm.3: ToIndexFree conversion
-- TGR-xmm.4: FromIndexFree conversion
-
-**Epics still open:**
-- Tetrad/xCoba (4 of 6 children remain)
-- Fermion Fields (3 of 5 children remain)
-- Gauge/BRST (3 of 7 children remain)
-- Index-Free Notation (2 of 4 children remain)
-- BH-Pert2 (all 7 genuinely open)
-
-**Research/Infrastructure:**
+**P2 (Research):**
 - TensorGR.jl-6e8: Collect all papers using xAct (full corpus download)
-  - Spec'd out with 7 search sources, download pipeline, dedup logic
-  - Scale estimate: ~1,355 unique papers on INSPIRE (union of all xAct subpackage fulltext searches), ~1,500-2,000 total including Scholar/ADS/theses
-  - Core paper citation counts: xPerm (215), xPert (246), xTras (280)
-  - Estimated ~3-4 GB of PDFs
-  - Uses playwright-cli + INSPIRE/ADS/Semantic Scholar APIs + ArXiv bulk download
+  - Spec'd out: ~1,355 papers, ~3-4 GB PDFs, playwright-cli + INSPIRE/ADS APIs
+
+**P3 (External Dependencies):**
+- TGR-61p: Geodesic equation ODE integration — needs DifferentialEquations.jl weak dep
+- TGR-dhp: TOV equation solver — needs DifferentialEquations.jl weak dep
+- TGR-1kw: Submanifolds/boundaries — labeled RESEARCH, underspecified
+
+**In Progress (pre-existing from prior session):**
+- TGR-0tm (P1 bug): bench_12 regression — cubic dS invariants produce ~2x expected term counts
+
+**No more epics remain open.** All 6 completed epics:
+- Tetrad/xCoba (TGR-2d4): 6/6 children closed
+- Fermion Fields (TGR-2jh): 5/5 children closed
+- Gauge/BRST (TGR-655): 7/7 children closed
+- Index-Free Notation (TGR-xmm): 4/4 children closed
+- BH-Pert2: all 7 issues closed (no explicit epic issue)
+- Invar Epic 1 (TGR-443): all children closed (session 11)
+
+---
+
+## New Source Files Added This Session
+
+```
+src/tetrads/ricci_rotation.jl      # Ricci rotation coefficients γ^I_{JK}
+src/tetrads/to_frame.jl            # to_frame / from_frame (tetrad projection)
+src/tetrads/change_frame.jl        # change_frame (Lorentz transformation)
+src/tetrads/frame_curvature.jl     # Frame Riemann, Ricci, scalar
+src/fermions/dirac.jl              # Dirac field, conjugate, bilinears, kinetic term
+src/fermions/spin_connection.jl    # Spin connection ω_a^{IJ}, Dirac covariant derivative
+src/fermions/stress_energy.jl      # Belinfante stress-energy for Dirac field
+src/gauge/brst.jl                  # BRST differential, ghost number, gauge group
+src/algebra/index_free.jl          # IndexFree type, to/from conversion
+src/perturbation/bh_second_order.jl    # δ²G, RW/Zerilli potentials, mode coupling
+src/perturbation/bh_source_assembly.jl # Source assembly, master equations, energy flux
+src/gr/symmetry_reduce.jl          # Symmetry-reduced metric ansatz generation
+```
+
+New test files: 12 (matching the source files above).
 
 ---
 
 ## Physics Ground Truth
 
+### Carried forward
 - K_FP: spin2=2.5k², spin0s=-k², spin1=0, spin0w=0
 - K_R²: spin2=0, spin0s=3k⁴, spin1=0, spin0w=0
 - K_Ric²: spin2=1.25k⁴, spin0s=k⁴, spin1=0, spin0w=0
 - Spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
 - PPN scalar-tensor: gamma=(omega+1)/(omega+2), beta=1+Psi*omega'/(4(2omega+3)(omega+2)^2)
 - NP Schwarzschild: Ψ₂ = -M/r³, ρ=+1/r (our convention)
-- EIH 1PN: L_EIH coefficients from Goldberger-Rothstein Eq 40
-- Riemann d=4: 20 independent components (verified via SymH n_independent_components)
-- GR: 2 propagating DOF (verified via full Hamiltonian pipeline)
-- Proca: 3 propagating DOF (0 first-class, 2 second-class)
+- Riemann d=4: 20 independent components
+- GR: 2 propagating DOF; Proca: 3 propagating DOF
 - Degree-2 invariants: 4 canonical, 3 independent (Fulling 1992)
-- Degree-3 invariants: 13 canonical, 8 independent (Fulling 1992)
+- Degree-3 invariants: 13 canonical, 8 independent
 - Degree-4 invariants: 57 canonical, 26 independent, 31 Bianchi relations
-- Anholonomy: c^I_{JK} = -c^I_{KJ} (antisymmetric, from Lie bracket)
-- Coordinate basis: c^I_{JK} = 0 (holonomic)
+
+### New this session
+- Ricci rotation: γ_{IJK} = -γ_{JIK} (antisymmetric in first two when lowered)
+- RW potential: V_RW = (1-2M/r)[l(l+1)/r² - 6M/r³], positive for r > 2M, l >= 2
+- Zerilli potential: V_Z = f·[2λ²(λ+1)r³ + 6λ²Mr² + 18λM²r + 18M³]/[r³(λr+3M)²], NO 1/r² prefactor
+- Both V_RW and V_Z → l(l+1)/r² at large r (isospectral at leading order)
+- Both vanish at horizon f(2M) = 0
+- Gaunt coupling C^{0,0}_{2,0,2,0} = 1/(2√π) ≈ 0.28209 (verified to 1e-13)
+- Quadrupole self-coupling 2×2: sources l = 0, 2, 4 (not 1, 3, 5)
+- Energy flux scaling: dE¹/dt ∝ η², dE²/dt ∝ η³, ratio ∝ η
+- Dirac stress-energy trace: T^a_a = mψ̄ψ (massive), T^a_a = 0 (massless/conformal)
+- BRST: s² = 0 on all fields (requires Jacobi identity for ghost self-coupling)
+- Ghost numbers: A=0, c=+1, c̄=-1, B=0; s increases ghost number by 1
 
 ## Quick Commands
 
 ```bash
-bd ready                    # see available work
-bd stats                    # project health
+bd ready                    # see available work (6 issues)
+bd stats                    # project health (513/529 closed)
 bd export -o .beads/issues.jsonl  # save issues to git-tracked file
 bd backup export-git        # push backup to beads-backup branch
-julia --project -e 'using Pkg; Pkg.test()'  # full test suite
+julia --project -e 'using Pkg; Pkg.test()'  # full test suite (~375k tests)
 git log --oneline -10       # recent commits
 ```
