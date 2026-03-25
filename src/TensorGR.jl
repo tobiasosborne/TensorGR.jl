@@ -30,6 +30,7 @@ include("algebra/ibp.jl")
 include("algebra/collect_tensors.jl")
 include("algebra/ansatz.jl")
 include("algebra/all_contractions.jl")
+include("algebra/index_free.jl")
 include("algebra/invar_lagrangian.jl")
 include("algebra/trace.jl")
 include("algebra/symmetrize.jl")
@@ -333,6 +334,8 @@ export abstract_trace, make_traceless
 export symmetrize, antisymmetrize, impose_symmetry
 export YoungTableau, young_shape, young_symmetrize, young_project
 export all_contractions, contraction_ansatz, filter_independent_contractions
+export IndexFree, to_index_free, from_index_free
+export index_free_structure, same_tensor_structure
 export solve_tensors
 export invariant_lagrangian
 
