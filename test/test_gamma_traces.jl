@@ -263,17 +263,26 @@
     end
 
     # ────────────────────────────────────────────────────────────────
-    # Custom dimension: verify Tr(I) = dim for arbitrary dimension
+    # Custom dimension: verify Tr(I) = 2^{floor(d/2)} for arbitrary dimension
+    # Ground truth: Peskin & Schroeder Appendix A; d_s = 2^{floor(d/2)}
     # ────────────────────────────────────────────────────────────────
     @testset "Custom spinor dimension" begin
-        # In d dimensions, Tr(I) = d_s (here we use dim parameter)
+        # In d=6: Tr(I) = 2^3 = 8
         result_d6 = gamma_chain_trace(GammaMatrix[]; dim=6)
-        @test result_d6 == TScalar(6 // 1)
+        @test result_d6 == TScalar(8 // 1)
 
-        # Tr(gamma^a gamma^b) = d_s * g^{ab}
+        # Tr(gamma^a gamma^b) = d_s * g^{ab}, d_s = 8 for d=6
         result2_d6 = gamma_chain_trace([GammaMatrix(up(:a)), GammaMatrix(up(:b))]; dim=6)
         @test result2_d6 isa TProduct
-        @test result2_d6.scalar == 6 // 1
+        @test result2_d6.scalar == 8 // 1
+
+        # d=10: Tr(I) = 2^5 = 32 (10D supergravity)
+        result_d10 = gamma_chain_trace(GammaMatrix[]; dim=10)
+        @test result_d10 == TScalar(32 // 1)
+
+        # d=3: Tr(I) = 2^1 = 2 (3D Chern-Simons)
+        result_d3 = gamma_chain_trace(GammaMatrix[]; dim=3)
+        @test result_d3 == TScalar(2 // 1)
     end
 
     # ────────────────────────────────────────────────────────────────

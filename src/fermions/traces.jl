@@ -30,7 +30,7 @@ Ground truth: Peskin & Schroeder (1995) Eqs A.21-A.28.
 function gamma_chain_trace(gammas::Vector{GammaMatrix};
                             metric::Symbol=:g, dim::Int=4)
     n = length(gammas)
-    spinor_dim = dim  # Tr(I) in d dimensions
+    spinor_dim = 2^(dim ÷ 2)  # Tr(I) = 2^{floor(d/2)} in d dimensions
 
     # Empty trace
     n == 0 && return TScalar(Rational{Int}(spinor_dim))

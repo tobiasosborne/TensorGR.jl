@@ -133,7 +133,7 @@ For even n ≥ 4, use recursive relation via Clifford algebra.
 Ground truth: Peskin & Schroeder (1995) Sec 3.2, Eqs 3.45-3.46.
 """
 function gamma_trace(n::Int; dim::Int=4)
-    spinor_dim = dim  # In d dimensions, Tr(I) = 2^{d/2}; for d=4, = 4
+    spinor_dim = 2^(dim ÷ 2)  # Tr(I) = 2^{floor(d/2)}: d=4→4, d=6→8, d=10→32
     if n == 0
         return spinor_dim
     elseif n % 2 == 1
