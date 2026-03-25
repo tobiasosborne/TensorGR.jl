@@ -327,21 +327,25 @@ end
 _pmap_over_tsum(f, expr::TensorExpr) = f(expr)
 
 """
-    _collect_terms_parallel(expr::TSum)
+    _collect_terms_parallel(expr::TSum; canonicalize_terms::Bool=true)
 
-Two-phase parallel collect_terms: parallel canonicalize + serial Dict merge.
+Two-phase parallel collect_terms: parallel normalize + serial Dict merge.
+When `canonicalize_terms=false`, skip re-canonicalization (terms already canonical).
 """
-function _collect_terms_parallel(expr::TSum)
+function _collect_terms_parallel(expr::TSum; canonicalize_terms::Bool=true)
     n = length(expr.terms)
     reg = current_registry()
-    # Phase 1: parallel canonicalize
+    # Phase 1: parallel normalize (optionally re-canonicalize)
     pairs = Vector{Tuple{Rational{Int}, TensorExpr}}(undef, n)
     @sync for i in 1:n
         let i=i
             Threads.@spawn begin
                 with_registry(reg) do
                     scalar, core = _split_scalar(expr.terms[i])
-                    pairs[i] = (scalar, _normalize_dummies(canonicalize(core)))
+                    normalized = canonicalize_terms ?
+                        _normalize_dummies(canonicalize(core)) :
+                        _normalize_dummies(core)
+                    pairs[i] = (scalar, normalized)
                 end
             end
         end
@@ -497,7 +501,7 @@ function _simplify_one_pass(expr::TensorExpr, reg::TensorRegistry,
     # appear with term collection, revert canonicalize_terms to default (true).
     result = collect_inner_sums(result)
     if parallel && result isa TSum && length(result.terms) >= PARALLEL_THRESHOLD
-        result = _collect_terms_parallel(result)
+        result = _collect_terms_parallel(result; canonicalize_terms=false)
     else
         result = collect_terms(result; canonicalize_terms=false)
     end
