@@ -132,6 +132,14 @@ using TensorGR
     include("test_frame_bundle.jl")
     # Anholonomy coefficients (tetrad structure constants)
     include("test_anholonomy.jl")
+    # Ricci rotation coefficients (frame connection)
+    include("test_ricci_rotation.jl")
+    # ToBasis / FromBasis for tetrad frames
+    include("test_to_frame.jl")
+    # ChangeBasis between frame choices
+    include("test_change_frame.jl")
+    # Curvature in tetrad frame
+    include("test_frame_curvature.jl")
     # xIdeal: Petrov classification
     include("test_petrov_invariants.jl")
     include("test_petrov_classify.jl")

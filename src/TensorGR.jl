@@ -57,6 +57,10 @@ include("spinors/ashtekar_variables.jl")
 # Layer 2.6: Tetrad/frame bundle
 include("tetrads/frame_bundle.jl")
 include("tetrads/anholonomy.jl")
+include("tetrads/ricci_rotation.jl")
+include("tetrads/to_frame.jl")
+include("tetrads/change_frame.jl")
+include("tetrads/frame_curvature.jl")
 
 # Layer 2.6: Scalar algebra
 include("scalar/algebra.jl")
@@ -282,6 +286,11 @@ export define_ashtekar_variables!, ashtekar_connection_expr, densitized_triad_ex
 export ashtekar_curvature_expr, gauss_constraint_expr
 export define_frame_bundle!, frame_up, frame_down, is_frame_index
 export define_anholonomy!, anholonomy_expr, has_anholonomy, get_anholonomy_name
+export define_ricci_rotation!, ricci_rotation_expr, has_ricci_rotation, get_ricci_rotation_name
+export to_frame, from_frame
+export define_frame_transformation!, frame_transformation_expr, change_frame
+export frame_riemann_expr, frame_riemann_structure_expr
+export frame_ricci_expr, frame_ricci_scalar_expr
 export set_vanishing!
 export current_registry, with_registry
 
