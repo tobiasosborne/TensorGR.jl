@@ -256,6 +256,8 @@ using TensorGR
     include("test_xact_ground_truth.jl")
     # BH second-order perturbation source terms
     include("test_bh_second_order.jl")
+    # BH source assembly and gauge-invariant master equations
+    include("test_bh_source_assembly.jl")
     # Weyl and Ricci curvature spinors
     include("test_weyl_ricci_spinors.jl")
     # Newman-Penrose null tetrad

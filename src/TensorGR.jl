@@ -96,6 +96,7 @@ include("perturbation/variation.jl")
 include("perturbation/backgrounds.jl")
 include("perturbation/isaacson.jl")
 include("perturbation/bh_second_order.jl")
+include("perturbation/bh_source_assembly.jl")
 
 # Layer 4: SVT decomposition
 include("svt/fourier.jl")
@@ -410,6 +411,10 @@ export MasterEquation, regge_wheeler_potential, regge_wheeler_equation
 export zerilli_potential, zerilli_equation
 export tortoise_coordinate, inverse_tortoise
 export evaluate_potential, potential_at_horizon, potential_at_infinity
+export SourceContribution, SecondOrderSource, assemble_source
+export SourcedMasterEquation, second_order_rw, second_order_zerilli
+export GaugeInvariantVariable, gauge_invariant_variable, is_gauge_invariant_at_zero
+export EVEN_SECTORS, ODD_SECTORS
 export variational_derivative, euler_lagrange
 export metric_variation, var_lagrangian
 
