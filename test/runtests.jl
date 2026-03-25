@@ -260,6 +260,8 @@ using TensorGR
     include("test_bh_source_assembly.jl")
     # BH-Pert2 end-to-end validation (Brizuela + energy flux)
     include("test_bh_validation.jl")
+    # Symmetry-reduced metric ansatz
+    include("test_symmetry_reduce.jl")
     # Weyl and Ricci curvature spinors
     include("test_weyl_ricci_spinors.jl")
     # Newman-Penrose null tetrad
