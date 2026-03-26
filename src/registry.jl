@@ -7,13 +7,13 @@ and optional metadata (e.g., `:conjugate_bundle`, `:is_spinor`).
 struct VBundleProperties
     name::Symbol
     manifold::Symbol
-    dim::Int
+    dim::Union{Int,Symbol}
     indices::Vector{Symbol}
     options::Dict{Symbol,Any}
 end
 
 # Backward-compatible 4-arg positional constructor
-VBundleProperties(name::Symbol, manifold::Symbol, dim::Int, indices::Vector{Symbol}) =
+VBundleProperties(name::Symbol, manifold::Symbol, dim::Union{Int,Symbol}, indices::Vector{Symbol}) =
     VBundleProperties(name, manifold, dim, indices, Dict{Symbol,Any}())
 
 """
@@ -23,7 +23,7 @@ Properties of a manifold: dimension, associated metric/derivative symbols, and i
 """
 struct ManifoldProperties
     name::Symbol
-    dim::Int
+    dim::Union{Int,Symbol}
     metric::Union{Symbol, Nothing}
     derivative::Union{Symbol, Nothing}
     indices::Vector{Symbol}
@@ -130,7 +130,7 @@ Register a vector bundle on a manifold with given fiber dimension and index alph
 Optionally specify a conjugate bundle (e.g., for spinor SL2C/SL2C_dot pairs).
 """
 function define_vbundle!(reg::TensorRegistry, name::Symbol;
-                         manifold::Symbol, dim::Int,
+                         manifold::Symbol, dim::Union{Int,Symbol},
                          indices::Vector{Symbol}=Symbol[],
                          conjugate_bundle::Union{Nothing,Symbol}=nothing)
     has_vbundle(reg, name) && error("VBundle $name already registered")

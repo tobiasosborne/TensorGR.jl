@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-25 (Session 14)
+# HANDOFF — 2026-03-26 (Session 15: Feynfeld.jl integration)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -25,15 +25,81 @@
 
 ## Current State
 
-- **530 of 568 issues closed** (3 closed this session)
-- **Full test suite: 375,396 tests, ALL PASS** (1 known @test_skip in test_euler_density.jl:480)
-- **Benchmarks: 445 pass, 0 fail, 3 broken (stretch goals)** — run last session, not re-run this session
-- All pushed to `master`, no uncommitted work
+- **530 of 568 issues closed** (0 closed this session — this session was cross-project integration only)
+- **Full test suite: 375,404 tests, ALL PASS** (1 known Broken in test_euler_density.jl:480)
+- **Benchmarks: 53 Tier 1 pass** — re-run this session after changes
+- All changes from this session pushed to `master`
 - `bd stats` for live counts, `bd ready` for available work
 
 ---
 
-## What Was Done This Session (3 issues closed)
+## What Was Done This Session (Feynfeld.jl integration — 0 issues closed)
+
+**Context**: Feynfeld.jl (sister project at `../Feynfeld.jl`) is a Julia port of the
+Mathematica QFT ecosystem (FeynCalc/FeynArts/FeynRules). It depends on TensorGR.jl for
+index contraction and canonicalization of Lorentz algebra expressions. Feynfeld needs
+**symbolic manifold dimensions** for dimensional regularisation (D = 4 − 2ε), where D
+is a symbol, not an integer.
+
+### Change 1: `ManifoldProperties.dim` and `VBundleProperties.dim` type widening
+
+**File**: `src/registry.jl`
+**Change**: `dim::Int` → `dim::Union{Int,Symbol}` on both structs, plus the
+`VBundleProperties` 4-arg constructor and `define_vbundle!` keyword argument.
+
+**Why**: Feynfeld needs `ManifoldProperties(:M4, :D, :η, nothing, [...])` to register
+a Minkowski manifold with symbolic dimension `:D` for dimensional regularisation.
+Without this, every `dim` argument must be a concrete integer, blocking QFT use cases.
+
+**Impact**: This is a **public API change**. Any code that constructs
+`ManifoldProperties` or `VBundleProperties` with integer dims continues to work
+(`4 isa Union{Int,Symbol}` is true). Code that type-asserts `dim::Int` on these fields
+will need updating.
+
+**Backward compatibility**: Full. All 375,404 existing tests pass without modification.
+
+### Change 2: Metric trace for symbolic dimensions
+
+**File**: `src/algebra/contraction.jl`, line 77
+**Change**: `TScalar(dim // 1)` → `TScalar(dim isa Int ? dim // 1 : dim)`
+
+**Why**: When `g^a_a` is self-traced on a manifold with `dim = :D`, the original code
+attempted `Symbol // Int` which has no method. Now returns `TScalar(:D)` for symbolic
+dimensions, `TScalar(dim // 1)` for integer dimensions.
+
+**Impact**: The contraction engine now returns `TScalar(:D)` instead of crashing for
+symbolic-dim manifolds. No behavior change for integer dimensions.
+
+### Change 3: `define_metric!` guards for symbolic dimensions
+
+**File**: `src/gr/metric.jl`
+**Changes**:
+1. The `lorentzian(d)` fallback (line 53): now returns `nothing` when `d isa Symbol`
+   instead of crashing on `fill(1, :D - 1)`. Callers must pass `signature` explicitly
+   for symbolic-dim manifolds.
+2. Epsilon tensor registration (lines 83-96): wrapped in `if d isa Int` guard since it
+   does `1:d-1` range arithmetic and `rank=(0, d)` which require concrete integers.
+
+**Impact**: `define_metric!` now works for symbolic-dim manifolds but skips epsilon
+tensor registration (you cannot construct a fully-antisymmetric tensor of symbolic rank).
+For integer dimensions, behavior is unchanged.
+
+### Change 4: DDI order guard for symbolic dimensions
+
+**File**: `src/algebra/full_simplify.jl`
+**Change**: `_fs_ddi_order(expr, dim::Int)` → `_fs_ddi_order(expr, dim)` with
+`dim isa Int ? clamp(deg, 2, dim ÷ 2) : deg` guard.
+
+**Why**: DDI (dimensionally dependent identity) capping at `dim ÷ 2` is meaningless for
+symbolic dimensions. Now returns `deg` uncapped when dim is symbolic.
+
+**Impact**: DDI simplification for symbolic-dim manifolds will apply all DDI orders up
+to the expression degree (no capping). This is correct — capping is an optimization for
+known-dimension cases where higher-order DDIs vanish identically.
+
+---
+
+## What Was Done Last Session (Session 14: 3 issues closed)
 
 ### 1. TensorGR.jl-2on (P1 Bug): Parallel/serial inconsistency in simplify pipeline
 
@@ -104,7 +170,20 @@ Same fix applied to `_unify(::TSum, ::TSum)`.
 - **Pinned term counts are NOT ground truth**: physics correctness is what matters
 - **Code review agents can be WRONG about physics**: verify against textbooks
 
-### New this session
+### New this session (session 15)
+- **`ManifoldProperties.dim` is now `Union{Int,Symbol}`**: Feynfeld.jl needs symbolic
+  dimensions for dimensional regularisation. All GR-specific code that does arithmetic
+  on `dim` (hamiltonian, geodesics, components, foliation, brauer) will error for
+  symbolic dims — this is correct behavior.
+- **`contract_metrics` returns `TScalar(:D)` for symbolic-dim metric traces**: Previously
+  only returned `TScalar(dim // 1)` for integer dims.
+- **`define_metric!` skips epsilon tensor for symbolic dims**: Cannot construct a
+  fully-antisymmetric tensor of symbolic rank.
+- **Feynfeld.jl is a consumer of TensorGR.jl**: It uses the registry, TIndex, contraction,
+  and canonicalization engines for Lorentz algebra in QFT. Changes to these APIs must
+  consider both GR and QFT use cases.
+
+### From session 14
 - **`free_indices()` uses Dict iteration → non-deterministic in Julia 1.12**: Use `indices(expr)` for deterministic ordering, then filter to free indices by name set.
 - **Dummy detection after free-index replacement is WRONG**: After replacing free indices `:a` → `:_1`, `:b` → `:_1`, the duplicate `:_1` entries are falsely detected as dummy pairs. Always compute dummies from the ORIGINAL expression.
 - **Sort-based rule matching fails with shared pattern variables**: Pattern `T_{a_,b_} * T_{b_,c_}` vs `T_{z,y} * T_{y,x}` — sorting aligns factors such that `b_` gets conflicting bindings. Backtracking within same-name groups is the correct approach.
@@ -113,6 +192,20 @@ Same fix applied to `_unify(::TSum, ::TSum)`.
 ---
 
 ## ⚠ Core Changes To Monitor
+
+**This session** (symbolic dimension support for Feynfeld.jl):
+- Location: `src/registry.jl` (struct types), `src/algebra/contraction.jl` (metric trace),
+  `src/gr/metric.jl` (epsilon/signature guards), `src/algebra/full_simplify.jl` (DDI guard)
+- Change: `dim::Int` → `dim::Union{Int,Symbol}` on ManifoldProperties and VBundleProperties,
+  plus runtime guards at 3 arithmetic sites
+- Risk: **Medium** — public API type change. All 375,404 tests pass. All Tier 1 benchmarks pass.
+  But any downstream code type-asserting `dim::Int` will break.
+- **GR-specific code that does arithmetic on `dim`** (hamiltonian, geodesics, components,
+  foliation, brauer) will naturally error with `MethodError` for symbolic dims. This is
+  correct — you cannot compute Christoffel symbols in D dimensions numerically.
+- Revert: change `Union{Int,Symbol}` back to `Int` in registry.jl and revert the 3 guards
+
+**Session 14** commits (carried forward):
 
 **Commit bf27dab** (`canonicalize_terms` in `_collect_terms_parallel`):
 - Location: `src/algebra/simplify.jl`, lines 330-360
@@ -135,10 +228,13 @@ Same fix applied to `_unify(::TSum, ::TSum)`.
 
 ## TODO Next Session
 
-1. **Run Reviewer 2 for TensorGR.jl-88e** (rule matching fix) — was interrupted
+1. **Run Reviewer 2 for TensorGR.jl-88e** (rule matching fix) — was interrupted in session 14
 2. **Add dedicated tests for order-independent rule matching** — currently only verified via REPL
-3. **Run benchmarks** — not run this session after the rule fix
-4. Continue with ready queue (`bd ready`)
+3. **Run full benchmarks (Tier 1-3)** — only Tier 1 run this session
+4. **Add tests for symbolic-dim manifolds** — currently only tested from Feynfeld.jl side
+5. **Update docstrings** for `ManifoldProperties`, `VBundleProperties`, `define_vbundle!` to
+   document that `dim` accepts `Symbol` for symbolic dimensions
+6. Continue with ready queue (`bd ready`)
 
 ## Ready Queue
 

@@ -49,8 +49,14 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
     mp = get_manifold(reg, manifold)
     d = mp.dim
 
-    # Store signature
-    sig = signature !== nothing ? signature : lorentzian(d)
+    # Store signature (skip default for symbolic dims where concrete signature is impossible)
+    sig = if signature !== nothing
+        signature
+    elseif d isa Int
+        lorentzian(d)
+    else
+        nothing
+    end
 
     # Register metric tensor g_{ab} (symmetric)
     if !has_tensor(reg, name)
@@ -75,18 +81,21 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
     end
 
     # Register epsilon tensor ε_{a1...ad} (fully antisymmetric)
-    eps_name = Symbol(:ε, name)
-    if !has_tensor(reg, eps_name)
-        syms = SymmetrySpec[]
-        for i in 1:d-1
-            push!(syms, AntiSymmetric(i, i + 1))
+    # Skip for symbolic dimensions (cannot determine rank or symmetries)
+    if d isa Int
+        eps_name = Symbol(:ε, name)
+        if !has_tensor(reg, eps_name)
+            syms = SymmetrySpec[]
+            for i in 1:d-1
+                push!(syms, AntiSymmetric(i, i + 1))
+            end
+            register_tensor!(reg, TensorProperties(
+                name=eps_name, manifold=manifold, rank=(0, d),
+                symmetries=syms,
+                options=Dict{Symbol,Any}(:is_epsilon => true,
+                                         :metric => name,
+                                         :sign_det => sig !== nothing ? sign_det(sig) : 1)))
         end
-        register_tensor!(reg, TensorProperties(
-            name=eps_name, manifold=manifold, rank=(0, d),
-            symmetries=syms,
-            options=Dict{Symbol,Any}(:is_epsilon => true,
-                                     :metric => name,
-                                     :sign_det => sign_det(sig))))
     end
 
     # Register curvature tensors

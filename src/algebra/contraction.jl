@@ -74,7 +74,7 @@ function contract_metrics(t::Tensor)
                t.indices[1].vbundle == t.indices[2].vbundle
                 # Self-traced metric: g^a_a → dim (requires opposite positions)
                 dim = _effective_dim(reg, t.name)
-                return TScalar(dim // 1)
+                return TScalar(dim isa Int ? dim // 1 : dim)
             end
         end
     end

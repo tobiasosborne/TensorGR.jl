@@ -111,11 +111,11 @@ function _fs_try_infer_dim(reg::TensorRegistry)
 end
 
 """Determine DDI order from expression degree and dimension."""
-function _fs_ddi_order(expr::TensorExpr, dim::Int)
+function _fs_ddi_order(expr::TensorExpr, dim)
     deg = count_riemann_degree(expr)
     # DDI order matches curvature degree (order 2 = quadratic DDIs, etc.)
     # Cap at dim÷2 (DDIs beyond that are trivially zero)
-    clamp(deg, 2, dim ÷ 2)
+    dim isa Int ? clamp(deg, 2, dim ÷ 2) : deg
 end
 
 """Convert Riemann tensors to Weyl + Ricci decomposition (expression-level)."""
