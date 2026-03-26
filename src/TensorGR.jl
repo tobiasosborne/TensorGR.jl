@@ -204,6 +204,7 @@ include("fermions/stress_energy.jl")
 
 # Layer 5.6: Gauge fields and BRST
 include("gauge/brst.jl")
+include("gauge/yang_mills.jl")
 
 # Layer 5.5: Metric-affine gravity
 include("metric_affine/connection.jl")
@@ -243,6 +244,10 @@ include("harmonics/laplacian.jl")
 include("harmonics/decompose_scalar.jl")
 include("harmonics/decompose_vector.jl")
 include("harmonics/decompose_tensor.jl")
+include("harmonics/schwarzschild.jl")
+include("harmonics/rw_gauge.jl")
+include("harmonics/regge_wheeler.jl")
+include("harmonics/master_functions.jl")
 
 # Layer 5.5: Scalar-tensor gravity (Horndeski, DHOST, EFT-DE)
 include("scalar_tensor/horndeski.jl")
@@ -629,6 +634,8 @@ export dirac_stress_trace_expr, get_dirac_stress_energy
 export GaugeGroupProperties, define_gauge_group!, get_gauge_group
 export brst_gauge_field, brst_ghost, brst_anti_ghost, brst_nl_field
 export ghost_number, filter_by_ghost_number
+export yang_mills_field_strength, gauge_covariant_deriv, yang_mills_bianchi
+export yang_mills_lagrangian, yang_mills_field_equations
 
 # Exports: Metric-affine gravity
 export AffineConnection, define_affine_connection!
@@ -691,6 +698,14 @@ export ScalarMode, HarmonicDecomposition, decompose_scalar, get_mode
 export VectorMode, VectorHarmonicDecomposition, decompose_vector
 export TensorMode, TensorHarmonicDecomposition, decompose_symmetric_tensor
 export Parity, EVEN, ODD
+export SchwarzschildBackground, define_schwarzschild_background!
+export get_schwarzschild_background, schwarzschild_f, schwarzschild_r
+export schwarzschild_rw_potential, schwarzschild_zerilli_potential, schwarzschild_potential_difference
+export RWGaugeChoice, rw_gauge_odd, rw_gauge_even, rw_gauge_full
+export apply_rw_gauge!, rw_dof_count
+export RWMasterEquation, derive_rw_equation, derive_zerilli_equation
+export evaluate_rw_potential, rw_potential_at_horizon, rw_potential_at_infinity
+export MasterFunctionSpec, rw_master_function, zerilli_master_function, extract_master_functions
 
 # Exports: Scalar-tensor gravity
 export ScalarTensorFunction, g_tensor_name, differentiate_G

@@ -263,6 +263,8 @@ using TensorGR
     include("test_bh_source_assembly.jl")
     # BH-Pert2 end-to-end validation (Brizuela + energy flux)
     include("test_bh_validation.jl")
+    # Regge-Wheeler / Zerilli master equations
+    include("test_rw_zerilli.jl")
     # Symmetry-reduced metric ansatz
     include("test_symmetry_reduce.jl")
     # Weyl and Ricci curvature spinors
@@ -333,6 +335,8 @@ using TensorGR
     include("test_dirac_stress_energy.jl")
     # BRST differential and ghost number
     include("test_brst.jl")
+    # Yang-Mills field strength and equations
+    include("test_yang_mills.jl")
     # Bimetric linearized perturbation
     include("test_bimetric_linearize.jl")
     # Bimetric mass eigenstates diagonalization
