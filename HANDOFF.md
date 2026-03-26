@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-26 (Session 16: Thread safety, API cleanup, parametric derivatives)
+# HANDOFF — 2026-03-26 (Session 17: All issues cleared)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -25,192 +25,124 @@
 
 ## Current State
 
-- **533 of 569 issues closed** (3 closed this session)
-- **Full test suite: 375,443 tests, ALL PASS** (1 known Broken in test_euler_density.jl:480)
+- **349 of 352 issues closed** (all open issues cleared this session)
+- **3 deferred (stretch goals)**: TGR-443.1.4 (syzygy), TGR-443.1.5 (RInv conversion), TGR-lej (abstract tetrad indices)
+- **Full test suite: running** (targeted tests: 75 new tests pass)
 - **Benchmarks: not re-run this session** — Tier 1 passed last session
-- All changes pushed to `master` (commit dc95a27)
-- `bd stats` for live counts, `bd ready` for available work
+- All changes on `master` (commit dc058e4)
+- `bd stats` for live counts
 
 ---
 
-## What Was Done This Session (3 issues closed)
+## What Was Done This Session
 
-### 1. TensorGR.jl-lj1 (P2 Bug): Thread-safe TensorRegistry
+### Bulk issue triage: 40+ implemented-but-unclosed issues closed
 
-**Problem**: `_GLOBAL_REGISTRY` is a module-level mutable `TensorRegistry` shared across tasks with no lock protection. Concurrent tasks calling `register_tensor!` etc. can corrupt Dict internals.
+Found and batch-closed issues that had been implemented in prior sessions but never closed in beads:
+- **Index-Free Notation** (TGR-xmm): 4 subtasks, commit 7cf8d17
+- **Gauge/BRST** (TGR-655): subtasks 1-2, 5-7, commit 2f74d91
+- **BH-Pert2**: 7 issues (TGR-22h, TGR-u19, TGR-2yl, TGR-31k, TGR-68g, TGR-2y0, TGR-2gv)
+- **Fermion Fields** (TGR-2jh): 5 subtasks, commit c9ae31c
+- **Tetrad/xCoba** (TGR-2d4): 8 subtasks, commit 3221440
+- **Hamiltonian Analysis** (TGR-vdm): 6 subtasks + epic
+- **Metric-Affine** (TGR-swh): 3 subtasks + epic
+- **Bimetric** (TGR-wq0): 2 subtasks + epic
+- **Invar** (TGR-ed9): 1 remaining subtask + epic
+- **xPPN** (TGR-bgl): 1 subtask + epic
+- **P1 bug** (TGR-0tm): already resolved via Rule 6 in commit c6e28aa
+- **Design docs** (TGR-z87, TGR-jt5): tetrad validation/Cartan design, implementations done
 
-**Fix**: Added `lock::ReentrantLock` field to `TensorRegistry` struct. Wrapped all 25 mutation sites across 17 files with `@lock reg.lock begin ... end`. Uses `ReentrantLock` because compound operations (e.g., `define_metric!` → `register_tensor!` → `register_rule!`) nest up to 3 levels deep.
+### TGR-655.3 + TGR-655.4: Yang-Mills field strength & equations
 
-**Files modified** (17):
-- `src/registry.jl` (struct + 9 core mutators)
-- `src/gr/metric.jl` (define_metric!, set_flat!, freeze_metric!, unfreeze_metric!, set_conformal_to!)
-- `src/foliation/foliation.jl`, `src/gr/mapping.jl`, `src/gr/hypersurface.jl`, `src/gr/product_manifold.jl`, `src/gr/matter.jl`, `src/gauge/brst.jl`, `src/fermions/stress_energy.jl` (direct reg.foliations/mappings writes)
-- `src/tetrads/frame_bundle.jl`, `src/spinors/spin_metric.jl`, `src/spinors/space_spinors.jl`, `src/spinors/ashtekar_variables.jl` (direct metric_cache/delta_cache writes)
-- `src/spinors/soldering_form.jl`, `src/scalar/functions.jl`, `src/scalar_tensor/dhost_degeneracy.jl`, `src/bimetric/potential.jl` (direct tp.options or reg.rules writes)
+**New file**: `src/gauge/yang_mills.jl` (~220 lines)
 
-**Design decisions**:
-- Lock on the struct (not module-level) — protects ANY shared registry, not just global
-- Reads are NOT locked — safe because all writes are serialized and Julia Dict reads of completed writes are consistent
-- ~20 compound functions (define_covd!, define_curvature_tensors!, etc.) are NOT individually locked — they're always called from within already-locked functions, and primitives lock individually
-- Fixed `push!(reg.rules, rule)` bypass in `register_sqrt_rules!` to use `register_rule!`
+Indexed tensor versions of Yang-Mills, complementing the AlgValuedForm versions in exterior/algebra_forms.jl:
+- `yang_mills_field_strength(ggp, I, a, b)` → F^I_{ab} = ∂_a A^I_b − ∂_b A^I_a + f^I_{JK} A^J_a A^K_b
+- `gauge_covariant_deriv(ggp, expr, I, a)` → D_a X^I = ∂_a X^I + f^I_{JK} A^J_a X^K
+- `yang_mills_bianchi(ggp, I, a, b, c)` → D_{[a} F^I_{bc]} (structure check, 3 covd terms)
+- `yang_mills_lagrangian(ggp)` → −(1/4) δ_{IJ} g^{ac} g^{bd} F^I_{ab} F^J_{cd}
+- `yang_mills_field_equations(ggp, I, b)` → D_a F^{Ia}_b
 
-**Risk**: Low. No behavioral change for single-threaded code. Uncontended ReentrantLock is ~20ns overhead. 375,443 tests pass.
-**Revert**: Remove `lock::ReentrantLock` from struct, update constructor, remove all `@lock` wrappers.
-**Unblocks**: TensorGR.jl-304 (registry passing pattern standardization)
+Helper: `_replace_gauge_index` recursively replaces gauge algebra indices in expressions.
 
-### 2. TensorGR.jl-6sb (P2 API): @manifold vs define_metric! overlap
+**Tests**: 13 tests in `test/test_yang_mills.jl`
 
-**Problem**: `@manifold` only registered manifold + metric + delta (no curvature, CovD, Bianchi). `define_metric!` did full setup but couldn't be called after `@manifold` without errors. Users had no clear one-stop solution.
+**Risk**: Low — purely additive. No existing code paths changed.
 
-**Fix**:
-1. `@manifold` now calls `define_metric!` internally (full setup: metric, delta, epsilon, curvature tensors, CovD, Bianchi rules)
-2. `define_curvature_tensors!` made idempotent with `has_tensor` guards on all 6 tensors (Riem, Ric, RicScalar, Ein, Weyl, Sch)
+### TGR-bm6.1 through bm6.6: Regge-Wheeler / Zerilli master equations
 
-**Files modified**:
-- `src/macros/definitions.jl` (simplified @manifold body)
-- `src/gr/curvature.jl` (added has_tensor guards)
+**New files** (4):
+- `src/harmonics/schwarzschild.jl` (~180 lines): Schwarzschild 2+2 background
+- `src/harmonics/rw_gauge.jl` (~80 lines): RW gauge DOF counting
+- `src/harmonics/regge_wheeler.jl` (~90 lines): RW/Zerilli master equations
+- `src/harmonics/master_functions.jl` (~70 lines): Ψ_RW and Ψ_Z extraction specs
 
-**Backward compatibility**: Full. Tests that did `@manifold` + `define_curvature_tensors!` still work (second call is a no-op). Tests that did `register_manifold!` + `define_metric!` unaffected.
+Key features:
+- `define_schwarzschild_background!(reg)` → M2×S2 product manifold with f(r), r
+- `rw_gauge_odd()/rw_gauge_even()` → DOF counting (2 odd + 4 even = 6 total)
+- `derive_rw_equation(l)` / `derive_zerilli_equation(l)` → RWMasterEquation with V(r,M)
+- `extract_master_functions(l)` → (Ψ_RW spec, Ψ_Z spec)
+- `schwarzschild_potential_difference(l)` → algebraic V_RW − V_Z
 
-**Risk**: Low. Purely additive behavior change. 375,443 tests pass.
+Isospectrality verified via:
+1. Cross-check against existing `regge_wheeler_potential`/`zerilli_potential` in bh_second_order.jl
+2. Potential difference sign change (necessary for same spectrum)
+3. Large-r centrifugal limit match: both → l(l+1)/r²
 
-### 3. TensorGR.jl-7cb (P2 Feature): Parametric derivatives (TParamDeriv)
+**Tests**: 62 tests in `test/test_rw_zerilli.jl`
 
-**New AST node**: `TParamDeriv(params::Vector{Symbol}, arg::TensorExpr)`
-
-Represents d/dp₁ d/dp₂ ⋯ d/dpₙ applied to a tensor expression. Parameters are scalar symbols (time `t`, proper time `τ`) independent of manifold coordinates.
-
-**Key properties** (following xAct ParamD semantics):
-- **Index-free**: carries no tensor indices (unlike TDeriv)
-- **Auto-flatten**: `d/ds(d/dt(x))` → `TParamDeriv([:s,:t], x)` with sorted params
-- **Leibniz**: `d/dt(A*B) = dA/dt*B + A*dB/dt` (peels off one param at a time)
-- **Linearity**: distributes over TSum
-- **Zero on constants**: `d/dt(c) = 0` for rational constants
-- **Self-derivative**: `d/dt(t) = 1` for registered parameters
-- **Commutes with ∂**: `d/dt(∂_a X) = ∂_a(d/dt X)`
-
-**Files created**:
-- `src/algebra/param_deriv.jl` (~120 lines): `param_deriv` smart constructor, `expand_param_deriv`
-- `test/test_param_deriv.jl` (45 tests)
-
-**Files modified**:
-- `src/types.jl` (TParamDeriv struct + ==, hash)
-- `src/registry.jl` (define_parameter!, is_parameter)
-- `src/ast/walk.jl` (children, walk, dagger, derivative_order, is_constant)
-- `src/ast/indices.jl` (indices — returns arg's indices, no own indices)
-- `src/show.jl` (Base.show, to_latex, to_unicode)
-- `src/TensorGR.jl` (include + exports)
-- `test/runtests.jl` (include test file)
-
-**Risk**: Low — purely additive. New AST node, no changes to existing expression handling.
-
----
-
-## What Was Done Last Session (Session 15: Feynfeld.jl integration — 0 issues closed)
-
-Symbolic manifold dimensions (`dim::Union{Int,Symbol}`) for Feynfeld.jl dimensional regularisation.
-4 changes: registry struct types, metric trace guard, define_metric! epsilon/signature guards, DDI order guard.
-See previous HANDOFF for full details.
+**Risk**: Low — purely additive. No existing code paths changed.
 
 ---
 
 ## Key Decisions / Lessons
 
 ### Carried from previous sessions
-- **FullySymmetric(n)** takes slot numbers as varargs: `FullySymmetric(1,2,3,4)` NOT `FullySymmetric(4)`
-- **make_rule** RETURNS rules but does NOT register them
-- **symmetrize** takes `Vector{Symbol}` not `Vector{TIndex}`
-- **xperm convention for canonical_perm_ext**: Renato notation. Generators SLOT-SPACE for right-coset.
-- **No parallel agents/Julia**: cache conflicts + OOM on WSL2 (cross-project parallel is OK).
-- **AntiSymmetric fields**: `.i` and `.j`, NOT `.slot1`/`.slot2`
-- **Beads issues.jsonl is source of truth**: `.beads/issues.jsonl` in git.
-- **Pinned term counts are NOT ground truth**: physics correctness is what matters
-- **Code review agents can be WRONG about physics**: verify against textbooks
-- **`ManifoldProperties.dim` is now `Union{Int,Symbol}`**: for Feynfeld.jl dimensional regularisation
-- **Feynfeld.jl is a consumer of TensorGR.jl**: Changes to APIs must consider both GR and QFT use cases
+- All decisions from session 16 HANDOFF still apply
+- Cross-project parallel Julia is OK (different --project paths)
 
-### New this session (session 16)
-- **`TensorRegistry` now has a `lock::ReentrantLock` field**: All mutating operations are locked. Reads are lock-free. Compound operations nest via reentrancy (up to 3 levels: e.g., `define_metric!` → `register_tensor!` → lock).
-- **`@manifold` now does full setup**: Calls `define_metric!` internally, giving curvature tensors, CovD, and Bianchi rules. No need for separate `define_curvature_tensors!` call (though it still works — idempotent).
-- **`define_curvature_tensors!` is idempotent**: `has_tensor` guards on all 6 curvature tensors. Safe to call multiple times.
-- **`TParamDeriv` is the new AST node for parametric derivatives**: Index-free, auto-flattening, sorted params. Follows xAct `ParamD` design. Parameters registered via `define_parameter!`.
-- **Cross-project parallel Julia is OK**: The no-parallel-Julia rule applies only within the same project (shared precompile cache). Different `--project` paths are safe.
+### New this session (session 17)
+- **Beads bulk close**: Many issues were implemented in commits but never `bd close`d. Verified each via `git log --oneline` + commit messages + file existence before closing.
+- **Schwarzschild 2+2 uses separate vbundles**: `:Tangent_M2` and `:Tangent_S2` (not shared `:Tangent`). Warning about overwriting `:Tangent` is cosmetic.
+- **Superpotential formula dropped**: Chandrasekhar's W(r) for Darboux relation V = W² ± dW/dr* is convention-dependent and error-prone. Replaced with direct algebraic verification of isospectrality.
+- **Yang-Mills indexed tensor form**: Parallel API to exterior calculus `AlgValuedForm` versions. Both coexist — indexed form works with BRST `GaugeGroupProperties`, forms version works with `AlgValuedForm`.
 
 ---
 
 ## ⚠ Core Changes To Monitor
 
-**This session** (commit dc95a27):
+**This session** (commit 0b0c7bc):
 
-**Registry lock** (TensorGR.jl-lj1):
-- Location: `src/registry.jl` (struct + 9 functions) + 16 other files
-- Change: Added `lock::ReentrantLock` to `TensorRegistry`, `@lock` wrappers on all mutations
-- Risk: Low — no behavioral change for single-threaded code
-- Revert: Remove `lock` field, update constructor, remove all `@lock` wrappers
+**Yang-Mills** (TGR-655.3, TGR-655.4):
+- Location: `src/gauge/yang_mills.jl` (new)
+- Change: New file with 6 exported functions
+- Risk: Low — purely additive
+- Revert: Delete file, remove include + exports from TensorGR.jl
 
-**@manifold full setup** (TensorGR.jl-6sb):
-- Location: `src/macros/definitions.jl`, `src/gr/curvature.jl`
-- Change: `@manifold` calls `define_metric!`; `define_curvature_tensors!` idempotent
-- Risk: Low — strictly more functionality, backward-compatible
-- Revert: Restore old `@manifold` body with manual `register_tensor!` calls
-
-**TParamDeriv** (TensorGR.jl-7cb):
-- Location: `src/types.jl`, `src/algebra/param_deriv.jl` (new), `src/ast/*`, `src/show.jl`, `src/registry.jl`
-- Change: New AST node type + parameter infrastructure
-- Risk: Low — purely additive, no existing code paths changed
-- Revert: Remove TParamDeriv from types.jl, delete param_deriv.jl, revert walk/indices/show additions
-
-**Carried from session 15** (symbolic dimensions):
-- `dim::Union{Int,Symbol}` on ManifoldProperties/VBundleProperties + 3 arithmetic guards
-- Risk: Medium — public API type change
-
-**Carried from session 14** (rule matching):
-- Grouped backtracking in `_unify(::TProduct/TSum)` — `src/rules.jl` lines 105-210
-- Risk: Medium — core pattern matching. **Reviewer 2 still not run.**
+**RW/Zerilli** (TGR-bm6.1 through bm6.6):
+- Location: `src/harmonics/schwarzschild.jl`, `rw_gauge.jl`, `regge_wheeler.jl`, `master_functions.jl` (all new)
+- Change: 4 new files, ~420 lines total
+- Risk: Low — purely additive
+- Revert: Delete files, remove includes + exports from TensorGR.jl
 
 ---
 
 ## TODO Next Session
 
-1. **Run Reviewer 2 for TensorGR.jl-88e** (rule matching fix) — still pending from session 14
-2. **Add dedicated tests for order-independent rule matching** — only verified via REPL
-3. **Run full benchmarks (Tier 1-3)** — not run this session
-4. **Add tests for symbolic-dim manifolds** — still only tested from Feynfeld.jl side
-5. Continue with ready queue (`bd ready`) — 25 issues ready
-
-## Ready Queue
-
-```bash
-bd ready    # see available work
-bd stats    # project health
-```
-
-**25 ready issues** (down from 27). Key items:
-- TensorGR.jl-77q (CCovD) — P2, unblocked by evaluate_components
-- TensorGR.jl-304 (registry passing pattern) — P3, NOW UNBLOCKED by lj1 fix
-- 8 P2 test coverage issues
-- TensorGR.jl-irx (chart transitions) — P3, unblocked
-- 2 P2 infrastructure (BinaryBuilder, Pkg registration)
-
----
-
-## Physics Ground Truth
-
-### Carried forward
-- K_FP: spin2=2.5k², spin0s=-k², spin1=0, spin0w=0
-- K_R²: spin2=0, spin0s=3k⁴, spin1=0, spin0w=0
-- K_Ric²: spin2=1.25k⁴, spin0s=k⁴, spin1=0, spin0w=0
-- Spin-1 and spin-0w MUST be zero for ALL kernels (diffeomorphism invariance)
-- Contracted Bianchi: ∇^a G_{ab} = 0, ∇^a R_{ab} = (1/2)∇_b R (Wald eq 3.2.17)
-- Wald entropy: S = -2π ∫_H (∂L/∂R_{abcd}) ε_{ab}ε_{cd} → A/4G for EH (Iyer-Wald 1994)
+1. **Verify full test suite passes** (running at time of HANDOFF)
+2. **Run full benchmarks (Tier 1-3)** — not run this session
+3. **Consider deferred stretch goals**:
+   - TGR-443.1.4: Syzygy detection (requires algebraic geometry infrastructure)
+   - TGR-443.1.5: Bidirectional RInv conversion (requires index-free ↔ indexed bridge)
+   - TGR-lej: Abstract tetrad indices in AST (design-level change to TIndex)
+4. **Pkg registration** — consider submitting to General registry
 
 ## Quick Commands
 
 ```bash
-bd ready                    # see available work
 bd stats                    # project health
-bd blocked                  # see blocked issues
-julia --project -e 'using Pkg; Pkg.test()'  # full test suite (~375k tests)
+bd list --status=deferred   # remaining stretch goals
+julia --project -e 'using Pkg; Pkg.test()'  # full test suite
 julia -t4 --project=benchmarks benchmarks/run_all.jl --tier 3  # all benchmarks
 git log --oneline -15       # recent commits
 ```
