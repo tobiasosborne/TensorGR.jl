@@ -8,6 +8,7 @@ children(::TScalar) = TensorExpr[]
 children(p::TProduct) = p.factors
 children(s::TSum) = s.terms
 children(d::TDeriv) = TensorExpr[d.arg]
+children(d::TParamDeriv) = TensorExpr[d.arg]
 
 """
     walk(f, expr::TensorExpr) -> TensorExpr
@@ -36,6 +37,11 @@ end
 function walk(f, expr::TDeriv)
     new_arg = walk(f, expr.arg)
     f(TDeriv(expr.index, new_arg, expr.covd))
+end
+
+function walk(f, expr::TParamDeriv)
+    new_arg = walk(f, expr.arg)
+    f(TParamDeriv(expr.params, new_arg))
 end
 
 """
@@ -72,6 +78,9 @@ end
 function dagger(d::TDeriv)
     TDeriv(TIndex(d.index.name, d.index.position == Up ? Down : Up, d.index.vbundle), dagger(d.arg), d.covd)
 end
+function dagger(d::TParamDeriv)
+    TParamDeriv(d.params, dagger(d.arg))
+end
 
 """
     derivative_order(expr::TensorExpr) -> Int
@@ -81,6 +90,7 @@ Count the total number of derivatives acting in an expression.
 derivative_order(::Tensor) = 0
 derivative_order(::TScalar) = 0
 derivative_order(d::TDeriv) = 1 + derivative_order(d.arg)
+derivative_order(d::TParamDeriv) = length(d.params) + derivative_order(d.arg)
 function derivative_order(p::TProduct)
     isempty(p.factors) ? 0 : maximum(derivative_order(f) for f in p.factors)
 end
@@ -96,6 +106,7 @@ Check if expression has no free or dummy indices (i.e., is a scalar constant).
 is_constant(::TScalar) = true
 is_constant(t::Tensor) = isempty(t.indices)
 is_constant(d::TDeriv) = false
+is_constant(d::TParamDeriv) = false  # ParamDeriv of a tensor is not constant
 function is_constant(p::TProduct)
     all(is_constant, p.factors)
 end

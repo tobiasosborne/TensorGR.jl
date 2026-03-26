@@ -6,6 +6,7 @@ Return all indices in the expression (both free and dummy).
 indices(t::Tensor) = copy(t.indices)
 indices(::TScalar) = TIndex[]
 indices(d::TDeriv) = vcat(TIndex[d.index], indices(d.arg))
+indices(d::TParamDeriv) = indices(d.arg)  # ParamD carries no indices
 
 function indices(p::TProduct)
     result = TIndex[]

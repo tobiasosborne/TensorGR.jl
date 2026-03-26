@@ -60,6 +60,7 @@ function define_perfect_fluid!(reg::TensorRegistry, name::Symbol;
                                 rho::Symbol=:rho,
                                 p::Symbol=:p,
                                 u::Symbol=:u)
+    @lock reg.lock begin
     has_manifold(reg, manifold) || error("Manifold $manifold not registered")
     has_tensor(reg, metric) || error("Metric $metric not registered")
 
@@ -159,6 +160,7 @@ function define_perfect_fluid!(reg::TensorRegistry, name::Symbol;
     reg.foliations[Symbol(:perfect_fluid_, name)] = fp
 
     fp
+    end
 end
 
 """

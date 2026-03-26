@@ -57,38 +57,40 @@ function define_mapping!(reg::TensorRegistry, name::Symbol;
                           domain::Symbol, codomain::Symbol,
                           jacobian_name::Symbol=Symbol(:d, name),
                           inv_jacobian_name::Union{Symbol, Nothing}=nothing)
-    has_manifold(reg, domain) || error("Domain manifold $domain not registered")
-    has_manifold(reg, codomain) || error("Codomain manifold $codomain not registered")
-    has_mapping(reg, name) && error("Mapping $name already registered")
+    @lock reg.lock begin
+        has_manifold(reg, domain) || error("Domain manifold $domain not registered")
+        has_manifold(reg, codomain) || error("Codomain manifold $codomain not registered")
+        has_mapping(reg, name) && error("Mapping $name already registered")
 
-    # VBundle names for cross-manifold indices
-    vb_domain = _tangent_vbundle_name(reg, domain)
-    vb_codomain = _tangent_vbundle_name(reg, codomain)
+        # VBundle names for cross-manifold indices
+        vb_domain = _tangent_vbundle_name(reg, domain)
+        vb_codomain = _tangent_vbundle_name(reg, codomain)
 
-    # Register Jacobian: dφ^i_a (upper index on codomain, lower on domain)
-    if !has_tensor(reg, jacobian_name)
-        register_tensor!(reg, TensorProperties(
-            name=jacobian_name, manifold=domain, rank=(1, 1),
-            options=Dict{Symbol,Any}(:is_jacobian => true,
-                                     :mapping => name,
-                                     :up_vbundle => vb_codomain,
-                                     :down_vbundle => vb_domain)))
+        # Register Jacobian: dφ^i_a (upper index on codomain, lower on domain)
+        if !has_tensor(reg, jacobian_name)
+            register_tensor!(reg, TensorProperties(
+                name=jacobian_name, manifold=domain, rank=(1, 1),
+                options=Dict{Symbol,Any}(:is_jacobian => true,
+                                         :mapping => name,
+                                         :up_vbundle => vb_codomain,
+                                         :down_vbundle => vb_domain)))
+        end
+
+        # Optionally register inverse Jacobian
+        if inv_jacobian_name !== nothing && !has_tensor(reg, inv_jacobian_name)
+            register_tensor!(reg, TensorProperties(
+                name=inv_jacobian_name, manifold=codomain, rank=(1, 1),
+                options=Dict{Symbol,Any}(:is_jacobian => true,
+                                         :mapping => name,
+                                         :is_inverse => true,
+                                         :up_vbundle => vb_domain,
+                                         :down_vbundle => vb_codomain)))
+        end
+
+        mp = MappingProperties(name, domain, codomain, jacobian_name, inv_jacobian_name)
+        reg.mappings[name] = mp
+        mp
     end
-
-    # Optionally register inverse Jacobian
-    if inv_jacobian_name !== nothing && !has_tensor(reg, inv_jacobian_name)
-        register_tensor!(reg, TensorProperties(
-            name=inv_jacobian_name, manifold=codomain, rank=(1, 1),
-            options=Dict{Symbol,Any}(:is_jacobian => true,
-                                     :mapping => name,
-                                     :is_inverse => true,
-                                     :up_vbundle => vb_domain,
-                                     :down_vbundle => vb_codomain)))
-    end
-
-    mp = MappingProperties(name, domain, codomain, jacobian_name, inv_jacobian_name)
-    reg.mappings[name] = mp
-    mp
 end
 
 """Return the tangent bundle name for a manifold (domain-specific if multi-manifold)."""

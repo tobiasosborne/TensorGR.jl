@@ -305,24 +305,26 @@ Ground truth: Cayley-Hamilton theorem for 4×4 matrices.
 """
 function register_sqrt_rules!(reg::TensorRegistry, bs::BimetricSetup;
                                 max_power::Int=4)
-    S_name = Symbol(:S_, bs.metric_g, :_, bs.metric_f)
+    @lock reg.lock begin
+        S_name = Symbol(:S_, bs.metric_g, :_, bs.metric_f)
 
-    # Functional rule: detect S^{max_power} chains in TProduct factors
-    # and replace using Cayley-Hamilton reduction.
-    rule = RewriteRule(
-        function(expr::TensorExpr)
-            # Match a TProduct containing a chain of max_power S factors
-            expr isa TProduct || return false
-            chain = _find_S_chain(expr, S_name, max_power)
-            return chain !== nothing
-        end,
-        function(expr::TensorExpr)
-            _reduce_S_chain(expr, S_name, max_power, bs, reg)
-        end
-    )
+        # Functional rule: detect S^{max_power} chains in TProduct factors
+        # and replace using Cayley-Hamilton reduction.
+        rule = RewriteRule(
+            function(expr::TensorExpr)
+                # Match a TProduct containing a chain of max_power S factors
+                expr isa TProduct || return false
+                chain = _find_S_chain(expr, S_name, max_power)
+                return chain !== nothing
+            end,
+            function(expr::TensorExpr)
+                _reduce_S_chain(expr, S_name, max_power, bs, reg)
+            end
+        )
 
-    push!(reg.rules, rule)
-    RewriteRule[rule]
+        register_rule!(reg, rule)
+        RewriteRule[rule]
+    end
 end
 
 """Find a chain of `n` S-factors contracted in sequence within a TProduct."""

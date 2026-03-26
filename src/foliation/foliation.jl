@@ -30,17 +30,19 @@ function define_foliation!(reg::TensorRegistry, name::Symbol;
                            manifold::Symbol,
                            temporal::Int=0,
                            spatial::Vector{Int}=Int[1,2,3])
-    has_manifold(reg, manifold) || error("Manifold $manifold not registered")
-    mp = get_manifold(reg, manifold)
-    total = 1 + length(spatial)
-    total == mp.dim || error("Foliation dimension $(total) != manifold dimension $(mp.dim)")
-    temporal in spatial && error("Temporal component $temporal must not be in spatial $spatial")
-    length(unique(spatial)) == length(spatial) || error("Spatial components must be unique")
-    has_foliation(reg, name) && error("Foliation $name already registered")
+    @lock reg.lock begin
+        has_manifold(reg, manifold) || error("Manifold $manifold not registered")
+        mp = get_manifold(reg, manifold)
+        total = 1 + length(spatial)
+        total == mp.dim || error("Foliation dimension $(total) != manifold dimension $(mp.dim)")
+        temporal in spatial && error("Temporal component $temporal must not be in spatial $spatial")
+        length(unique(spatial)) == length(spatial) || error("Spatial components must be unique")
+        has_foliation(reg, name) && error("Foliation $name already registered")
 
-    fol = FoliationProperties(name, manifold, temporal, spatial, length(spatial))
-    reg.foliations[name] = fol
-    fol
+        fol = FoliationProperties(name, manifold, temporal, spatial, length(spatial))
+        reg.foliations[name] = fol
+        fol
+    end
 end
 
 """

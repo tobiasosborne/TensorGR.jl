@@ -33,55 +33,57 @@ one :Lorentz index.
 """
 function define_frame_bundle!(reg::TensorRegistry;
                               manifold::Symbol=:M4, dim::Int=4)
-    has_manifold(reg, manifold) || error("Manifold $manifold not registered")
+    @lock reg.lock begin
+        has_manifold(reg, manifold) || error("Manifold $manifold not registered")
 
-    if !has_vbundle(reg, :Lorentz)
-        define_vbundle!(reg, :Lorentz;
-                        manifold=manifold, dim=dim,
-                        indices=[:I, :J, :K, :L, :M, :N])
+        if !has_vbundle(reg, :Lorentz)
+            define_vbundle!(reg, :Lorentz;
+                            manifold=manifold, dim=dim,
+                            indices=[:I, :J, :K, :L, :M, :N])
+        end
+
+        # Save manifold-level caches so register_tensor! doesn't overwrite
+        saved_metric = get(reg.metric_cache, manifold, nothing)
+        saved_delta  = get(reg.delta_cache, manifold, nothing)
+
+        # ── Frame metric eta_{IJ} ─────────────────────────────────────────
+        if !has_tensor(reg, :eta)
+            register_tensor!(reg, TensorProperties(
+                name=:eta, manifold=manifold, rank=(0, 2),
+                symmetries=SymmetrySpec[Symmetric(1, 2)],
+                is_metric=true,
+                options=Dict{Symbol,Any}(
+                    :is_metric => true,
+                    :vbundle => :Lorentz,
+                    :vbundle_dim => dim)))
+        end
+
+        # ── Frame delta: delta^I_J ────────────────────────────────────────
+        if !has_tensor(reg, :delta_frame)
+            register_tensor!(reg, TensorProperties(
+                name=:delta_frame, manifold=manifold, rank=(1, 1),
+                symmetries=SymmetrySpec[],
+                is_delta=true,
+                options=Dict{Symbol,Any}(
+                    :is_delta => true,
+                    :vbundle => :Lorentz,
+                    :vbundle_dim => dim)))
+        end
+
+        # ── Restore manifold-level caches ─────────────────────────────────
+        if saved_metric !== nothing
+            reg.metric_cache[manifold] = saved_metric
+        end
+        if saved_delta !== nothing
+            reg.delta_cache[manifold] = saved_delta
+        end
+
+        # ── Populate caches keyed by vbundle ──────────────────────────────
+        reg.metric_cache[:Lorentz] = :eta
+        reg.delta_cache[:Lorentz]  = :delta_frame
+
+        nothing
     end
-
-    # Save manifold-level caches so register_tensor! doesn't overwrite
-    saved_metric = get(reg.metric_cache, manifold, nothing)
-    saved_delta  = get(reg.delta_cache, manifold, nothing)
-
-    # ── Frame metric eta_{IJ} ─────────────────────────────────────────
-    if !has_tensor(reg, :eta)
-        register_tensor!(reg, TensorProperties(
-            name=:eta, manifold=manifold, rank=(0, 2),
-            symmetries=SymmetrySpec[Symmetric(1, 2)],
-            is_metric=true,
-            options=Dict{Symbol,Any}(
-                :is_metric => true,
-                :vbundle => :Lorentz,
-                :vbundle_dim => dim)))
-    end
-
-    # ── Frame delta: delta^I_J ────────────────────────────────────────
-    if !has_tensor(reg, :delta_frame)
-        register_tensor!(reg, TensorProperties(
-            name=:delta_frame, manifold=manifold, rank=(1, 1),
-            symmetries=SymmetrySpec[],
-            is_delta=true,
-            options=Dict{Symbol,Any}(
-                :is_delta => true,
-                :vbundle => :Lorentz,
-                :vbundle_dim => dim)))
-    end
-
-    # ── Restore manifold-level caches ─────────────────────────────────
-    if saved_metric !== nothing
-        reg.metric_cache[manifold] = saved_metric
-    end
-    if saved_delta !== nothing
-        reg.delta_cache[manifold] = saved_delta
-    end
-
-    # ── Populate caches keyed by vbundle ──────────────────────────────
-    reg.metric_cache[:Lorentz] = :eta
-    reg.delta_cache[:Lorentz]  = :delta_frame
-
-    nothing
 end
 
 # ── Convenience constructors ──────────────────────────────────────────────

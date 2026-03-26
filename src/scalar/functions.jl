@@ -13,17 +13,19 @@ The derivative, if provided, is another scalar function name: f' = derivative.
 """
 function define_scalar_function!(reg::TensorRegistry, name::Symbol;
                                   derivative::Union{Symbol, Nothing}=nothing)
-    if !haskey(reg.tensors, name)
-        register_tensor!(reg, TensorProperties(
-            name=name, manifold=:_scalar, rank=(0, 0),
-            symmetries=SymmetrySpec[],
-            options=Dict{Symbol,Any}(:is_scalar_function => true,
-                                     :derivative => derivative)))
-    else
-        get_tensor(reg, name).options[:is_scalar_function] = true
-        get_tensor(reg, name).options[:derivative] = derivative
+    @lock reg.lock begin
+        if !haskey(reg.tensors, name)
+            register_tensor!(reg, TensorProperties(
+                name=name, manifold=:_scalar, rank=(0, 0),
+                symmetries=SymmetrySpec[],
+                options=Dict{Symbol,Any}(:is_scalar_function => true,
+                                         :derivative => derivative)))
+        else
+            get_tensor(reg, name).options[:is_scalar_function] = true
+            get_tensor(reg, name).options[:derivative] = derivative
+        end
+        nothing
     end
-    nothing
 end
 
 """

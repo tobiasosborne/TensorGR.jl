@@ -87,6 +87,14 @@ function Base.show(io::IO, d::TDeriv)
     print(io, ")")
 end
 
+function Base.show(io::IO, d::TParamDeriv)
+    print(io, "D[")
+    join(io, d.params, ",")
+    print(io, "](")
+    show(io, d.arg)
+    print(io, ")")
+end
+
 # ── LaTeX rendering ──────────────────────────────────────────────────
 
 """
@@ -179,6 +187,11 @@ end
 function to_latex(d::TDeriv)
     idx_str = _latex_index_name(d.index)
     return "\\partial_{$idx_str} " * to_latex(d.arg)
+end
+
+function to_latex(d::TParamDeriv)
+    params_str = join(string.(d.params), ",")
+    return "\\dot{" * to_latex(d.arg) * "}_{" * params_str * "}"
 end
 
 # ── Unicode rendering ────────────────────────────────────────────────
@@ -291,4 +304,9 @@ end
 function to_unicode(d::TDeriv)
     idx_str = to_unicode(d.index)
     return "∂" * idx_str * "(" * to_unicode(d.arg) * ")"
+end
+
+function to_unicode(d::TParamDeriv)
+    params_str = join(string.(d.params), ",")
+    return "d/d(" * params_str * ")(" * to_unicode(d.arg) * ")"
 end

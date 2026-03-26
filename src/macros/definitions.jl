@@ -9,7 +9,9 @@
     @manifold name dim=d metric=g indices=[a,b,c,d,e,f]
 
 Define a manifold with dimension, metric, and index alphabet.
-Also registers the metric tensor (symmetric, rank (0,2)) and delta.
+Performs full setup: registers manifold, metric (with signature), delta, epsilon,
+curvature tensors (Riem, Ric, RicScalar, Ein, Weyl, Sch), covariant derivative,
+and Bianchi rules. Equivalent to `register_manifold!` + `define_metric!`.
 """
 macro manifold(name, kwargs...)
     _parse_manifold(name, kwargs)
@@ -44,18 +46,7 @@ function _parse_manifold(name, kwargs)
             register_manifold!(reg, ManifoldProperties(
                 $(QuoteNode(name)), $dim, $(QuoteNode(metric)),
                 $(QuoteNode(derivative)), Symbol[$(QuoteNode.(idx_list)...)]))
-            register_tensor!(reg, TensorProperties(
-                name=$(QuoteNode(metric)), manifold=$(QuoteNode(name)),
-                rank=(0, 2),
-                symmetries=SymmetrySpec[Symmetric(1, 2)],
-                is_metric=true,
-                options=Dict{Symbol,Any}(:is_metric => true)))
-            register_tensor!(reg, TensorProperties(
-                name=:δ, manifold=$(QuoteNode(name)),
-                rank=(1, 1),
-                symmetries=SymmetrySpec[],
-                is_delta=true,
-                options=Dict{Symbol,Any}(:is_delta => true)))
+            define_metric!(reg, $(QuoteNode(metric)); manifold=$(QuoteNode(name)))
         end
     end |> esc
 end

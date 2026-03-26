@@ -41,39 +41,41 @@ Penrose & Rindler, *Spinors and Space-Time* Vol 1 (1984), Eqs 3.1.20, 3.1.23.
 function define_soldering_form!(reg::TensorRegistry;
                                 manifold::Symbol=:M4,
                                 name::Symbol=:sigma)
-    has_vbundle(reg, :SL2C) || error("SL2C bundle not registered; call define_spinor_bundles! first")
-    has_vbundle(reg, :SL2C_dot) || error("SL2C_dot bundle not registered; call define_spinor_bundles! first")
-    has_tensor(reg, :eps_spin) || error("Spin metric not registered; call define_spin_metric! first")
+    @lock reg.lock begin
+        has_vbundle(reg, :SL2C) || error("SL2C bundle not registered; call define_spinor_bundles! first")
+        has_vbundle(reg, :SL2C_dot) || error("SL2C_dot bundle not registered; call define_spinor_bundles! first")
+        has_tensor(reg, :eps_spin) || error("Spin metric not registered; call define_spin_metric! first")
 
-    if !has_tensor(reg, name)
-        register_tensor!(reg, TensorProperties(
-            name=name, manifold=manifold, rank=(1, 2),
-            symmetries=SymmetrySpec[],
-            options=Dict{Symbol,Any}(
-                :is_soldering => true,
-                :index_vbundles => [:Tangent, :SL2C, :SL2C_dot])))
+        if !has_tensor(reg, name)
+            register_tensor!(reg, TensorProperties(
+                name=name, manifold=manifold, rank=(1, 2),
+                symmetries=SymmetrySpec[],
+                options=Dict{Symbol,Any}(
+                    :is_soldering => true,
+                    :index_vbundles => [:Tangent, :SL2C, :SL2C_dot])))
+        end
+
+        # Store the soldering form name in the registry options for downstream use
+        # (e.g., to_spinor_indices needs to know which tensor is the soldering form).
+        # We store it keyed by manifold so multiple manifolds could each have one.
+        if !haskey(reg.tensors[name].options, :soldering_manifold)
+            reg.tensors[name].options[:soldering_manifold] = manifold
+        end
+
+        # ── Rule 1: Completeness ──────────────────────────────────────────────
+        # sigma^a_{AA'} sigma_a^{BB'} -> delta^B_A delta^{B'}_{A'}
+        #
+        # Implemented as a structural rewrite rule: when a product contains two
+        # sigma tensors contracted on their Tangent index, replace with deltas.
+        _register_soldering_completeness_rule!(reg, name)
+
+        # ── Rule 2: Metric reconstruction ────────────────────────────────────
+        # sigma^a_{AA'} sigma^{b AA'} -> g^{ab}
+        # (contracted on both spinor indices)
+        _register_soldering_metric_rule!(reg, name, manifold)
+
+        nothing
     end
-
-    # Store the soldering form name in the registry options for downstream use
-    # (e.g., to_spinor_indices needs to know which tensor is the soldering form).
-    # We store it keyed by manifold so multiple manifolds could each have one.
-    if !haskey(reg.tensors[name].options, :soldering_manifold)
-        reg.tensors[name].options[:soldering_manifold] = manifold
-    end
-
-    # ── Rule 1: Completeness ──────────────────────────────────────────────
-    # sigma^a_{AA'} sigma_a^{BB'} -> delta^B_A delta^{B'}_{A'}
-    #
-    # Implemented as a structural rewrite rule: when a product contains two
-    # sigma tensors contracted on their Tangent index, replace with deltas.
-    _register_soldering_completeness_rule!(reg, name)
-
-    # ── Rule 2: Metric reconstruction ────────────────────────────────────
-    # sigma^a_{AA'} sigma^{b AA'} -> g^{ab}
-    # (contracted on both spinor indices)
-    _register_soldering_metric_rule!(reg, name, manifold)
-
-    nothing
 end
 
 # ── Internal: register completeness contraction rule ──────────────────────

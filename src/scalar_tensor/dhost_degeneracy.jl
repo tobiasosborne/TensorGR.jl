@@ -237,23 +237,25 @@ Ground truth: Langlois & Noui (2016) arXiv:1510.06930, Sec 4.1.
 """
 function horndeski_as_dhost(ht::HorndeskiTheory;
                             registry::TensorRegistry=current_registry())
-    dht = define_dhost!(registry; manifold=ht.manifold, metric=ht.metric,
-                        scalar_field=ht.scalar_field, covd=ht.covd)
+    @lock registry.lock begin
+        dht = define_dhost!(registry; manifold=ht.manifold, metric=ht.metric,
+                            scalar_field=ht.scalar_field, covd=ht.covd)
 
-    set_vanishing!(registry, g_tensor_name(dht.a[3]))
-    set_vanishing!(registry, g_tensor_name(dht.a[4]))
-    set_vanishing!(registry, g_tensor_name(dht.a[5]))
+        set_vanishing!(registry, g_tensor_name(dht.a[3]))
+        set_vanishing!(registry, g_tensor_name(dht.a[4]))
+        set_vanishing!(registry, g_tensor_name(dht.a[5]))
 
-    # Encode Horndeski constraint: a1 = G4_X, a2 = -G4_X
-    # So a1 + a2 = 0 identically, making C1 vanish.
-    # Langlois & Noui (2016) arXiv:1510.06930, Sec 4.1.
-    G4X_name = g_tensor_name(differentiate_G(ht.G_functions[3], :X))
-    a1_name = g_tensor_name(dht.a[1])
-    a2_name = g_tensor_name(dht.a[2])
-    get_tensor(registry, a1_name).options[:dhost_coeff_expr] = G4X_name
-    get_tensor(registry, a2_name).options[:dhost_coeff_expr] = _sym_neg(G4X_name)
+        # Encode Horndeski constraint: a1 = G4_X, a2 = -G4_X
+        # So a1 + a2 = 0 identically, making C1 vanish.
+        # Langlois & Noui (2016) arXiv:1510.06930, Sec 4.1.
+        G4X_name = g_tensor_name(differentiate_G(ht.G_functions[3], :X))
+        a1_name = g_tensor_name(dht.a[1])
+        a2_name = g_tensor_name(dht.a[2])
+        get_tensor(registry, a1_name).options[:dhost_coeff_expr] = G4X_name
+        get_tensor(registry, a2_name).options[:dhost_coeff_expr] = _sym_neg(G4X_name)
 
-    dht
+        dht
+    end
 end
 
 # -- Reduce to Horndeski -------------------------------------------------------

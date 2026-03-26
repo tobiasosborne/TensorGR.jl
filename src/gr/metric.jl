@@ -46,71 +46,73 @@ function define_metric!(reg::TensorRegistry, name::Symbol;
                         manifold::Symbol,
                         signature::Union{MetricSignature, Nothing}=nothing,
                         covd_name::Union{Symbol, Nothing}=nothing)
-    mp = get_manifold(reg, manifold)
-    d = mp.dim
+    @lock reg.lock begin
+        mp = get_manifold(reg, manifold)
+        d = mp.dim
 
-    # Store signature (skip default for symbolic dims where concrete signature is impossible)
-    sig = if signature !== nothing
-        signature
-    elseif d isa Int
-        lorentzian(d)
-    else
+        # Store signature (skip default for symbolic dims where concrete signature is impossible)
+        sig = if signature !== nothing
+            signature
+        elseif d isa Int
+            lorentzian(d)
+        else
+            nothing
+        end
+
+        # Register metric tensor g_{ab} (symmetric)
+        if !has_tensor(reg, name)
+            register_tensor!(reg, TensorProperties(
+                name=name, manifold=manifold, rank=(0, 2),
+                symmetries=SymmetrySpec[Symmetric(1, 2)],
+                is_metric=true,
+                options=Dict{Symbol,Any}(:is_metric => true,
+                                         :signature => sig)))
+        else
+            # Update signature on existing metric
+            get_tensor(reg, name).options[:signature] = sig
+        end
+
+        # Register delta
+        if !has_tensor(reg, :δ)
+            register_tensor!(reg, TensorProperties(
+                name=:δ, manifold=manifold, rank=(1, 1),
+                symmetries=SymmetrySpec[],
+                is_delta=true,
+                options=Dict{Symbol,Any}(:is_delta => true)))
+        end
+
+        # Register epsilon tensor ε_{a1...ad} (fully antisymmetric)
+        # Skip for symbolic dimensions (cannot determine rank or symmetries)
+        if d isa Int
+            eps_name = Symbol(:ε, name)
+            if !has_tensor(reg, eps_name)
+                syms = SymmetrySpec[]
+                for i in 1:d-1
+                    push!(syms, AntiSymmetric(i, i + 1))
+                end
+                register_tensor!(reg, TensorProperties(
+                    name=eps_name, manifold=manifold, rank=(0, d),
+                    symmetries=syms,
+                    options=Dict{Symbol,Any}(:is_epsilon => true,
+                                             :metric => name,
+                                             :sign_det => sig !== nothing ? sign_det(sig) : 1)))
+            end
+        end
+
+        # Register curvature tensors
+        define_curvature_tensors!(reg, manifold, name)
+
+        # Register Levi-Civita CovD
+        cd = covd_name !== nothing ? covd_name : Symbol(:∇, name)
+        covd_props = define_covd!(reg, cd; manifold=manifold, metric=name)
+
+        # Register Bianchi rules
+        for rule in bianchi_rules(; manifold=manifold, metric=name)
+            register_rule!(reg, rule)
+        end
+
         nothing
     end
-
-    # Register metric tensor g_{ab} (symmetric)
-    if !has_tensor(reg, name)
-        register_tensor!(reg, TensorProperties(
-            name=name, manifold=manifold, rank=(0, 2),
-            symmetries=SymmetrySpec[Symmetric(1, 2)],
-            is_metric=true,
-            options=Dict{Symbol,Any}(:is_metric => true,
-                                     :signature => sig)))
-    else
-        # Update signature on existing metric
-        get_tensor(reg, name).options[:signature] = sig
-    end
-
-    # Register delta
-    if !has_tensor(reg, :δ)
-        register_tensor!(reg, TensorProperties(
-            name=:δ, manifold=manifold, rank=(1, 1),
-            symmetries=SymmetrySpec[],
-            is_delta=true,
-            options=Dict{Symbol,Any}(:is_delta => true)))
-    end
-
-    # Register epsilon tensor ε_{a1...ad} (fully antisymmetric)
-    # Skip for symbolic dimensions (cannot determine rank or symmetries)
-    if d isa Int
-        eps_name = Symbol(:ε, name)
-        if !has_tensor(reg, eps_name)
-            syms = SymmetrySpec[]
-            for i in 1:d-1
-                push!(syms, AntiSymmetric(i, i + 1))
-            end
-            register_tensor!(reg, TensorProperties(
-                name=eps_name, manifold=manifold, rank=(0, d),
-                symmetries=syms,
-                options=Dict{Symbol,Any}(:is_epsilon => true,
-                                         :metric => name,
-                                         :sign_det => sig !== nothing ? sign_det(sig) : 1)))
-        end
-    end
-
-    # Register curvature tensors
-    define_curvature_tensors!(reg, manifold, name)
-
-    # Register Levi-Civita CovD
-    cd = covd_name !== nothing ? covd_name : Symbol(:∇, name)
-    covd_props = define_covd!(reg, cd; manifold=manifold, metric=name)
-
-    # Register Bianchi rules
-    for rule in bianchi_rules(; manifold=manifold, metric=name)
-        register_rule!(reg, rule)
-    end
-
-    nothing
 end
 
 """
@@ -130,34 +132,36 @@ Mark a metric as flat. Auto-registers rules: Riem=0, Ric=0, RicScalar=0,
 Weyl=0, Ein=0, and Christoffel=0.
 """
 function set_flat!(reg::TensorRegistry, metric::Symbol)
-    has_tensor(reg, metric) || error("Metric $metric not registered")
-    props = get_tensor(reg, metric)
-    props.flat = true
-    props.options[:flat] = true
+    @lock reg.lock begin
+        has_tensor(reg, metric) || error("Metric $metric not registered")
+        props = get_tensor(reg, metric)
+        props.flat = true
+        props.options[:flat] = true
 
-    for tname in [:Riem, :Ric, :RicScalar, :Weyl, :Ein, :Sch]
-        if has_tensor(reg, tname)
-            register_rule!(reg, RewriteRule(
-                expr -> expr isa Tensor && expr.name == tname,
-                _ -> TScalar(0 // 1)
-            ))
-        end
-    end
-
-    # Christoffel = 0
-    if has_tensor(reg, metric)
-        tp = get_tensor(reg, metric)
-        for (tname, tp2) in reg.tensors
-            if tp2.is_christoffel &&
-               get(tp2.options, :metric, nothing) == metric
+        for tname in [:Riem, :Ric, :RicScalar, :Weyl, :Ein, :Sch]
+            if has_tensor(reg, tname)
                 register_rule!(reg, RewriteRule(
                     expr -> expr isa Tensor && expr.name == tname,
                     _ -> TScalar(0 // 1)
                 ))
             end
         end
+
+        # Christoffel = 0
+        if has_tensor(reg, metric)
+            tp = get_tensor(reg, metric)
+            for (tname, tp2) in reg.tensors
+                if tp2.is_christoffel &&
+                   get(tp2.options, :metric, nothing) == metric
+                    register_rule!(reg, RewriteRule(
+                        expr -> expr isa Tensor && expr.name == tname,
+                        _ -> TScalar(0 // 1)
+                    ))
+                end
+            end
+        end
+        nothing
     end
-    nothing
 end
 
 """
@@ -176,11 +180,13 @@ end
 Freeze a metric so it does not participate in contraction.
 """
 function freeze_metric!(reg::TensorRegistry, metric::Symbol)
-    has_tensor(reg, metric) || error("Metric $metric not registered")
-    tp = get_tensor(reg, metric)
-    tp.frozen = true
-    tp.options[:frozen] = true
-    nothing
+    @lock reg.lock begin
+        has_tensor(reg, metric) || error("Metric $metric not registered")
+        tp = get_tensor(reg, metric)
+        tp.frozen = true
+        tp.options[:frozen] = true
+        nothing
+    end
 end
 
 """
@@ -189,11 +195,13 @@ end
 Unfreeze a metric to allow contraction again.
 """
 function unfreeze_metric!(reg::TensorRegistry, metric::Symbol)
-    has_tensor(reg, metric) || error("Metric $metric not registered")
-    tp = get_tensor(reg, metric)
-    tp.frozen = false
-    tp.options[:frozen] = false
-    nothing
+    @lock reg.lock begin
+        has_tensor(reg, metric) || error("Metric $metric not registered")
+        tp = get_tensor(reg, metric)
+        tp.frozen = false
+        tp.options[:frozen] = false
+        nothing
+    end
 end
 
 """
@@ -335,12 +343,14 @@ Set g1 = e^{2f} g2 where factor is the conformal factor symbol.
 Auto-generates conformal transformation rules for curvature tensors.
 """
 function set_conformal_to!(reg::TensorRegistry, g1::Symbol, g2::Symbol, factor::Symbol)
-    has_tensor(reg, g1) || error("Metric $g1 not registered")
-    has_tensor(reg, g2) || error("Metric $g2 not registered")
-    tp1 = get_tensor(reg, g1)
-    tp1.options[:conformal_to] = g2
-    tp1.options[:conformal_factor] = factor
-    nothing
+    @lock reg.lock begin
+        has_tensor(reg, g1) || error("Metric $g1 not registered")
+        has_tensor(reg, g2) || error("Metric $g2 not registered")
+        tp1 = get_tensor(reg, g1)
+        tp1.options[:conformal_to] = g2
+        tp1.options[:conformal_factor] = factor
+        nothing
+    end
 end
 
 function _perm_sign(perm::Vector{Int})

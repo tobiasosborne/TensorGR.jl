@@ -61,30 +61,32 @@ G = product_einstein(:M, :M1)       # Ein_g1_{ab} - ½ RicScalar_g2 · g1_{ab}
 """
 function define_product_manifold!(reg::TensorRegistry, name::Symbol;
                                    factors::Vector{Symbol})
-    length(factors) < 2 && error("Product manifold requires at least 2 factors")
-    has_product_manifold(reg, name) && error("Product manifold $name already defined")
+    @lock reg.lock begin
+        length(factors) < 2 && error("Product manifold requires at least 2 factors")
+        has_product_manifold(reg, name) && error("Product manifold $name already defined")
 
-    factor_props = ManifoldProperties[]
-    factor_metrics = Symbol[]
-    factor_dims = Int[]
+        factor_props = ManifoldProperties[]
+        factor_metrics = Symbol[]
+        factor_dims = Int[]
 
-    for f in factors
-        has_manifold(reg, f) || error("Factor manifold $f not registered")
-        fp = get_manifold(reg, f)
-        fp.metric === nothing && error("Factor $f has no metric; all factors require metrics")
-        push!(factor_props, fp)
-        push!(factor_metrics, fp.metric)
-        push!(factor_dims, fp.dim)
+        for f in factors
+            has_manifold(reg, f) || error("Factor manifold $f not registered")
+            fp = get_manifold(reg, f)
+            fp.metric === nothing && error("Factor $f has no metric; all factors require metrics")
+            push!(factor_props, fp)
+            push!(factor_metrics, fp.metric)
+            push!(factor_dims, fp.dim)
+        end
+
+        # Register factor curvature tensors with metric-suffixed names
+        for (fp, fm) in zip(factor_props, factor_metrics)
+            _register_factor_curvature!(reg, fp.name, fm)
+        end
+
+        pp = ProductManifoldProperties(name, collect(factors), factor_metrics, factor_dims)
+        reg.foliations[Symbol(:product_, name)] = pp
+        pp
     end
-
-    # Register factor curvature tensors with metric-suffixed names
-    for (fp, fm) in zip(factor_props, factor_metrics)
-        _register_factor_curvature!(reg, fp.name, fm)
-    end
-
-    pp = ProductManifoldProperties(name, collect(factors), factor_metrics, factor_dims)
-    reg.foliations[Symbol(:product_, name)] = pp
-    pp
 end
 
 """Register Riemann, Ricci, RicScalar, Einstein, Weyl for a factor (metric-suffixed)."""

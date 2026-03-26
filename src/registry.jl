@@ -92,6 +92,8 @@ mutable struct TensorRegistry
     # Caches: metric/delta name per manifold (populated by register_tensor!)
     metric_cache::Dict{Symbol, Symbol}   # manifold => metric tensor name
     delta_cache::Dict{Symbol, Symbol}    # manifold => delta tensor name
+    # Thread-safety: protects all Dict/Vector mutations on this registry
+    lock::ReentrantLock
 end
 
 TensorRegistry() = TensorRegistry(
@@ -103,7 +105,8 @@ TensorRegistry() = TensorRegistry(
     Dict{Symbol,Any}(),
     Dict{Tuple{Symbol,Int}, Symbol}(),
     Dict{Symbol,Symbol}(),
-    Dict{Symbol,Symbol}()
+    Dict{Symbol,Symbol}(),
+    ReentrantLock()
 )
 
 has_manifold(reg::TensorRegistry, name::Symbol) = haskey(reg.manifolds, name)
@@ -133,15 +136,17 @@ function define_vbundle!(reg::TensorRegistry, name::Symbol;
                          manifold::Symbol, dim::Union{Int,Symbol},
                          indices::Vector{Symbol}=Symbol[],
                          conjugate_bundle::Union{Nothing,Symbol}=nothing)
-    has_vbundle(reg, name) && error("VBundle $name already registered")
-    has_manifold(reg, manifold) || error("Manifold $manifold not registered")
-    opts = Dict{Symbol,Any}()
-    if conjugate_bundle !== nothing
-        opts[:conjugate_bundle] = conjugate_bundle
+    @lock reg.lock begin
+        has_vbundle(reg, name) && error("VBundle $name already registered")
+        has_manifold(reg, manifold) || error("Manifold $manifold not registered")
+        opts = Dict{Symbol,Any}()
+        if conjugate_bundle !== nothing
+            opts[:conjugate_bundle] = conjugate_bundle
+        end
+        vb = VBundleProperties(name, manifold, dim, indices, opts)
+        reg.vbundles[name] = vb
+        vb
     end
-    vb = VBundleProperties(name, manifold, dim, indices, opts)
-    reg.vbundles[name] = vb
-    vb
 end
 
 """
@@ -155,26 +160,30 @@ function conjugate_vbundle(reg::TensorRegistry, name::Symbol)
 end
 
 function register_manifold!(reg::TensorRegistry, mp::ManifoldProperties)
-    has_manifold(reg, mp.name) && error("Manifold $(mp.name) already registered")
-    reg.manifolds[mp.name] = mp
-    # Auto-register the tangent bundle (only if not already registered for a different manifold)
-    if has_vbundle(reg, :Tangent)
-        existing = get_vbundle(reg, :Tangent)
-        if existing.manifold != mp.name
-            @warn "Overwriting :Tangent vbundle (was on $(existing.manifold), now on $(mp.name))"
+    @lock reg.lock begin
+        has_manifold(reg, mp.name) && error("Manifold $(mp.name) already registered")
+        reg.manifolds[mp.name] = mp
+        # Auto-register the tangent bundle (only if not already registered for a different manifold)
+        if has_vbundle(reg, :Tangent)
+            existing = get_vbundle(reg, :Tangent)
+            if existing.manifold != mp.name
+                @warn "Overwriting :Tangent vbundle (was on $(existing.manifold), now on $(mp.name))"
+            end
         end
+        reg.vbundles[:Tangent] = VBundleProperties(:Tangent, mp.name, mp.dim, mp.indices)
+        mp
     end
-    reg.vbundles[:Tangent] = VBundleProperties(:Tangent, mp.name, mp.dim, mp.indices)
-    mp
 end
 
 function register_tensor!(reg::TensorRegistry, tp::TensorProperties)
-    has_tensor(reg, tp.name) && error("Tensor $(tp.name) already registered")
-    reg.tensors[tp.name] = tp
-    # Populate metric/delta caches
-    tp.is_metric && (reg.metric_cache[tp.manifold] = tp.name)
-    tp.is_delta && (reg.delta_cache[tp.manifold] = tp.name)
-    tp
+    @lock reg.lock begin
+        has_tensor(reg, tp.name) && error("Tensor $(tp.name) already registered")
+        reg.tensors[tp.name] = tp
+        # Populate metric/delta caches
+        tp.is_metric && (reg.metric_cache[tp.manifold] = tp.name)
+        tp.is_delta && (reg.delta_cache[tp.manifold] = tp.name)
+        tp
+    end
 end
 
 """
@@ -183,8 +192,10 @@ end
 Add a rewrite rule to the registry. Rules are applied during `simplify`.
 """
 function register_rule!(reg::TensorRegistry, rule)
-    push!(reg.rules, rule)
-    rule
+    @lock reg.lock begin
+        push!(reg.rules, rule)
+        rule
+    end
 end
 
 """
@@ -200,27 +211,29 @@ get_rules(reg::TensorRegistry) = reg.rules
 Remove a tensor from the registry. Errors if other tensors depend on it.
 """
 function unregister_tensor!(reg::TensorRegistry, name::Symbol)
-    has_tensor(reg, name) || error("Tensor $name not registered")
-    # Check for dependents
-    for (tname, tp) in reg.tensors
-        tname == name && continue
-        if name in tp.dependencies
-            error("Cannot remove $name: tensor $tname depends on it")
+    @lock reg.lock begin
+        has_tensor(reg, name) || error("Tensor $name not registered")
+        # Check for dependents
+        for (tname, tp) in reg.tensors
+            tname == name && continue
+            if name in tp.dependencies
+                error("Cannot remove $name: tensor $tname depends on it")
+            end
+            if get(tp.options, :metric, nothing) == name ||
+               get(tp.options, :covd, nothing) == name
+                error("Cannot remove $name: tensor $tname references it")
+            end
         end
-        if get(tp.options, :metric, nothing) == name ||
-           get(tp.options, :covd, nothing) == name
-            error("Cannot remove $name: tensor $tname references it")
+        delete!(reg.tensors, name)
+        # Invalidate caches referencing this tensor
+        for (k, v) in reg.metric_cache
+            v == name && delete!(reg.metric_cache, k)
         end
+        for (k, v) in reg.delta_cache
+            v == name && delete!(reg.delta_cache, k)
+        end
+        nothing
     end
-    delete!(reg.tensors, name)
-    # Invalidate caches referencing this tensor
-    for (k, v) in reg.metric_cache
-        v == name && delete!(reg.metric_cache, k)
-    end
-    for (k, v) in reg.delta_cache
-        v == name && delete!(reg.delta_cache, k)
-    end
-    nothing
 end
 
 """
@@ -230,7 +243,9 @@ Register a LaTeX parser alias: `tex"tex_name_{...}"` with `rank` indices maps to
 Use `rank=-1` for a catch-all alias regardless of index count.
 """
 function tex_alias!(reg::TensorRegistry, tex_name::Symbol, tensor_name::Symbol; rank::Int=-1)
-    reg.tex_aliases[(tex_name, rank)] = tensor_name
+    @lock reg.lock begin
+        reg.tex_aliases[(tex_name, rank)] = tensor_name
+    end
 end
 
 """
@@ -239,12 +254,14 @@ end
 Remove a manifold from the registry. Errors if tensors are defined on it.
 """
 function unregister_manifold!(reg::TensorRegistry, name::Symbol)
-    has_manifold(reg, name) || error("Manifold $name not registered")
-    for (tname, tp) in reg.tensors
-        tp.manifold == name && error("Cannot remove manifold $name: tensor $tname is defined on it")
+    @lock reg.lock begin
+        has_manifold(reg, name) || error("Manifold $name not registered")
+        for (tname, tp) in reg.tensors
+            tp.manifold == name && error("Cannot remove manifold $name: tensor $tname is defined on it")
+        end
+        delete!(reg.manifolds, name)
+        nothing
     end
-    delete!(reg.manifolds, name)
-    nothing
 end
 
 """
@@ -253,13 +270,15 @@ end
 Remove a covariant derivative and its Christoffel symbol.
 """
 function unregister_covd!(reg::TensorRegistry, name::Symbol)
-    has_tensor(reg, name) || error("CovD $name not registered")
-    props = get_tensor(reg, name)
-    props.is_covd || error("$name is not a CovD")
-    christoffel = props.options[:covd_props].christoffel
-    delete!(reg.tensors, name)
-    haskey(reg.tensors, christoffel) && delete!(reg.tensors, christoffel)
-    nothing
+    @lock reg.lock begin
+        has_tensor(reg, name) || error("CovD $name not registered")
+        props = get_tensor(reg, name)
+        props.is_covd || error("$name is not a CovD")
+        christoffel = props.options[:covd_props].christoffel
+        delete!(reg.tensors, name)
+        haskey(reg.tensors, christoffel) && delete!(reg.tensors, christoffel)
+        nothing
+    end
 end
 
 """
@@ -268,15 +287,48 @@ end
 Mark a tensor as identically zero. Adds a rule that replaces it with ZERO.
 """
 function set_vanishing!(reg::TensorRegistry, name::Symbol)
-    has_tensor(reg, name) || error("Tensor $name not registered")
-    tp = get_tensor(reg, name)
-    tp.vanishing = true
-    tp.options[:vanishing] = true
-    register_rule!(reg, RewriteRule(
-        expr -> expr isa Tensor && expr.name == name,
-        _ -> TScalar(0 // 1)
-    ))
-    nothing
+    @lock reg.lock begin
+        has_tensor(reg, name) || error("Tensor $name not registered")
+        tp = get_tensor(reg, name)
+        tp.vanishing = true
+        tp.options[:vanishing] = true
+        register_rule!(reg, RewriteRule(
+            expr -> expr isa Tensor && expr.name == name,
+            _ -> TScalar(0 // 1)
+        ))
+        nothing
+    end
+end
+
+"""
+    define_parameter!(reg, name; dependencies=Symbol[])
+
+Register a scalar parameter (e.g., time `t`, proper time `τ`) for use with
+`TParamDeriv`. Parameters are scalar symbols independent of manifold coordinates.
+
+Tensors that depend on a parameter should list it in their `dependencies`.
+"""
+function define_parameter!(reg::TensorRegistry, name::Symbol;
+                           dependencies::Vector{Symbol}=Symbol[])
+    @lock reg.lock begin
+        has_tensor(reg, name) && error("Parameter $name conflicts with existing tensor")
+        register_tensor!(reg, TensorProperties(
+            name=name, manifold=:_parameter, rank=(0, 0),
+            symmetries=SymmetrySpec[],
+            options=Dict{Symbol,Any}(:is_parameter => true,
+                                     :param_dependencies => dependencies)))
+        nothing
+    end
+end
+
+"""
+    is_parameter(reg, name) -> Bool
+
+Check if a symbol is a registered parameter.
+"""
+function is_parameter(reg::TensorRegistry, name::Symbol)
+    has_tensor(reg, name) || return false
+    get(get_tensor(reg, name).options, :is_parameter, false)
 end
 
 # Global registry with task-local scoping (thread-safe)

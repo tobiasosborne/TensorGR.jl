@@ -51,31 +51,33 @@ function define_dirac_stress_energy!(reg::TensorRegistry, name::Symbol;
                                       metric::Symbol,
                                       field::Symbol,
                                       covd::Symbol=:D)
-    has_manifold(reg, manifold) ||
-        error("define_dirac_stress_energy!: manifold '$manifold' not registered")
-    has_tensor(reg, metric) ||
-        error("define_dirac_stress_energy!: metric '$metric' not registered")
-    is_grassmann(reg, field) ||
-        error("define_dirac_stress_energy!: '$field' is not a Grassmann field")
+    @lock reg.lock begin
+        has_manifold(reg, manifold) ||
+            error("define_dirac_stress_energy!: manifold '$manifold' not registered")
+        has_tensor(reg, metric) ||
+            error("define_dirac_stress_energy!: metric '$metric' not registered")
+        is_grassmann(reg, field) ||
+            error("define_dirac_stress_energy!: '$field' is not a Grassmann field")
 
-    bar_name = get_conjugate_name(reg, field)
+        bar_name = get_conjugate_name(reg, field)
 
-    if !has_tensor(reg, name)
-        register_tensor!(reg, TensorProperties(
-            name=name, manifold=manifold, rank=(2, 0),
-            symmetries=SymmetrySpec[Symmetric(1, 2)],
-            options=Dict{Symbol,Any}(
-                :is_stress_energy => true,
-                :matter_type => :dirac,
-                :field => field,
-                :conjugate => bar_name,
-                :covd => covd,
-                :metric => metric)))
+        if !has_tensor(reg, name)
+            register_tensor!(reg, TensorProperties(
+                name=name, manifold=manifold, rank=(2, 0),
+                symmetries=SymmetrySpec[Symmetric(1, 2)],
+                options=Dict{Symbol,Any}(
+                    :is_stress_energy => true,
+                    :matter_type => :dirac,
+                    :field => field,
+                    :conjugate => bar_name,
+                    :covd => covd,
+                    :metric => metric)))
+        end
+
+        dse = DiracStressEnergy(name, manifold, metric, field, bar_name, covd)
+        reg.foliations[Symbol(:dirac_stress_energy_, name)] = dse
+        dse
     end
-
-    dse = DiracStressEnergy(name, manifold, metric, field, bar_name, covd)
-    reg.foliations[Symbol(:dirac_stress_energy_, name)] = dse
-    dse
 end
 
 """

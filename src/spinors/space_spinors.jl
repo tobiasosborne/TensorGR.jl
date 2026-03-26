@@ -39,6 +39,7 @@ function define_space_spinors!(reg::TensorRegistry;
                                spatial_dim::Int=3,
                                indices::Vector{Symbol}=[:P,:Q,:R,:S,:T,:U],
                                metric::Symbol=:gamma)
+    @lock reg.lock begin
     has_manifold(reg, manifold) || error("Manifold $manifold not registered")
 
     # 1. Register SU(2) VBundle (dim 2)
@@ -92,6 +93,7 @@ function define_space_spinors!(reg::TensorRegistry;
     end
 
     nothing
+    end
 end
 
 # ── Convenience constructors ─────────────────────────────────────────────

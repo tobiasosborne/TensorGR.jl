@@ -141,68 +141,70 @@ function define_submanifold!(reg::TensorRegistry, name::Symbol;
                               induced_name::Symbol=:γ,
                               projector_name::Symbol=:P_hs,
                               signatures::Union{Vector{Int}, Nothing}=nothing)
-    @assert codimension >= 1 "codimension must be >= 1"
-    mp = get_manifold(reg, ambient)
-    d = mp.dim
-    @assert codimension < d "codimension must be < ambient dimension"
+    @lock reg.lock begin
+        @assert codimension >= 1 "codimension must be >= 1"
+        mp = get_manifold(reg, ambient)
+        d = mp.dim
+        @assert codimension < d "codimension must be < ambient dimension"
 
-    # Default names
-    if normal_names === nothing
-        normal_names = codimension == 1 ? [:n] :
-            [Symbol(:n, i) for i in 1:codimension]
-    end
-    if extrinsic_names === nothing
-        extrinsic_names = codimension == 1 ? [:K] :
-            [Symbol(:K, i) for i in 1:codimension]
-    end
-    if signatures === nothing
-        signatures = fill(-1, codimension)
-    end
-
-    @assert length(normal_names) == codimension
-    @assert length(extrinsic_names) == codimension
-    @assert length(signatures) == codimension
-    @assert all(s -> s in (-1, 1), signatures)
-
-    # Register normals with normalization rules
-    for (nn, sig) in zip(normal_names, signatures)
-        _register_normal!(reg, nn, ambient, sig)
-    end
-
-    # Register extrinsic curvatures K_i_{ab} (symmetric)
-    for kn in extrinsic_names
-        if !has_tensor(reg, kn)
-            register_tensor!(reg, TensorProperties(
-                name=kn, manifold=ambient, rank=(0, 2),
-                symmetries=SymmetrySpec[Symmetric(1, 2)],
-                options=Dict{Symbol,Any}(:is_extrinsic => true)))
+        # Default names
+        if normal_names === nothing
+            normal_names = codimension == 1 ? [:n] :
+                [Symbol(:n, i) for i in 1:codimension]
         end
+        if extrinsic_names === nothing
+            extrinsic_names = codimension == 1 ? [:K] :
+                [Symbol(:K, i) for i in 1:codimension]
+        end
+        if signatures === nothing
+            signatures = fill(-1, codimension)
+        end
+
+        @assert length(normal_names) == codimension
+        @assert length(extrinsic_names) == codimension
+        @assert length(signatures) == codimension
+        @assert all(s -> s in (-1, 1), signatures)
+
+        # Register normals with normalization rules
+        for (nn, sig) in zip(normal_names, signatures)
+            _register_normal!(reg, nn, ambient, sig)
+        end
+
+        # Register extrinsic curvatures K_i_{ab} (symmetric)
+        for kn in extrinsic_names
+            if !has_tensor(reg, kn)
+                register_tensor!(reg, TensorProperties(
+                    name=kn, manifold=ambient, rank=(0, 2),
+                    symmetries=SymmetrySpec[Symmetric(1, 2)],
+                    options=Dict{Symbol,Any}(:is_extrinsic => true)))
+            end
+        end
+
+        # Register induced metric (symmetric)
+        if !has_tensor(reg, induced_name)
+            register_tensor!(reg, TensorProperties(
+                name=induced_name, manifold=ambient, rank=(0, 2),
+                symmetries=SymmetrySpec[Symmetric(1, 2)],
+                options=Dict{Symbol,Any}(:is_induced_metric => true)))
+        end
+
+        # Register projector P^a_b
+        if !has_tensor(reg, projector_name)
+            register_tensor!(reg, TensorProperties(
+                name=projector_name, manifold=ambient, rank=(1, 1),
+                symmetries=SymmetrySpec[],
+                options=Dict{Symbol,Any}(:is_projector => true)))
+        end
+
+        # Store properties
+        sp = SubmanifoldProperties(
+            ambient, metric, codimension,
+            nothing, signatures[1], d, d - codimension,
+            collect(normal_names), collect(extrinsic_names), collect(signatures))
+        reg.foliations[Symbol(:hypersurface_, name)] = sp
+
+        sp
     end
-
-    # Register induced metric (symmetric)
-    if !has_tensor(reg, induced_name)
-        register_tensor!(reg, TensorProperties(
-            name=induced_name, manifold=ambient, rank=(0, 2),
-            symmetries=SymmetrySpec[Symmetric(1, 2)],
-            options=Dict{Symbol,Any}(:is_induced_metric => true)))
-    end
-
-    # Register projector P^a_b
-    if !has_tensor(reg, projector_name)
-        register_tensor!(reg, TensorProperties(
-            name=projector_name, manifold=ambient, rank=(1, 1),
-            symmetries=SymmetrySpec[],
-            options=Dict{Symbol,Any}(:is_projector => true)))
-    end
-
-    # Store properties
-    sp = SubmanifoldProperties(
-        ambient, metric, codimension,
-        nothing, signatures[1], d, d - codimension,
-        collect(normal_names), collect(extrinsic_names), collect(signatures))
-    reg.foliations[Symbol(:hypersurface_, name)] = sp
-
-    sp
 end
 
 """

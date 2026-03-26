@@ -93,8 +93,29 @@ struct TScalar <: TensorExpr
     val::Any
 end
 
+"""
+    TParamDeriv(params, arg)
+
+Parametric derivative d/dp₁ d/dp₂ ⋯ d/dpₙ applied to a tensor expression.
+Parameters are scalar symbols (e.g., time `t`, proper time `τ`) registered
+via `define_parameter!`. The parameter list is stored in sorted canonical order.
+
+Unlike `TDeriv`, this carries NO index — it acts along a parameter direction
+independent of manifold coordinates. Nested `TParamDeriv` expressions are
+automatically flattened and sorted.
+
+See also: `expand_param_deriv`, `define_parameter!`
+"""
+struct TParamDeriv <: TensorExpr
+    params::Vector{Symbol}
+    arg::TensorExpr
+end
+
 Base.:(==)(a::TScalar, b::TScalar) = isequal(a.val, b.val)
 Base.hash(a::TScalar, h::UInt) = hash(a.val, hash(:TScalar, h))
+
+Base.:(==)(a::TParamDeriv, b::TParamDeriv) = a.params == b.params && a.arg == b.arg
+Base.hash(a::TParamDeriv, h::UInt) = hash(a.arg, hash(a.params, hash(:TParamDeriv, h)))
 
 # ── Symmetry types (defined early so TensorProperties can use the union) ──
 

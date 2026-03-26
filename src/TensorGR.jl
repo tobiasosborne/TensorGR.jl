@@ -25,6 +25,7 @@ include("algebra/arithmetic.jl")
 include("algebra/contraction.jl")
 include("algebra/canonicalize.jl")
 include("algebra/derivatives.jl")
+include("algebra/param_deriv.jl")
 include("algebra/simplify.jl")
 include("algebra/ibp.jl")
 include("algebra/collect_tensors.jl")
@@ -274,7 +275,7 @@ include("macros/definitions.jl")
 include("parser/latex_parser.jl")
 
 # Exports: Types
-export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar
+export TensorExpr, Tensor, TProduct, TSum, TDeriv, TScalar, TParamDeriv
 export TIndex, IndexPosition, Up, Down, up, down
 
 # Exports: Registry
@@ -284,6 +285,7 @@ export register_manifold!, register_tensor!, register_rule!, get_rules
 export unregister_tensor!, unregister_manifold!, unregister_covd!
 export tex_alias!
 export define_vbundle!, conjugate_vbundle
+export define_parameter!, is_parameter, param_deriv, expand_param_deriv
 export define_spinor_bundles!
 export spin_up, spin_down, spin_dot_up, spin_dot_down
 export is_spinor_index, is_dotted, conjugate_index

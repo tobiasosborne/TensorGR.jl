@@ -63,6 +63,7 @@ function define_gauge_group!(reg::TensorRegistry, name::Symbol;
                               ghost::Symbol=:c_ghost,
                               anti_ghost::Symbol=:c_bar,
                               nl_field::Symbol=:B_NL)
+    @lock reg.lock begin
     has_manifold(reg, manifold) ||
         error("define_gauge_group!: manifold '$manifold' not registered")
 
@@ -134,6 +135,7 @@ function define_gauge_group!(reg::TensorRegistry, name::Symbol;
         struct_const, gauge_field, ghost, anti_ghost, nl_field)
     reg.foliations[Symbol(:gauge_group_, name)] = ggp
     ggp
+    end
 end
 
 """

@@ -56,6 +56,7 @@ function define_ashtekar_variables!(reg::TensorRegistry;
                                      manifold::Symbol=:Sigma,
                                      beta::Symbol=:beta_BI,
                                      spatial_metric::Symbol=:gamma)
+    @lock reg.lock begin
     has_manifold(reg, manifold) || error("Manifold $manifold not registered")
     has_vbundle(reg, :SU2) || error("SU(2) VBundle not registered; call define_space_spinors! first")
 
@@ -146,6 +147,7 @@ function define_ashtekar_variables!(reg::TensorRegistry;
     end
 
     nothing
+    end
 end
 
 # -- Expression builders -------------------------------------------------------

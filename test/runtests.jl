@@ -401,4 +401,6 @@ using TensorGR
     include("test_graded_tensor.jl")
     # Component evaluation (evaluate_components, prepare_values)
     include("test_evaluate_components.jl")
+    # Parametric derivatives (TParamDeriv)
+    include("test_param_deriv.jl")
 end
