@@ -2,7 +2,7 @@
     using TensorGR: define_gauge_group!, get_gauge_group, GaugeGroupProperties,
                     yang_mills_field_strength, gauge_covariant_deriv,
                     yang_mills_bianchi, yang_mills_lagrangian,
-                    yang_mills_field_equations,
+                    yang_mills_field_equations, brst_gauge_field,
                     TensorRegistry, TensorProperties, SymmetrySpec,
                     AntiSymmetric, ManifoldProperties,
                     Tensor, TProduct, TSum, TDeriv, TScalar, TIndex,
@@ -136,7 +136,6 @@
         reg = _make_ym_registry()
         ggp = get_gauge_group(reg, :SU3)
         with_registry(reg) do
-            using TensorGR: brst_gauge_field
             I = TIndex(:I, Up, :Gauge)
             a = down(:a)
 
