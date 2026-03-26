@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-26 (Session 15: Feynfeld.jl integration)
+# HANDOFF — 2026-03-26 (Session 16: Thread safety, API cleanup, parametric derivatives)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -19,141 +19,98 @@
 **Max 2-3 subagents at a time (sequential).** Checkpoint regularly.
 **USE MAX THINKING (opus) for all subagents.** Medium effort missed a bimetric sign bug (session 8) AND a generator conjugation bug (session 10).
 **WSL2 MEMORY**: Never enumerate large combinatorial sets in memory. Use streaming/chunked processing.
-**NO PARALLEL JULIA**: NEVER run two Julia processes simultaneously on WSL2 — cache conflicts and OOM. Check `ps aux | grep julia` before ANY julia command. This includes benchmarks while tests run in background. DO NOT use `while` loops polling for julia processes — they spawn extra shells.
+**NO PARALLEL JULIA**: NEVER run two Julia processes simultaneously within the same project on WSL2 — cache conflicts and OOM. Cross-project parallel is OK. Check `ps aux | grep julia` before ANY julia command. DO NOT use `while` loops polling for julia processes — they spawn extra shells.
 
 ---
 
 ## Current State
 
-- **530 of 568 issues closed** (0 closed this session — this session was cross-project integration only)
-- **Full test suite: 375,404 tests, ALL PASS** (1 known Broken in test_euler_density.jl:480)
-- **Benchmarks: 53 Tier 1 pass** — re-run this session after changes
-- All changes from this session pushed to `master`
+- **533 of 569 issues closed** (3 closed this session)
+- **Full test suite: 375,443 tests, ALL PASS** (1 known Broken in test_euler_density.jl:480)
+- **Benchmarks: not re-run this session** — Tier 1 passed last session
+- All changes pushed to `master` (commit dc95a27)
 - `bd stats` for live counts, `bd ready` for available work
 
 ---
 
-## What Was Done This Session (Feynfeld.jl integration — 0 issues closed)
+## What Was Done This Session (3 issues closed)
 
-**Context**: Feynfeld.jl (sister project at `../Feynfeld.jl`) is a Julia port of the
-Mathematica QFT ecosystem (FeynCalc/FeynArts/FeynRules). It depends on TensorGR.jl for
-index contraction and canonicalization of Lorentz algebra expressions. Feynfeld needs
-**symbolic manifold dimensions** for dimensional regularisation (D = 4 − 2ε), where D
-is a symbol, not an integer.
+### 1. TensorGR.jl-lj1 (P2 Bug): Thread-safe TensorRegistry
 
-### Change 1: `ManifoldProperties.dim` and `VBundleProperties.dim` type widening
+**Problem**: `_GLOBAL_REGISTRY` is a module-level mutable `TensorRegistry` shared across tasks with no lock protection. Concurrent tasks calling `register_tensor!` etc. can corrupt Dict internals.
 
-**File**: `src/registry.jl`
-**Change**: `dim::Int` → `dim::Union{Int,Symbol}` on both structs, plus the
-`VBundleProperties` 4-arg constructor and `define_vbundle!` keyword argument.
+**Fix**: Added `lock::ReentrantLock` field to `TensorRegistry` struct. Wrapped all 25 mutation sites across 17 files with `@lock reg.lock begin ... end`. Uses `ReentrantLock` because compound operations (e.g., `define_metric!` → `register_tensor!` → `register_rule!`) nest up to 3 levels deep.
 
-**Why**: Feynfeld needs `ManifoldProperties(:M4, :D, :η, nothing, [...])` to register
-a Minkowski manifold with symbolic dimension `:D` for dimensional regularisation.
-Without this, every `dim` argument must be a concrete integer, blocking QFT use cases.
+**Files modified** (17):
+- `src/registry.jl` (struct + 9 core mutators)
+- `src/gr/metric.jl` (define_metric!, set_flat!, freeze_metric!, unfreeze_metric!, set_conformal_to!)
+- `src/foliation/foliation.jl`, `src/gr/mapping.jl`, `src/gr/hypersurface.jl`, `src/gr/product_manifold.jl`, `src/gr/matter.jl`, `src/gauge/brst.jl`, `src/fermions/stress_energy.jl` (direct reg.foliations/mappings writes)
+- `src/tetrads/frame_bundle.jl`, `src/spinors/spin_metric.jl`, `src/spinors/space_spinors.jl`, `src/spinors/ashtekar_variables.jl` (direct metric_cache/delta_cache writes)
+- `src/spinors/soldering_form.jl`, `src/scalar/functions.jl`, `src/scalar_tensor/dhost_degeneracy.jl`, `src/bimetric/potential.jl` (direct tp.options or reg.rules writes)
 
-**Impact**: This is a **public API change**. Any code that constructs
-`ManifoldProperties` or `VBundleProperties` with integer dims continues to work
-(`4 isa Union{Int,Symbol}` is true). Code that type-asserts `dim::Int` on these fields
-will need updating.
+**Design decisions**:
+- Lock on the struct (not module-level) — protects ANY shared registry, not just global
+- Reads are NOT locked — safe because all writes are serialized and Julia Dict reads of completed writes are consistent
+- ~20 compound functions (define_covd!, define_curvature_tensors!, etc.) are NOT individually locked — they're always called from within already-locked functions, and primitives lock individually
+- Fixed `push!(reg.rules, rule)` bypass in `register_sqrt_rules!` to use `register_rule!`
 
-**Backward compatibility**: Full. All 375,404 existing tests pass without modification.
+**Risk**: Low. No behavioral change for single-threaded code. Uncontended ReentrantLock is ~20ns overhead. 375,443 tests pass.
+**Revert**: Remove `lock::ReentrantLock` from struct, update constructor, remove all `@lock` wrappers.
+**Unblocks**: TensorGR.jl-304 (registry passing pattern standardization)
 
-### Change 2: Metric trace for symbolic dimensions
+### 2. TensorGR.jl-6sb (P2 API): @manifold vs define_metric! overlap
 
-**File**: `src/algebra/contraction.jl`, line 77
-**Change**: `TScalar(dim // 1)` → `TScalar(dim isa Int ? dim // 1 : dim)`
+**Problem**: `@manifold` only registered manifold + metric + delta (no curvature, CovD, Bianchi). `define_metric!` did full setup but couldn't be called after `@manifold` without errors. Users had no clear one-stop solution.
 
-**Why**: When `g^a_a` is self-traced on a manifold with `dim = :D`, the original code
-attempted `Symbol // Int` which has no method. Now returns `TScalar(:D)` for symbolic
-dimensions, `TScalar(dim // 1)` for integer dimensions.
+**Fix**:
+1. `@manifold` now calls `define_metric!` internally (full setup: metric, delta, epsilon, curvature tensors, CovD, Bianchi rules)
+2. `define_curvature_tensors!` made idempotent with `has_tensor` guards on all 6 tensors (Riem, Ric, RicScalar, Ein, Weyl, Sch)
 
-**Impact**: The contraction engine now returns `TScalar(:D)` instead of crashing for
-symbolic-dim manifolds. No behavior change for integer dimensions.
+**Files modified**:
+- `src/macros/definitions.jl` (simplified @manifold body)
+- `src/gr/curvature.jl` (added has_tensor guards)
 
-### Change 3: `define_metric!` guards for symbolic dimensions
+**Backward compatibility**: Full. Tests that did `@manifold` + `define_curvature_tensors!` still work (second call is a no-op). Tests that did `register_manifold!` + `define_metric!` unaffected.
 
-**File**: `src/gr/metric.jl`
-**Changes**:
-1. The `lorentzian(d)` fallback (line 53): now returns `nothing` when `d isa Symbol`
-   instead of crashing on `fill(1, :D - 1)`. Callers must pass `signature` explicitly
-   for symbolic-dim manifolds.
-2. Epsilon tensor registration (lines 83-96): wrapped in `if d isa Int` guard since it
-   does `1:d-1` range arithmetic and `rank=(0, d)` which require concrete integers.
+**Risk**: Low. Purely additive behavior change. 375,443 tests pass.
 
-**Impact**: `define_metric!` now works for symbolic-dim manifolds but skips epsilon
-tensor registration (you cannot construct a fully-antisymmetric tensor of symbolic rank).
-For integer dimensions, behavior is unchanged.
+### 3. TensorGR.jl-7cb (P2 Feature): Parametric derivatives (TParamDeriv)
 
-### Change 4: DDI order guard for symbolic dimensions
+**New AST node**: `TParamDeriv(params::Vector{Symbol}, arg::TensorExpr)`
 
-**File**: `src/algebra/full_simplify.jl`
-**Change**: `_fs_ddi_order(expr, dim::Int)` → `_fs_ddi_order(expr, dim)` with
-`dim isa Int ? clamp(deg, 2, dim ÷ 2) : deg` guard.
+Represents d/dp₁ d/dp₂ ⋯ d/dpₙ applied to a tensor expression. Parameters are scalar symbols (time `t`, proper time `τ`) independent of manifold coordinates.
 
-**Why**: DDI (dimensionally dependent identity) capping at `dim ÷ 2` is meaningless for
-symbolic dimensions. Now returns `deg` uncapped when dim is symbolic.
+**Key properties** (following xAct ParamD semantics):
+- **Index-free**: carries no tensor indices (unlike TDeriv)
+- **Auto-flatten**: `d/ds(d/dt(x))` → `TParamDeriv([:s,:t], x)` with sorted params
+- **Leibniz**: `d/dt(A*B) = dA/dt*B + A*dB/dt` (peels off one param at a time)
+- **Linearity**: distributes over TSum
+- **Zero on constants**: `d/dt(c) = 0` for rational constants
+- **Self-derivative**: `d/dt(t) = 1` for registered parameters
+- **Commutes with ∂**: `d/dt(∂_a X) = ∂_a(d/dt X)`
 
-**Impact**: DDI simplification for symbolic-dim manifolds will apply all DDI orders up
-to the expression degree (no capping). This is correct — capping is an optimization for
-known-dimension cases where higher-order DDIs vanish identically.
+**Files created**:
+- `src/algebra/param_deriv.jl` (~120 lines): `param_deriv` smart constructor, `expand_param_deriv`
+- `test/test_param_deriv.jl` (45 tests)
+
+**Files modified**:
+- `src/types.jl` (TParamDeriv struct + ==, hash)
+- `src/registry.jl` (define_parameter!, is_parameter)
+- `src/ast/walk.jl` (children, walk, dagger, derivative_order, is_constant)
+- `src/ast/indices.jl` (indices — returns arg's indices, no own indices)
+- `src/show.jl` (Base.show, to_latex, to_unicode)
+- `src/TensorGR.jl` (include + exports)
+- `test/runtests.jl` (include test file)
+
+**Risk**: Low — purely additive. New AST node, no changes to existing expression handling.
 
 ---
 
-## What Was Done Last Session (Session 14: 3 issues closed)
+## What Was Done Last Session (Session 15: Feynfeld.jl integration — 0 issues closed)
 
-### 1. TensorGR.jl-2on (P1 Bug): Parallel/serial inconsistency in simplify pipeline
-
-The `canonicalize_terms=false` optimization from session 13 (commit 1b6502d) was only applied to the serial `collect_terms` path. The parallel `_collect_terms_parallel` still always re-canonicalized.
-
-**Fix**: Added `canonicalize_terms::Bool=true` kwarg to `_collect_terms_parallel`, matching the `collect_terms` API. Pipeline passes `false` to both paths.
-
-- Location: `src/algebra/simplify.jl`, lines 330-360 and 504
-- 3 proposers + 2 reviewers (all opus, all PASS)
-- 375,351 tests + 445 benchmarks pass
-
-### 2. TensorGR.jl-05y (P2 Feature): evaluate_components — abstract-to-component evaluation
-
-**New file**: `src/components/evaluate.jl` (~350 lines)
-
-`evaluate_components(expr, chart, values)` fully evaluates abstract TensorExpr trees to numeric CTensor arrays. Handles:
-- Free index expansion (Cartesian product over chart dimension)
-- Dummy index summation (Einstein convention) at expression level
-- Per-term internal contractions in TSum (each term's dummies summed independently)
-- Partial derivative evaluation via `deriv_fn` callback or pre-computed values
-- Deterministic output axis ordering via `indices()` traversal order
-
-Also adds `prepare_values(chart, metric_data)` convenience helper.
-
-**Key design decisions**:
-- Hybrid expression-level summation reusing existing `_replace_index` + `_evaluate_component`
-- Dummy names computed from ORIGINAL expression before free index replacement (otherwise `:_1` duplicates are falsely detected as dummies)
-- Uses `indices(expr)` for axis ordering, NOT `free_indices(expr)` (Dict iteration is non-deterministic in Julia 1.12)
-- Value lookup is position-agnostic: `T^{ab}` and `T_{ab}` look up same key. Users should `contract_metrics` at abstract level first.
-- Reviewer 1 caught TSum per-term dummy bug → fixed with `_eval_term_with_local_dummies`
-
-- Location: `src/components/evaluate.jl` (new), `src/TensorGR.jl` (+2 lines), `test/test_evaluate_components.jl` (new, 47 tests)
-- 3 proposers + 2 reviewers (Reviewer 1 FAIL→fixed→PASS, Reviewer 2 PASS)
-- 375,398 tests pass (47 new)
-- **Unblocks**: TensorGR.jl-77q (CCovD) and TensorGR.jl-irx (chart transitions)
-
-### 3. TensorGR.jl-88e (P2 Bug): Order-dependent TProduct/TSum rule unification
-
-`_unify(::TProduct, ::TProduct)` used positional zip — pattern `A*B` would not match expression `B*A`. `make_rule` did not canonicalize the pattern.
-
-**Fix**: Grouped backtracking matcher:
-1. Group factors by `(type, name, rank)` key
-2. Single-element groups: direct match (fast path, O(1))
-3. Multi-element groups: backtracking permutation search within group
-4. `_merge_bindings!` ensures consistency across groups
-
-Same fix applied to `_unify(::TSum, ::TSum)`.
-
-**Critical edge case**: Shared pattern variables across same-name factors (e.g., `T_{a_,b_} * T_{b_,c_}` matching `T_{z,y} * T_{y,x}`). Proposer 3 proved that simple sorting fails here but backtracking finds the valid alignment.
-
-- Location: `src/rules.jl`, lines 105-210 (replaced ~10 lines with ~100 lines)
-- 3 proposers + 1 reviewer (PASS). Reviewer 2 interrupted by session end — **should be run next session**
-- 375,396 tests pass
-- **Note**: No new dedicated test file was added for order-independent matching. The fix was verified with an ad-hoc REPL test (10 tests pass). A proper test should be added.
+Symbolic manifold dimensions (`dim::Union{Int,Symbol}`) for Feynfeld.jl dimensional regularisation.
+4 changes: registry struct types, metric trace guard, define_metric! epsilon/signature guards, DDI order guard.
+See previous HANDOFF for full details.
 
 ---
 
@@ -164,77 +121,62 @@ Same fix applied to `_unify(::TSum, ::TSum)`.
 - **make_rule** RETURNS rules but does NOT register them
 - **symmetrize** takes `Vector{Symbol}` not `Vector{TIndex}`
 - **xperm convention for canonical_perm_ext**: Renato notation. Generators SLOT-SPACE for right-coset.
-- **No parallel agents/Julia**: cache conflicts + OOM on WSL2.
+- **No parallel agents/Julia**: cache conflicts + OOM on WSL2 (cross-project parallel is OK).
 - **AntiSymmetric fields**: `.i` and `.j`, NOT `.slot1`/`.slot2`
 - **Beads issues.jsonl is source of truth**: `.beads/issues.jsonl` in git.
 - **Pinned term counts are NOT ground truth**: physics correctness is what matters
 - **Code review agents can be WRONG about physics**: verify against textbooks
+- **`ManifoldProperties.dim` is now `Union{Int,Symbol}`**: for Feynfeld.jl dimensional regularisation
+- **Feynfeld.jl is a consumer of TensorGR.jl**: Changes to APIs must consider both GR and QFT use cases
 
-### New this session (session 15)
-- **`ManifoldProperties.dim` is now `Union{Int,Symbol}`**: Feynfeld.jl needs symbolic
-  dimensions for dimensional regularisation. All GR-specific code that does arithmetic
-  on `dim` (hamiltonian, geodesics, components, foliation, brauer) will error for
-  symbolic dims — this is correct behavior.
-- **`contract_metrics` returns `TScalar(:D)` for symbolic-dim metric traces**: Previously
-  only returned `TScalar(dim // 1)` for integer dims.
-- **`define_metric!` skips epsilon tensor for symbolic dims**: Cannot construct a
-  fully-antisymmetric tensor of symbolic rank.
-- **Feynfeld.jl is a consumer of TensorGR.jl**: It uses the registry, TIndex, contraction,
-  and canonicalization engines for Lorentz algebra in QFT. Changes to these APIs must
-  consider both GR and QFT use cases.
-
-### From session 14
-- **`free_indices()` uses Dict iteration → non-deterministic in Julia 1.12**: Use `indices(expr)` for deterministic ordering, then filter to free indices by name set.
-- **Dummy detection after free-index replacement is WRONG**: After replacing free indices `:a` → `:_1`, `:b` → `:_1`, the duplicate `:_1` entries are falsely detected as dummy pairs. Always compute dummies from the ORIGINAL expression.
-- **Sort-based rule matching fails with shared pattern variables**: Pattern `T_{a_,b_} * T_{b_,c_}` vs `T_{z,y} * T_{y,x}` — sorting aligns factors such that `b_` gets conflicting bindings. Backtracking within same-name groups is the correct approach.
-- **`while` loops polling for Julia processes**: These can spawn extra shell processes and cause confusion. Avoid them — just run tests in foreground or use background tasks with notifications.
+### New this session (session 16)
+- **`TensorRegistry` now has a `lock::ReentrantLock` field**: All mutating operations are locked. Reads are lock-free. Compound operations nest via reentrancy (up to 3 levels: e.g., `define_metric!` → `register_tensor!` → lock).
+- **`@manifold` now does full setup**: Calls `define_metric!` internally, giving curvature tensors, CovD, and Bianchi rules. No need for separate `define_curvature_tensors!` call (though it still works — idempotent).
+- **`define_curvature_tensors!` is idempotent**: `has_tensor` guards on all 6 curvature tensors. Safe to call multiple times.
+- **`TParamDeriv` is the new AST node for parametric derivatives**: Index-free, auto-flattening, sorted params. Follows xAct `ParamD` design. Parameters registered via `define_parameter!`.
+- **Cross-project parallel Julia is OK**: The no-parallel-Julia rule applies only within the same project (shared precompile cache). Different `--project` paths are safe.
 
 ---
 
 ## ⚠ Core Changes To Monitor
 
-**This session** (symbolic dimension support for Feynfeld.jl):
-- Location: `src/registry.jl` (struct types), `src/algebra/contraction.jl` (metric trace),
-  `src/gr/metric.jl` (epsilon/signature guards), `src/algebra/full_simplify.jl` (DDI guard)
-- Change: `dim::Int` → `dim::Union{Int,Symbol}` on ManifoldProperties and VBundleProperties,
-  plus runtime guards at 3 arithmetic sites
-- Risk: **Medium** — public API type change. All 375,404 tests pass. All Tier 1 benchmarks pass.
-  But any downstream code type-asserting `dim::Int` will break.
-- **GR-specific code that does arithmetic on `dim`** (hamiltonian, geodesics, components,
-  foliation, brauer) will naturally error with `MethodError` for symbolic dims. This is
-  correct — you cannot compute Christoffel symbols in D dimensions numerically.
-- Revert: change `Union{Int,Symbol}` back to `Int` in registry.jl and revert the 3 guards
+**This session** (commit dc95a27):
 
-**Session 14** commits (carried forward):
+**Registry lock** (TensorGR.jl-lj1):
+- Location: `src/registry.jl` (struct + 9 functions) + 16 other files
+- Change: Added `lock::ReentrantLock` to `TensorRegistry`, `@lock` wrappers on all mutations
+- Risk: Low — no behavioral change for single-threaded code
+- Revert: Remove `lock` field, update constructor, remove all `@lock` wrappers
 
-**Commit bf27dab** (`canonicalize_terms` in `_collect_terms_parallel`):
-- Location: `src/algebra/simplify.jl`, lines 330-360
-- Change: Added `canonicalize_terms::Bool=true` kwarg, pipeline passes `false`
-- Risk: Low — matches serial path behavior
+**@manifold full setup** (TensorGR.jl-6sb):
+- Location: `src/macros/definitions.jl`, `src/gr/curvature.jl`
+- Change: `@manifold` calls `define_metric!`; `define_curvature_tensors!` idempotent
+- Risk: Low — strictly more functionality, backward-compatible
+- Revert: Restore old `@manifold` body with manual `register_tensor!` calls
 
-**Commit 293c59c** (`evaluate_components`):
-- Location: `src/components/evaluate.jl` (new file)
-- Change: Full abstract-to-component evaluation pipeline
-- Risk: Low — purely additive, no existing code modified
+**TParamDeriv** (TensorGR.jl-7cb):
+- Location: `src/types.jl`, `src/algebra/param_deriv.jl` (new), `src/ast/*`, `src/show.jl`, `src/registry.jl`
+- Change: New AST node type + parameter infrastructure
+- Risk: Low — purely additive, no existing code paths changed
+- Revert: Remove TParamDeriv from types.jl, delete param_deriv.jl, revert walk/indices/show additions
 
-**Commit 3bb1ad3** (order-independent rule matching):
-- Location: `src/rules.jl`, lines 105-210
-- Change: Grouped backtracking in `_unify(::TProduct/TSum)`
-- Risk: Medium — core pattern matching infrastructure
-- **Only 1 of 2 reviewers completed** — run Reviewer 2 next session
-- Revert: Restore the simple `zip`-based `_unify` if rule matching regresses
+**Carried from session 15** (symbolic dimensions):
+- `dim::Union{Int,Symbol}` on ManifoldProperties/VBundleProperties + 3 arithmetic guards
+- Risk: Medium — public API type change
+
+**Carried from session 14** (rule matching):
+- Grouped backtracking in `_unify(::TProduct/TSum)` — `src/rules.jl` lines 105-210
+- Risk: Medium — core pattern matching. **Reviewer 2 still not run.**
 
 ---
 
 ## TODO Next Session
 
-1. **Run Reviewer 2 for TensorGR.jl-88e** (rule matching fix) — was interrupted in session 14
-2. **Add dedicated tests for order-independent rule matching** — currently only verified via REPL
-3. **Run full benchmarks (Tier 1-3)** — only Tier 1 run this session
-4. **Add tests for symbolic-dim manifolds** — currently only tested from Feynfeld.jl side
-5. **Update docstrings** for `ManifoldProperties`, `VBundleProperties`, `define_vbundle!` to
-   document that `dim` accepts `Symbol` for symbolic dimensions
-6. Continue with ready queue (`bd ready`)
+1. **Run Reviewer 2 for TensorGR.jl-88e** (rule matching fix) — still pending from session 14
+2. **Add dedicated tests for order-independent rule matching** — only verified via REPL
+3. **Run full benchmarks (Tier 1-3)** — not run this session
+4. **Add tests for symbolic-dim manifolds** — still only tested from Feynfeld.jl side
+5. Continue with ready queue (`bd ready`) — 25 issues ready
 
 ## Ready Queue
 
@@ -243,13 +185,12 @@ bd ready    # see available work
 bd stats    # project health
 ```
 
-**28 ready issues** after closing 3 this session. Key items:
-- TensorGR.jl-77q (CCovD) — NOW UNBLOCKED by evaluate_components
-- TensorGR.jl-irx (chart transitions) — NOW UNBLOCKED
-- TensorGR.jl-lj1 (global registry sync) — P2 bug, blocks 1 other
-- TensorGR.jl-7cb (parametric derivatives) — P2 feature
+**25 ready issues** (down from 27). Key items:
+- TensorGR.jl-77q (CCovD) — P2, unblocked by evaluate_components
+- TensorGR.jl-304 (registry passing pattern) — P3, NOW UNBLOCKED by lj1 fix
 - 8 P2 test coverage issues
-- 3 P2 infrastructure (BinaryBuilder, Pkg registration, papers corpus)
+- TensorGR.jl-irx (chart transitions) — P3, unblocked
+- 2 P2 infrastructure (BinaryBuilder, Pkg registration)
 
 ---
 
