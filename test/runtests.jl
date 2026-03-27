@@ -339,6 +339,8 @@ using TensorGR
     include("test_yang_mills.jl")
     # REPL tensor mode
     include("test_repl_mode.jl")
+    # Chaos monkey: REPL UX hardening
+    include("test_chaos_monkey.jl")
     # Bimetric linearized perturbation
     include("test_bimetric_linearize.jl")
     # Bimetric mass eigenstates diagonalization
