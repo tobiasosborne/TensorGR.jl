@@ -310,3 +310,21 @@ function to_unicode(d::TParamDeriv)
     params_str = join(string.(d.params), ",")
     return "d/d(" * params_str * ")(" * to_unicode(d.arg) * ")"
 end
+
+# ── Pretty display (MIME dispatch) ──────────────────────────────────
+
+# Terminal: use Unicode rendering instead of raw AST dump
+Base.show(io::IO, ::MIME"text/plain", expr::Tensor) = print(io, to_unicode(expr))
+Base.show(io::IO, ::MIME"text/plain", expr::TProduct) = print(io, to_unicode(expr))
+Base.show(io::IO, ::MIME"text/plain", expr::TSum) = print(io, to_unicode(expr))
+Base.show(io::IO, ::MIME"text/plain", expr::TDeriv) = print(io, to_unicode(expr))
+Base.show(io::IO, ::MIME"text/plain", expr::TScalar) = print(io, to_unicode(expr))
+Base.show(io::IO, ::MIME"text/plain", expr::TParamDeriv) = print(io, to_unicode(expr))
+
+# Jupyter/Pluto/Documenter: render as LaTeX via MathJax
+Base.show(io::IO, ::MIME"text/latex", expr::Tensor) = print(io, "\$", to_latex(expr), "\$")
+Base.show(io::IO, ::MIME"text/latex", expr::TProduct) = print(io, "\$", to_latex(expr), "\$")
+Base.show(io::IO, ::MIME"text/latex", expr::TSum) = print(io, "\$", to_latex(expr), "\$")
+Base.show(io::IO, ::MIME"text/latex", expr::TDeriv) = print(io, "\$", to_latex(expr), "\$")
+Base.show(io::IO, ::MIME"text/latex", expr::TScalar) = print(io, "\$", to_latex(expr), "\$")
+Base.show(io::IO, ::MIME"text/latex", expr::TParamDeriv) = print(io, "\$", to_latex(expr), "\$")

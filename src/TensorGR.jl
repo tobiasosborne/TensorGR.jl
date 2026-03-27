@@ -744,4 +744,22 @@ function from_symengine end
 
 export to_symbolics, from_symbolics, to_symengine, from_symengine
 
+# REPL tensor mode (interactive sessions only)
+include("repl/tensor_mode.jl")
+export init_repl_mode!
+
+# Auto-activate if requested
+function __init__()
+    if get(ENV, "TENSORGR_REPL", "") == "1"
+        # Defer to avoid REPL not being ready yet
+        @async begin
+            sleep(0.5)
+            try
+                init_repl_mode!()
+            catch
+            end
+        end
+    end
+end
+
 end # module TensorGR
