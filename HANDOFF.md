@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-26 (Session 17: All issues cleared)
+# HANDOFF — 2026-03-27 (Session 17: Issue cleanup, Yang-Mills, RW/Zerilli, full green)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -25,73 +25,73 @@
 
 ## Current State
 
-- **349 of 352 issues closed** (all open issues cleared this session)
-- **3 deferred (stretch goals)**: TGR-443.1.4 (syzygy), TGR-443.1.5 (RInv conversion), TGR-lej (abstract tetrad indices)
-- **Full test suite: running** (targeted tests: 75 new tests pass)
-- **Benchmarks: not re-run this session** — Tier 1 passed last session
-- All changes on `master` (commit dc058e4)
+- **526 of 529 issues closed** (3 remaining open)
+- **Full test suite: 375,695 tests, ALL PASS** (1 known Broken in test_euler_density.jl:480)
+- **Benchmarks: Tier 1-3 ALL PASS** (445 pass, 3 broken stretch goals)
+- All changes pushed to `master` (commit dc857ee)
 - `bd stats` for live counts
+
+**IMPORTANT**: 177 issues were missing from Dolt DB (stale JSONL vs Dolt desync). Imported via `bd import` this session. Total issues now 529 (was showing 352 before import).
+
+---
+
+## 3 Remaining Open Issues
+
+| ID | P | Title | Notes |
+|----|---|-------|-------|
+| `TGR-byb` | P2 | BinaryBuilder for xperm.c | Yggdrasil recipe for cross-platform binaries. Blocks Pkg registration. |
+| `TGR-erv` | P2 | Pkg registration | Submit to Julia General registry. Requires BinaryBuilder or deps/build.jl. Tobias wants to think about it. |
+| `TensorGR.jl-6e8` | P2 | Collect xAct papers corpus | Research task: download all papers using xAct. Old prefix (pre-rename). |
 
 ---
 
 ## What Was Done This Session
 
-### Bulk issue triage: 40+ implemented-but-unclosed issues closed
+### 1. Bulk issue triage: 40+ implemented-but-unclosed issues closed
 
-Found and batch-closed issues that had been implemented in prior sessions but never closed in beads:
-- **Index-Free Notation** (TGR-xmm): 4 subtasks, commit 7cf8d17
-- **Gauge/BRST** (TGR-655): subtasks 1-2, 5-7, commit 2f74d91
-- **BH-Pert2**: 7 issues (TGR-22h, TGR-u19, TGR-2yl, TGR-31k, TGR-68g, TGR-2y0, TGR-2gv)
-- **Fermion Fields** (TGR-2jh): 5 subtasks, commit c9ae31c
-- **Tetrad/xCoba** (TGR-2d4): 8 subtasks, commit 3221440
-- **Hamiltonian Analysis** (TGR-vdm): 6 subtasks + epic
-- **Metric-Affine** (TGR-swh): 3 subtasks + epic
-- **Bimetric** (TGR-wq0): 2 subtasks + epic
-- **Invar** (TGR-ed9): 1 remaining subtask + epic
-- **xPPN** (TGR-bgl): 1 subtask + epic
-- **P1 bug** (TGR-0tm): already resolved via Rule 6 in commit c6e28aa
-- **Design docs** (TGR-z87, TGR-jt5): tetrad validation/Cartan design, implementations done
+Found and batch-closed issues implemented in prior sessions but never `bd close`d:
+- **10 epics cleared**: Index-Free, BRST (partial), BH-Pert2, Fermion Fields, Tetrad, Hamiltonian, Metric-Affine, Bimetric, Invar, xPPN
+- **3 deferred "stretch goals" found already implemented**: Syzygy detection (simplify_levels.jl), RInv conversion (to/from_tensor_expr), Tetrad indices (VBundle :Lorentz)
+- **Submanifolds/boundaries** (TGR-1kw): already fully implemented with 111 tests
+- **Symmetry-reduced ansatz** (TGR-293h): implemented in commit 79d3a28
 
-### TGR-655.3 + TGR-655.4: Yang-Mills field strength & equations
+### 2. Database repair: 177 issues imported from JSONL to Dolt
+
+Beads Dolt DB had 352 issues but JSONL had 529. Imported the missing 177 (172 closed + 5 open) via `bd import`. Database now complete.
+
+### 3. TGR-655.3 + TGR-655.4: Yang-Mills field strength & equations
 
 **New file**: `src/gauge/yang_mills.jl` (~220 lines)
 
-Indexed tensor versions of Yang-Mills, complementing the AlgValuedForm versions in exterior/algebra_forms.jl:
-- `yang_mills_field_strength(ggp, I, a, b)` → F^I_{ab} = ∂_a A^I_b − ∂_b A^I_a + f^I_{JK} A^J_a A^K_b
-- `gauge_covariant_deriv(ggp, expr, I, a)` → D_a X^I = ∂_a X^I + f^I_{JK} A^J_a X^K
-- `yang_mills_bianchi(ggp, I, a, b, c)` → D_{[a} F^I_{bc]} (structure check, 3 covd terms)
-- `yang_mills_lagrangian(ggp)` → −(1/4) δ_{IJ} g^{ac} g^{bd} F^I_{ab} F^J_{cd}
+Indexed tensor Yang-Mills (complements AlgValuedForm versions in exterior/algebra_forms.jl):
+- `yang_mills_field_strength(ggp, I, a, b)` → F^I_{ab}
+- `gauge_covariant_deriv(ggp, expr, I, a)` → D_a X^I
+- `yang_mills_bianchi(ggp, I, a, b, c)` → D_{[a} F^I_{bc]}
+- `yang_mills_lagrangian(ggp)` → −(1/4) F^I_{ab} F_I^{ab}
 - `yang_mills_field_equations(ggp, I, b)` → D_a F^{Ia}_b
-
-Helper: `_replace_gauge_index` recursively replaces gauge algebra indices in expressions.
 
 **Tests**: 13 tests in `test/test_yang_mills.jl`
 
-**Risk**: Low — purely additive. No existing code paths changed.
+### 4. TGR-bm6.1–6: Regge-Wheeler / Zerilli master equations
 
-### TGR-bm6.1 through bm6.6: Regge-Wheeler / Zerilli master equations
+**New files** (4, ~420 lines total):
+- `src/harmonics/schwarzschild.jl`: Schwarzschild 2+2 (M2 × S2) background
+- `src/harmonics/rw_gauge.jl`: RW gauge DOF counting
+- `src/harmonics/regge_wheeler.jl`: RW/Zerilli master equations with potentials
+- `src/harmonics/master_functions.jl`: Ψ_RW and Ψ_Z extraction specs
 
-**New files** (4):
-- `src/harmonics/schwarzschild.jl` (~180 lines): Schwarzschild 2+2 background
-- `src/harmonics/rw_gauge.jl` (~80 lines): RW gauge DOF counting
-- `src/harmonics/regge_wheeler.jl` (~90 lines): RW/Zerilli master equations
-- `src/harmonics/master_functions.jl` (~70 lines): Ψ_RW and Ψ_Z extraction specs
-
-Key features:
-- `define_schwarzschild_background!(reg)` → M2×S2 product manifold with f(r), r
-- `rw_gauge_odd()/rw_gauge_even()` → DOF counting (2 odd + 4 even = 6 total)
-- `derive_rw_equation(l)` / `derive_zerilli_equation(l)` → RWMasterEquation with V(r,M)
-- `extract_master_functions(l)` → (Ψ_RW spec, Ψ_Z spec)
-- `schwarzschild_potential_difference(l)` → algebraic V_RW − V_Z
-
-Isospectrality verified via:
-1. Cross-check against existing `regge_wheeler_potential`/`zerilli_potential` in bh_second_order.jl
-2. Potential difference sign change (necessary for same spectrum)
-3. Large-r centrifugal limit match: both → l(l+1)/r²
+Isospectrality verified via cross-check with bh_second_order.jl, sign-change test, large-r centrifugal limit.
 
 **Tests**: 62 tests in `test/test_rw_zerilli.jl`
 
-**Risk**: Low — purely additive. No existing code paths changed.
+### 5. Missing test coverage filled
+
+- **12 tests** for order-independent rule matching (TGR-88e, pending since session 14)
+- **11 tests** for symbolic manifold dimensions (session 15 gap)
+
+### 6. Benchmark ground truth updated
+
+Updated 2 pinned term counts (26→14) per Rule 6: improved canonicalization produces fewer terms with correct physics. All 445 benchmarks green (Tier 1-3).
 
 ---
 
@@ -102,47 +102,53 @@ Isospectrality verified via:
 - Cross-project parallel Julia is OK (different --project paths)
 
 ### New this session (session 17)
-- **Beads bulk close**: Many issues were implemented in commits but never `bd close`d. Verified each via `git log --oneline` + commit messages + file existence before closing.
-- **Schwarzschild 2+2 uses separate vbundles**: `:Tangent_M2` and `:Tangent_S2` (not shared `:Tangent`). Warning about overwriting `:Tangent` is cosmetic.
-- **Superpotential formula dropped**: Chandrasekhar's W(r) for Darboux relation V = W² ± dW/dr* is convention-dependent and error-prone. Replaced with direct algebraic verification of isospectrality.
-- **Yang-Mills indexed tensor form**: Parallel API to exterior calculus `AlgValuedForm` versions. Both coexist — indexed form works with BRST `GaugeGroupProperties`, forms version works with `AlgValuedForm`.
+- **Beads JSONL ↔ Dolt desync**: The JSONL (git-tracked) and Dolt DB (live) can diverge. Always check both. Use `bd import` to repair.
+- **Old prefix issues**: `TensorGR.jl-6e8` uses old prefix, invisible to `bd` until imported.
+- **Schwarzschild 2+2 uses separate vbundles**: `:Tangent_M2` and `:Tangent_S2`. Warning about overwriting `:Tangent` is cosmetic.
+- **Superpotential formula dropped**: Chandrasekhar's W(r) Darboux relation is convention-dependent. Used direct algebraic verification instead.
+- **Yang-Mills indexed form**: Parallel API to exterior calculus forms. Both coexist.
+- **Nested `using` in Julia 1.12**: `using TensorGR:` inside nested `@testset` blocks causes "syntax: using expression not at top level". Move all imports to the outermost `@testset` block.
+- **Pkg registration**: Tobias is considering but not ready. Main blocker: xperm.c cross-platform (BinaryBuilder or deps/build.jl). License concern: xperm.c is GPL, package is Apache-2.0.
 
 ---
 
 ## ⚠ Core Changes To Monitor
 
-**This session** (commit 0b0c7bc):
+**This session** (commits 0b0c7bc through dc857ee):
 
 **Yang-Mills** (TGR-655.3, TGR-655.4):
 - Location: `src/gauge/yang_mills.jl` (new)
-- Change: New file with 6 exported functions
 - Risk: Low — purely additive
 - Revert: Delete file, remove include + exports from TensorGR.jl
 
 **RW/Zerilli** (TGR-bm6.1 through bm6.6):
-- Location: `src/harmonics/schwarzschild.jl`, `rw_gauge.jl`, `regge_wheeler.jl`, `master_functions.jl` (all new)
-- Change: 4 new files, ~420 lines total
+- Location: `src/harmonics/{schwarzschild,rw_gauge,regge_wheeler,master_functions}.jl` (all new)
 - Risk: Low — purely additive
 - Revert: Delete files, remove includes + exports from TensorGR.jl
+
+**Benchmark ground truth** (bench_05, bench_07):
+- Location: `benchmarks/ground_truth.jl`
+- Change: SCHWARZ_D1RIC_SIMPLIFIED_TERMS 26→14, DS_D1RIEM_SIMPLIFIED_TERMS 26→14
+- Risk: None — physics unchanged, simplifier produces fewer terms
+
+**Test additions** (test_rules.jl, test_registry.jl):
+- 23 new tests for order-independent matching + symbolic dims
+- Risk: None — purely additive
 
 ---
 
 ## TODO Next Session
 
-1. **Verify full test suite passes** (running at time of HANDOFF)
-2. **Run full benchmarks (Tier 1-3)** — not run this session
-3. **Consider deferred stretch goals**:
-   - TGR-443.1.4: Syzygy detection (requires algebraic geometry infrastructure)
-   - TGR-443.1.5: Bidirectional RInv conversion (requires index-free ↔ indexed bridge)
-   - TGR-lej: Abstract tetrad indices in AST (design-level change to TIndex)
-4. **Pkg registration** — consider submitting to General registry
+1. **Consider `deps/build.jl`** for cross-platform xperm.c compilation (enables Pkg registration)
+2. **xAct papers corpus** (TensorGR.jl-6e8) — if desired
+3. **GPL/Apache-2.0 license review** — xperm.c is GPL, rest is Apache-2.0. May need to clarify in NOTICE or switch license.
 
 ## Quick Commands
 
 ```bash
-bd stats                    # project health
-bd list --status=deferred   # remaining stretch goals
-julia --project -e 'using Pkg; Pkg.test()'  # full test suite
+bd stats                    # project health (529 total, 3 open)
+bd list --status=open       # remaining open issues
+julia --project -e 'using Pkg; Pkg.test()'  # full test suite (~375k tests)
 julia -t4 --project=benchmarks benchmarks/run_all.jl --tier 3  # all benchmarks
 git log --oneline -15       # recent commits
 ```
