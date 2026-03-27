@@ -155,7 +155,8 @@ function init_repl_mode!()
 
     _init_commands!()
 
-    # Avoid loading REPL at compile time
+    # Load REPL at runtime (not compile time — it's a stdlib)
+    @eval import REPL
     LineEdit = REPL.LineEdit
 
     # Create the tensor prompt
