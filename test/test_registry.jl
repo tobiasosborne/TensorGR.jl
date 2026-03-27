@@ -107,3 +107,50 @@ end
     @test_throws KeyError get_manifold(reg, :nonexistent)
     @test_throws KeyError get_tensor(reg, :nonexistent)
 end
+
+# ── Symbolic manifold dimensions (session 15) ────────────────────────
+
+@testset "Symbolic dimension manifolds" begin
+    using TensorGR: ManifoldProperties, VBundleProperties, TensorRegistry,
+                    register_manifold!, has_manifold, get_manifold,
+                    define_vbundle!, has_vbundle, get_vbundle,
+                    with_registry
+
+    @testset "ManifoldProperties accepts symbolic dim" begin
+        mp = ManifoldProperties(:Md, :d, :g, nothing, [:a, :b, :c])
+        @test mp.dim === :d
+        @test mp.name === :Md
+    end
+
+    @testset "register symbolic-dim manifold" begin
+        reg = TensorRegistry()
+        mp = ManifoldProperties(:Md, :d, :g, nothing, [:a, :b, :c])
+        register_manifold!(reg, mp)
+        @test has_manifold(reg, :Md)
+        @test get_manifold(reg, :Md).dim === :d
+    end
+
+    @testset "VBundleProperties accepts symbolic dim" begin
+        reg = TensorRegistry()
+        mp = ManifoldProperties(:Md, :d, :g, nothing, [:a, :b, :c])
+        register_manifold!(reg, mp)
+        define_vbundle!(reg, :V; manifold=:Md, dim=:n, indices=[:I, :J, :K])
+        @test has_vbundle(reg, :V)
+        @test get_vbundle(reg, :V).dim === :n
+    end
+
+    @testset "mixed int and symbolic dims coexist" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            # Concrete dim
+            mp4 = ManifoldProperties(:M4, 4, :g, nothing, [:a, :b, :c, :d])
+            register_manifold!(reg, mp4)
+            # Symbolic dim
+            mpd = ManifoldProperties(:Md, :d, :h, nothing, [:p, :q, :r, :s])
+            register_manifold!(reg, mpd)
+
+            @test get_manifold(reg, :M4).dim == 4
+            @test get_manifold(reg, :Md).dim === :d
+        end
+    end
+end

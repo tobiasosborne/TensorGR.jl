@@ -42,7 +42,7 @@ const WEYL_EXPANSION_TERMS = 3
 const WEYL_DECOMPOSITION_TERMS = 3
 
 # ── Schwarzschild (arXiv:0903.1134) ──────────────────────────────────────────
-const SCHWARZ_D1RIC_SIMPLIFIED_TERMS = 26  # δ¹Ric on vacuum bg, simplified
+const SCHWARZ_D1RIC_SIMPLIFIED_TERMS = 14  # δ¹Ric on vacuum bg, simplified (improved canonicalization)
 const SCHWARZ_D2RIC_RAW_TERMS = 8          # δ²Ric on vacuum bg, raw
 
 # ── Chern-Simons (arXiv:1012.3144) ──────────────────────────────────────────
@@ -52,7 +52,7 @@ const CS_ISAACSON_TERMS = 8       # ⟨δ²Ric⟩ bilinear in h
 
 # ── de Sitter (arXiv:1403.3335) ─────────────────────────────────────────────
 const DS_D1RIEM_RAW_TERMS = 6     # δ¹Riem on dS, raw
-const DS_D1RIEM_SIMPLIFIED_TERMS = 26   # δ¹Riem on dS, simplified (contract_curvature in pipeline)
+const DS_D1RIEM_SIMPLIFIED_TERMS = 14   # δ¹Riem on dS, simplified (improved canonicalization)
 
 # ── Galileon (arXiv:0901.1314) ──────────────────────────────────────────────
 const GALILEON_L2_FACTORS = 3     # g^{ab} ∂_a π ∂_b π

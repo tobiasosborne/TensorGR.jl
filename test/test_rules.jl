@@ -296,4 +296,124 @@
         result = apply_rules_fixpoint(Tensor(:A, [down(:x)]), [r1, r2])
         @test result == Tensor(:C, [down(:x)])
     end
+
+    # ── Order-independent rule matching (TGR-88e) ────────────────────
+
+    @testset "TProduct: order-independent factor matching" begin
+        # Rule: T_{a_} U_{b_} → V_{a_ b_}
+        # Should match regardless of factor order in the expression
+        pat = TProduct(1 // 1, TensorExpr[
+            Tensor(:T, [down(:a_)]),
+            Tensor(:U, [down(:b_)])
+        ])
+        repl = Tensor(:V, [down(:a_), down(:b_)])
+        rule = RewriteRule(pat, repl)
+
+        # Expression in same order
+        expr1 = TProduct(1 // 1, TensorExpr[
+            Tensor(:T, [down(:x)]),
+            Tensor(:U, [down(:y)])
+        ])
+        result1 = apply_rules(expr1, [rule])
+        @test result1 == Tensor(:V, [down(:x), down(:y)])
+
+        # Expression in REVERSED order — must still match
+        expr2 = TProduct(1 // 1, TensorExpr[
+            Tensor(:U, [down(:y)]),
+            Tensor(:T, [down(:x)])
+        ])
+        result2 = apply_rules(expr2, [rule])
+        @test result2 == Tensor(:V, [down(:x), down(:y)])
+    end
+
+    @testset "TProduct: same-name factors with shared pattern vars" begin
+        # Rule: T_{a_, b_} T_{b_, c_} → S_{a_, c_}
+        # This is the critical case from TGR-88e: same-name factors where
+        # simple sorting fails but backtracking finds the valid alignment.
+        pat = TProduct(1 // 1, TensorExpr[
+            Tensor(:T, [down(:a_), down(:b_)]),
+            Tensor(:T, [down(:b_), down(:c_)])
+        ])
+        repl = Tensor(:S, [down(:a_), down(:c_)])
+        rule = RewriteRule(pat, repl)
+
+        # Expression: T_{x,y} T_{y,z}  — should match with a_→x, b_→y, c_→z
+        expr1 = TProduct(1 // 1, TensorExpr[
+            Tensor(:T, [down(:x), down(:y)]),
+            Tensor(:T, [down(:y), down(:z)])
+        ])
+        result1 = apply_rules(expr1, [rule])
+        @test result1 == Tensor(:S, [down(:x), down(:z)])
+
+        # Reversed order: T_{y,z} T_{x,y}  — backtracking required
+        expr2 = TProduct(1 // 1, TensorExpr[
+            Tensor(:T, [down(:y), down(:z)]),
+            Tensor(:T, [down(:x), down(:y)])
+        ])
+        result2 = apply_rules(expr2, [rule])
+        @test result2 == Tensor(:S, [down(:x), down(:z)])
+    end
+
+    @testset "TProduct: distinct-name factors (fast path)" begin
+        # When factor names differ, each group has size 1 → no backtracking needed
+        pat = TProduct(1 // 1, TensorExpr[
+            Tensor(:A, [down(:a_)]),
+            Tensor(:B, [down(:b_)]),
+            Tensor(:C, [down(:c_)])
+        ])
+        repl = Tensor(:D, [down(:a_), down(:b_), down(:c_)])
+        rule = RewriteRule(pat, repl)
+
+        # Any permutation should work
+        expr = TProduct(1 // 1, TensorExpr[
+            Tensor(:C, [down(:z)]),
+            Tensor(:A, [down(:x)]),
+            Tensor(:B, [down(:y)])
+        ])
+        result = apply_rules(expr, [rule])
+        @test result == Tensor(:D, [down(:x), down(:y), down(:z)])
+    end
+
+    @testset "TSum: order-independent term matching" begin
+        # Rule: A_{a_} + B_{a_} → C_{a_}
+        pat = TSum(TensorExpr[
+            Tensor(:A, [down(:a_)]),
+            Tensor(:B, [down(:a_)])
+        ])
+        repl = Tensor(:C, [down(:a_)])
+        rule = RewriteRule(pat, repl)
+
+        # Same order
+        expr1 = TSum(TensorExpr[
+            Tensor(:A, [down(:x)]),
+            Tensor(:B, [down(:x)])
+        ])
+        @test apply_rules(expr1, [rule]) == Tensor(:C, [down(:x)])
+
+        # Reversed order
+        expr2 = TSum(TensorExpr[
+            Tensor(:B, [down(:x)]),
+            Tensor(:A, [down(:x)])
+        ])
+        @test apply_rules(expr2, [rule]) == Tensor(:C, [down(:x)])
+    end
+
+    @testset "TProduct: non-matching permutations correctly rejected" begin
+        # Rule: T_{a_, b_} T_{b_, c_} → S_{a_, c_}
+        # Expression: T_{x,y} T_{z,w} — b_ can't bind to both y and z
+        pat = TProduct(1 // 1, TensorExpr[
+            Tensor(:T, [down(:a_), down(:b_)]),
+            Tensor(:T, [down(:b_), down(:c_)])
+        ])
+        repl = Tensor(:S, [down(:a_), down(:c_)])
+        rule = RewriteRule(pat, repl)
+
+        expr = TProduct(1 // 1, TensorExpr[
+            Tensor(:T, [down(:x), down(:y)]),
+            Tensor(:T, [down(:z), down(:w)])
+        ])
+        result = apply_rules(expr, [rule])
+        # Should NOT match (y ≠ z, so b_ can't be consistent)
+        @test result == expr
+    end
 end
