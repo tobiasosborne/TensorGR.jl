@@ -91,7 +91,7 @@ function _process_tensor_input(line::AbstractString)
                 return result
             else
                 # Parse argument as LaTeX, then apply command
-                expr = parse_tex(arg_str)
+                expr = _parse_and_resolve(arg_str)
                 result = func(expr)
                 TensorREPL._last_result[] = result
                 return result
@@ -100,9 +100,87 @@ function _process_tensor_input(line::AbstractString)
     end
 
     # Plain LaTeX expression
-    expr = parse_tex(s)
+    expr = _parse_and_resolve(s)
     TensorREPL._last_result[] = expr
     return expr
+end
+
+"""Parse LaTeX and resolve tensor names against the active registry."""
+function _parse_and_resolve(s::AbstractString)
+    expr = parse_tex(s)
+    _resolve_names(expr)
+end
+
+"""
+    _resolve_names(expr) -> TensorExpr
+
+Walk the AST and resolve generic names to registered tensor names.
+Uses the current registry to determine:
+- R with 4 indices → Riem (if registered)
+- R with 2 indices → Ric (if registered)
+- R with 0 indices → RicScalar (if registered)
+- G with 2 indices → Ein (if registered)
+- C with 4 indices → Weyl (if registered)
+"""
+function _resolve_names(t::Tensor)
+    reg = current_registry()
+    n = length(t.indices)
+    resolved = _try_resolve_name(reg, t.name, n)
+    resolved === t.name ? t : Tensor(resolved, t.indices)
+end
+
+function _resolve_names(p::TProduct)
+    TProduct(p.scalar, TensorExpr[_resolve_names(f) for f in p.factors])
+end
+
+function _resolve_names(s::TSum)
+    TSum(TensorExpr[_resolve_names(t) for t in s.terms])
+end
+
+function _resolve_names(d::TDeriv)
+    TDeriv(d.index, _resolve_names(d.arg), d.covd)
+end
+
+function _resolve_names(s::TScalar)
+    s
+end
+
+function _resolve_names(d::TParamDeriv)
+    TParamDeriv(d.params, _resolve_names(d.arg))
+end
+
+function _resolve_names(expr::TensorExpr)
+    expr  # fallback
+end
+
+# Standard name resolution table: (latex_name, n_indices) => registry_name
+const _STANDARD_NAMES = Dict{Tuple{Symbol,Int}, Symbol}(
+    (:R, 4) => :Riem,
+    (:R, 2) => :Ric,
+    (:R, 0) => :RicScalar,
+    (:G, 2) => :Ein,
+    (:C, 4) => :Weyl,
+    (:Gamma, 3) => :Christoffel,
+)
+
+function _try_resolve_name(reg::TensorRegistry, name::Symbol, n_indices::Int)
+    # If already registered, use as-is
+    has_tensor(reg, name) && return name
+
+    # Check standard aliases
+    key = (name, n_indices)
+    if haskey(_STANDARD_NAMES, key)
+        candidate = _STANDARD_NAMES[key]
+        has_tensor(reg, candidate) && return candidate
+    end
+
+    # Check tex_aliases in registry
+    tex_key = (name, n_indices)
+    if haskey(reg.tex_aliases, tex_key)
+        return reg.tex_aliases[tex_key]
+    end
+
+    name  # no resolution found
 end
 
 function _print_tensor_help()
