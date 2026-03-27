@@ -18,6 +18,8 @@
 # Or set ENV["TENSORGR_REPL"] = "1" before loading to auto-activate.
 =#
 
+import REPL
+
 # ── State ────────────────────────────────────────────────────────────
 
 """Global state for the tensor REPL mode."""
@@ -155,65 +157,90 @@ function init_repl_mode!()
 
     _init_commands!()
 
-    # Load REPL at runtime (not compile time — it's a stdlib)
-    @eval import REPL
     LineEdit = REPL.LineEdit
-
-    # Create the tensor prompt
-    tensor_prompt = LineEdit.Prompt("tensor> ";
-        prompt_prefix = Base.text_colors[:cyan],
-        prompt_suffix = Base.text_colors[:normal],
-        on_enter = s -> true,  # always accept on Enter
-        on_done = (s, buf, ok) -> begin
-            line = String(take!(buf))
-            if !ok || isempty(strip(line))
-                return nothing
-            end
-            try
-                result = _process_tensor_input(line)
-                _display_tensor_result(stdout, result)
-            catch e
-                printstyled(stderr, "  Error: "; color=:red, bold=true)
-                showerror(stderr, e)
-                println(stderr)
-            end
-        end,
-        sticky = true
-    )
 
     # Get the main julia> prompt
     main_mode = repl.interface.modes[1]
 
-    # Keymap: '\' enters tensor mode from julia>
-    trigger_keymap = Dict{Any,Any}(
-        '\\' => (s, args...) -> begin
-            if isempty(LineEdit.buffer(s))
-                LineEdit.transition(s, tensor_prompt)
-            else
-                LineEdit.edit_insert(s, '\\')
-            end
-        end
+    # Create the tensor prompt (follows Pkg REPLMode pattern exactly)
+    tensor_prompt = LineEdit.Prompt("tensor> ";
+        prompt_prefix = repl.options.hascolor ? Base.text_colors[:cyan] : "",
+        prompt_suffix = "",
+        sticky = true
     )
 
-    # Keymap: backspace on empty line returns to julia>
-    exit_keymap = Dict{Any,Any}(
-        '\b' => (s, args...) -> begin
-            if isempty(LineEdit.buffer(s))
-                LineEdit.transition(s, main_mode)
+    tensor_prompt.repl = repl
+    hp = main_mode.hist
+    hp.mode_mapping[:tensor] = tensor_prompt
+    tensor_prompt.hist = hp
+
+    tensor_prompt.on_done = (s, buf, ok) -> begin
+        line = String(take!(buf))
+        if !ok || isempty(strip(line))
+            return nothing
+        end
+        Base.@invokelatest _on_tensor_done(line)
+    end
+
+    # Build keymap: search + prefix + mode-switch + history + defaults
+    search_prompt, skeymap = LineEdit.setup_search_keymap(hp)
+    prefix_prompt, prefix_keymap = LineEdit.setup_prefix_keymap(hp, tensor_prompt)
+    mk = REPL.mode_keymap(main_mode)
+
+    # Backspace on empty line returns to julia>
+    exit_keymap = Dict{Any, Any}(
+        '\b' => function (s, o...)
+            if isempty(s) || position(LineEdit.buffer(s)) == 0
+                buf = copy(LineEdit.buffer(s))
+                LineEdit.transition(s, main_mode) do
+                    LineEdit.state(s, main_mode).input_buffer = buf
+                end
             else
                 LineEdit.edit_backspace(s)
             end
+            return
         end
     )
 
-    tensor_prompt.keymap_dict = LineEdit.keymap([exit_keymap, LineEdit.default_keymap])
-
-    # Add trigger to main mode
-    main_mode.keymap_dict = LineEdit.keymap([trigger_keymap, main_mode.keymap_dict])
+    b = Dict{Any, Any}[
+        skeymap, exit_keymap, mk, prefix_keymap,
+        LineEdit.history_keymap, LineEdit.default_keymap,
+        LineEdit.escape_defaults,
+    ]
+    tensor_prompt.keymap_dict = LineEdit.keymap(b)
 
     # Register the mode
     push!(repl.interface.modes, tensor_prompt)
 
+    # Add \ trigger to main julia> mode
+    trigger_keymap = Dict{Any, Any}(
+        '\\' => function (s, args...)
+            if isempty(s) || position(LineEdit.buffer(s)) == 0
+                buf = copy(LineEdit.buffer(s))
+                LineEdit.transition(s, tensor_prompt) do
+                    LineEdit.state(s, tensor_prompt).input_buffer = buf
+                end
+            else
+                LineEdit.edit_insert(s, '\\')
+                LineEdit.check_show_hint(s)
+            end
+            return
+        end
+    )
+    main_mode.keymap_dict = LineEdit.keymap_merge(main_mode.keymap_dict, trigger_keymap)
+
     printstyled("  Tensor mode activated — press \\ to enter\n"; color=:cyan)
     nothing
+end
+
+"""Callback for tensor mode input (wrapped in @invokelatest for world age safety)."""
+function _on_tensor_done(line::String)
+    try
+        result = _process_tensor_input(line)
+        _display_tensor_result(stdout, result)
+    catch e
+        printstyled(stderr, "  Error: "; color=:red, bold=true)
+        showerror(stderr, e)
+        println(stderr)
+    end
 end
