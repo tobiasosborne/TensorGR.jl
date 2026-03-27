@@ -40,6 +40,16 @@
 {"created_at":"2026-03-15T11:22:13Z","created_by":"tobiasosborne","depends_on_id":"TGR-xb3","issue_id":"TGR-22h","type":"blocks"}
 {"created_at":"2026-03-14T23:08:26Z","created_by":"tobiasosborne","depends_on_id":"TGR-7me","issue_id":"TGR-28t","type":"blocks"}
 {"created_at":"2026-03-14T23:08:26Z","created_by":"tobiasosborne","depends_on_id":"TGR-h3h","issue_id":"TGR-28t","type":"blocks"}
+{"created_at":"2026-03-27T10:46:04Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.1","type":"parent-child"}
+{"created_at":"2026-03-27T10:49:59Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.10","type":"parent-child"}
+{"created_at":"2026-03-27T10:46:20Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.2","type":"parent-child"}
+{"created_at":"2026-03-27T10:46:31Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.3","type":"parent-child"}
+{"created_at":"2026-03-27T10:46:42Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.4","type":"parent-child"}
+{"created_at":"2026-03-27T10:46:48Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.5","type":"parent-child"}
+{"created_at":"2026-03-27T10:49:22Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.6","type":"parent-child"}
+{"created_at":"2026-03-27T10:49:29Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.7","type":"parent-child"}
+{"created_at":"2026-03-27T10:49:46Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.8","type":"parent-child"}
+{"created_at":"2026-03-27T10:49:51Z","created_by":"tobias","depends_on_id":"TGR-2ai","issue_id":"TGR-2ai.9","type":"parent-child"}
 {"created_at":"2026-03-14T23:10:08Z","created_by":"tobiasosborne","depends_on_id":"TGR-2d4","issue_id":"TGR-2d4.1","type":"parent-child"}
 {"created_at":"2026-03-14T23:11:01Z","created_by":"tobiasosborne","depends_on_id":"TGR-2d4","issue_id":"TGR-2d4.10","type":"parent-child"}
 {"created_at":"2026-03-14T23:11:01Z","created_by":"tobiasosborne","depends_on_id":"TGR-2d4.8","issue_id":"TGR-2d4.10","type":"blocks"}

@@ -1094,3 +1094,14 @@
 {"actor":"tobias","comment":null,"created_at":"2026-03-20T12:31:48Z","event_type":"closed","id":1094,"issue_id":"TGR-28t","new_value":"src/spinors/soldering_form.jl: to_tensor_indices, test_soldering_form.jl","old_value":""}
 {"actor":"tobias","comment":null,"created_at":"2026-03-20T12:50:28Z","event_type":"closed","id":1095,"issue_id":"TGR-v8u","new_value":"35 tests: Feynman pipeline validation, EIH coefficients 3/-7/-1/2 verified against Goldberger-Rothstein Eq 40","old_value":""}
 {"actor":"tobias","comment":null,"created_at":"2026-03-20T13:14:56Z","event_type":"closed","id":1096,"issue_id":"TGR-6bn.4","new_value":"simplify_level4 in simplify_levels.jl, test_invar_level4.jl: 11 tests","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:45:55Z","event_type":"created","id":1097,"issue_id":"TGR-2ai","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:46:04Z","event_type":"created","id":1098,"issue_id":"TGR-2ai.1","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:46:20Z","event_type":"created","id":1099,"issue_id":"TGR-2ai.2","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:46:31Z","event_type":"created","id":1100,"issue_id":"TGR-2ai.3","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:46:42Z","event_type":"created","id":1101,"issue_id":"TGR-2ai.4","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:46:48Z","event_type":"created","id":1102,"issue_id":"TGR-2ai.5","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:49:22Z","event_type":"created","id":1103,"issue_id":"TGR-2ai.6","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:49:29Z","event_type":"created","id":1104,"issue_id":"TGR-2ai.7","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:49:46Z","event_type":"created","id":1105,"issue_id":"TGR-2ai.8","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:49:51Z","event_type":"created","id":1106,"issue_id":"TGR-2ai.9","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T10:49:59Z","event_type":"created","id":1107,"issue_id":"TGR-2ai.10","new_value":"","old_value":""}
