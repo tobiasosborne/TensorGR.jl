@@ -30,6 +30,9 @@ using ..TensorGR
 # Last result (% in tensor mode)
 const _last_result = Ref{Any}(nothing)
 
+# Active registry for tensor mode (set via init_repl_mode! or set_tensor_registry!)
+const _registry = Ref{Union{TensorRegistry, Nothing}}(nothing)
+
 # Command registry: name => (func, help_string)
 const _commands = Dict{String, Tuple{Function, String}}()
 
@@ -40,16 +43,37 @@ end
 
 end  # module TensorREPL
 
+"""
+    set_tensor_registry!(reg::TensorRegistry)
+
+Set the registry used by the tensor REPL mode. Call this after
+`@manifold` to make simplify/contract work in tensor mode.
+"""
+function set_tensor_registry!(reg::TensorRegistry)
+    TensorREPL._registry[] = reg
+    nothing
+end
+
+"""Get the active tensor mode registry, falling back to current_registry()."""
+function _tensor_registry()
+    r = TensorREPL._registry[]
+    r !== nothing ? r : current_registry()
+end
+
 # ── Command registry ─────────────────────────────────────────────────
 
 function _init_commands!()
-    TensorREPL.register_command!("simplify", expr -> simplify(expr),
+    TensorREPL.register_command!("simplify",
+        expr -> with_registry(_tensor_registry()) do; simplify(expr); end,
         "Simplify expression via the full pipeline")
-    TensorREPL.register_command!("canon", expr -> canonicalize(expr),
+    TensorREPL.register_command!("canon",
+        expr -> with_registry(_tensor_registry()) do; canonicalize(expr); end,
         "Canonicalize (xperm only, no collection)")
-    TensorREPL.register_command!("expand", expr -> expand_products(expr),
+    TensorREPL.register_command!("expand",
+        expr -> with_registry(_tensor_registry()) do; expand_products(expr); end,
         "Expand products")
-    TensorREPL.register_command!("contract", expr -> contract_metrics(expr),
+    TensorREPL.register_command!("contract",
+        expr -> with_registry(_tensor_registry()) do; contract_metrics(expr); end,
         "Contract metrics")
     TensorREPL.register_command!("latex", expr -> (println(to_latex(expr)); expr),
         "Print LaTeX form")
@@ -108,7 +132,9 @@ end
 """Parse LaTeX and resolve tensor names against the active registry."""
 function _parse_and_resolve(s::AbstractString)
     expr = parse_tex(s)
-    _resolve_names(expr)
+    with_registry(_tensor_registry()) do
+        _resolve_names(expr)
+    end
 end
 
 """
@@ -228,10 +254,13 @@ Call this after `using TensorGR` in an interactive session, or set
 The tensor mode accepts LaTeX-style tensor expressions and displays
 results in Unicode notation. Type `help` in tensor mode for commands.
 """
-function init_repl_mode!()
+function init_repl_mode!(reg::TensorRegistry=current_registry())
     # Only works in interactive REPL
     isdefined(Base, :active_repl) || return nothing
     repl = Base.active_repl
+
+    # Store registry for tensor mode
+    TensorREPL._registry[] = reg
 
     _init_commands!()
 

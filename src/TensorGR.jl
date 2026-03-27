@@ -746,7 +746,7 @@ export to_symbolics, from_symbolics, to_symengine, from_symengine
 
 # REPL tensor mode (interactive sessions only)
 include("repl/tensor_mode.jl")
-export init_repl_mode!
+export init_repl_mode!, set_tensor_registry!
 
 # Auto-activate if requested
 function __init__()
