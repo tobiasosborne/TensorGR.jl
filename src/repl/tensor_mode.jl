@@ -36,6 +36,9 @@ const _registry = Ref{Union{TensorRegistry, Nothing}}(nothing)
 # Command registry: name => (func, help_string)
 const _commands = Dict{String, Tuple{Function, String}}()
 
+# Named variables: "expr" => TensorExpr
+const _variables = Dict{String, Any}()
+
 """Register a command for tensor mode."""
 function register_command!(name::String, f::Function, help::String="")
     _commands[name] = (f, help)
@@ -82,6 +85,18 @@ function _init_commands!()
     TensorREPL.register_command!("terms",
         expr -> (println(expr isa TSum ? length(expr.terms) : 1, " term(s)"); expr),
         "Count terms")
+    TensorREPL.register_command!("level2",
+        expr -> with_registry(_tensor_registry()) do; simplify_level2(expr); end,
+        "Simplify with Bianchi + cyclic identities (Level 2)")
+    TensorREPL.register_command!("simplify_level2",
+        expr -> with_registry(_tensor_registry()) do; simplify_level2(expr); end,
+        "Simplify with Bianchi + cyclic identities (Level 2)")
+    TensorREPL.register_command!("to_riemann",
+        expr -> with_registry(_tensor_registry()) do; to_riemann(expr); end,
+        "Convert to Riemann basis")
+    TensorREPL.register_command!("to_ricci",
+        expr -> with_registry(_tensor_registry()) do; to_ricci(expr); end,
+        "Convert to Ricci basis")
 end
 
 # ── Input processing ─────────────────────────────────────────────────
@@ -102,31 +117,101 @@ function _process_tensor_input(line::AbstractString)
         return nothing
     end
 
-    # Check for command prefix: "simplify expr" or "simplify %"
+    # Check for variable assignment: "name = expr" or "name = command expr"
+    m = match(r"^([a-zA-Z_]\w*)\s*=\s*(.+)$", s)
+    if m !== nothing
+        varname = String(m[1])
+        rhs = strip(String(m[2]))
+        # Don't shadow commands
+        if !haskey(TensorREPL._commands, varname)
+            result = _process_tensor_rhs(rhs)
+            TensorREPL._variables[varname] = result
+            TensorREPL._last_result[] = result
+            return result
+        end
+    end
+
+    # Check for command prefix: "simplify expr", "simplify %", or "simplify(expr)"
     for (cmd, (func, _)) in TensorREPL._commands
+        # Match "cmd arg" or bare "cmd"
         if startswith(s, cmd * " ") || s == cmd
             arg_str = strip(s[length(cmd)+1:end])
-            if isempty(arg_str) || arg_str == "%"
-                # Apply to last result
-                TensorREPL._last_result[] === nothing &&
-                    error("No previous result (%) available")
-                result = func(TensorREPL._last_result[])
-                TensorREPL._last_result[] = result
-                return result
-            else
-                # Parse argument as LaTeX, then apply command
-                expr = _parse_and_resolve(arg_str)
-                result = func(expr)
-                TensorREPL._last_result[] = result
-                return result
-            end
+            result = _apply_command(func, arg_str)
+            return result
         end
+        # Match "cmd(arg)" function-call syntax
+        if startswith(s, cmd * "(") && endswith(s, ")")
+            arg_str = strip(s[length(cmd)+2:end-1])
+            result = _apply_command(func, arg_str)
+            return result
+        end
+    end
+
+    # Check for bare variable reference
+    if _is_variable_ref(s)
+        result = TensorREPL._variables[String(s)]
+        TensorREPL._last_result[] = result
+        return result
     end
 
     # Plain LaTeX expression
     expr = _parse_and_resolve(s)
     TensorREPL._last_result[] = expr
     return expr
+end
+
+"""Process the RHS of a variable assignment (may be a command or plain LaTeX)."""
+function _process_tensor_rhs(s::AbstractString)
+    s = String(strip(s))
+
+    # RHS could be "%" or a variable name
+    if s == "%"
+        TensorREPL._last_result[] === nothing &&
+            error("No previous result (%) available")
+        return TensorREPL._last_result[]
+    end
+
+    # RHS could be a command: "simplify %" or "simplify expr" or "simplify(expr)"
+    for (cmd, (func, _)) in TensorREPL._commands
+        if startswith(s, cmd * " ") || s == cmd
+            arg_str = strip(s[length(cmd)+1:end])
+            return _apply_command(func, arg_str)
+        end
+        if startswith(s, cmd * "(") && endswith(s, ")")
+            arg_str = strip(s[length(cmd)+2:end-1])
+            return _apply_command(func, arg_str)
+        end
+    end
+
+    # RHS is a variable reference
+    if _is_variable_ref(s)
+        return TensorREPL._variables[s]
+    end
+
+    # RHS is plain LaTeX
+    _parse_and_resolve(s)
+end
+
+"""Apply a command function to an argument string (shared by space and paren syntax)."""
+function _apply_command(func::Function, arg_str::AbstractString)
+    if isempty(arg_str) || arg_str == "%"
+        # Apply to last result
+        TensorREPL._last_result[] === nothing &&
+            error("No previous result (%) available")
+        expr = TensorREPL._last_result[]
+    elseif _is_variable_ref(arg_str)
+        expr = TensorREPL._variables[String(arg_str)]
+    else
+        expr = _parse_and_resolve(arg_str)
+    end
+    result = func(expr)
+    TensorREPL._last_result[] = result
+    return result
+end
+
+"""Check if a string is a reference to a stored variable."""
+function _is_variable_ref(s::AbstractString)
+    haskey(TensorREPL._variables, String(s))
 end
 
 """Parse LaTeX and resolve tensor names against the active registry."""
@@ -224,6 +309,10 @@ function _print_tensor_help()
         println()
     end
     println()
+    println("  Variables:")
+    printstyled("    expr = R_{abcd}\n"; color=:green)
+    printstyled("    result = simplify expr\n"; color=:green)
+    println()
     println("  % refers to the last result")
     println("  Press backspace on empty line to return to julia>")
 end
@@ -295,6 +384,8 @@ function init_repl_mode!(reg::TensorRegistry=current_registry())
         if !ok || isempty(strip(line))
             return nothing
         end
+        # Record in shared history so up-arrow recall works
+        _record_history(tensor_prompt, line)
         Base.@invokelatest _on_tensor_done(line)
     end
 
@@ -347,6 +438,20 @@ function init_repl_mode!(reg::TensorRegistry=current_registry())
 
     printstyled("  Tensor mode activated — press \\ to enter\n"; color=:cyan)
     nothing
+end
+
+"""Record an input line in the shared REPL history provider."""
+function _record_history(prompt, line::String)
+    hp = prompt.hist
+    hp === nothing && return
+    try
+        # REPLHistoryProvider stores parallel vectors: history + modes
+        push!(hp.history, line)
+        push!(hp.modes, :tensor)
+        hp.cur_idx = length(hp.history) + 1
+    catch
+        # Gracefully degrade if history internals change
+    end
 end
 
 """Callback for tensor mode input (wrapped in @invokelatest for world age safety)."""

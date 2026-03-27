@@ -23,8 +23,9 @@ function bianchi_rules(; manifold::Symbol=:M4, metric::Symbol=:g)
     #
     # Practically: if we find R_{abcd} + R_{acdb} in a sum, we know the third
     # term R_{adbc} = -(R_{abcd} + R_{acdb}), so we can rewrite.
-    # However, this is better handled at the simplify level via canonicalize.
-    # The algebraic Bianchi is already captured by RiemannSymmetry in xperm.
+    # NOTE: This is a multi-term symmetry that xperm CANNOT handle.
+    # RiemannSymmetry only captures monoterm symmetries (antisymmetry, pair swap).
+    # The algebraic Bianchi is handled by simplify_level2 via _bianchi_reduce_direct.
 
     # Contracted Bianchi: ∇^a G_{ab} = 0
     # Pattern: ∂_a(G^a_b) where G = Ein  → expressed as a functional rule

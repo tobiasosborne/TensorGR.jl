@@ -227,6 +227,66 @@
         @test s == TScalar(-3 // 1)
     end
 
+    @testset "Antisymmetrization brackets" begin
+        # R_{a[bcd]} → antisymmetrize over b,c,d (3! = 6 terms)
+        expr = tex"R_{a[bcd]}"
+        @test expr isa TSum
+        @test length(expr.terms) == 6  # 3! permutations
+
+        # T_{[ab]} → antisymmetrize over a,b (2 terms)
+        expr = tex"T_{[ab]}"
+        @test expr isa TSum
+        @test length(expr.terms) == 2
+
+        # Up-index antisymmetrization: T^{[ab]}
+        expr = tex"T^{[ab]}"
+        @test expr isa TSum
+        @test length(expr.terms) == 2
+    end
+
+    @testset "Symmetrization parentheses in indices" begin
+        # T_{(ab)} → symmetrize over a,b (2 terms)
+        expr = tex"T_{(ab)}"
+        @test expr isa TSum
+        @test length(expr.terms) == 2
+
+        # T_{(abc)} → symmetrize over a,b,c (6 terms)
+        expr = tex"T_{(abc)}"
+        @test expr isa TSum
+        @test length(expr.terms) == 6
+    end
+
+    @testset "Mixed plain and bracketed indices" begin
+        # R_{a[bc]d} — only b,c antisymmetrized, a and d untouched
+        expr = tex"R_{a[bc]d}"
+        @test expr isa TSum
+        @test length(expr.terms) == 2  # 2! permutations of b,c
+    end
+
+    @testset "Antisymmetrization + simplify" begin
+        reg = TensorRegistry()
+        with_registry(reg) do
+            @manifold M4 dim=4 metric=g
+            define_curvature_tensors!(reg, :M4, :g)
+
+            # R_{a[bcd]}: 6 terms → 3 after level 1 simplify
+            expr = tex"R_{a[bcd]}"
+            result = simplify(expr)
+            @test result isa TSum
+            @test length(result.terms) == 3
+
+            # Level 2 (Bianchi) reduces to zero
+            result2 = simplify_level2(expr)
+            @test result2 == TScalar(0 // 1)
+        end
+    end
+
+    @testset "Expression-level parentheses still work" begin
+        # (R_{ab} + T_{ab}) should still be grouping, not symmetrization
+        p = tex"(R_{ab} + T_{ab}) V^a"
+        @test p isa TProduct
+    end
+
     @testset "Registry tex aliases" begin
         reg = TensorRegistry()
         with_registry(reg) do

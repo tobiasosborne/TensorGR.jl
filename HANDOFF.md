@@ -1,4 +1,4 @@
-# HANDOFF — 2026-03-27 (Session 17: Issue cleanup, Yang-Mills, RW/Zerilli, full green)
+# HANDOFF — 2026-03-27 (Session 18: REPL UX fixes, Bianchi reduction, parser brackets)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -25,151 +25,221 @@
 
 ## Current State
 
-- **526 of 529 issues closed** (3 remaining open)
-- **Full test suite: 375,695 tests, ALL PASS** (1 known Broken in test_euler_density.jl:480)
-- **Benchmarks: Tier 1-3 ALL PASS** (445 pass, 3 broken stretch goals)
-- All changes pushed to `master` (commit d09ba45)
+- **540 issues total** (495 closed, 35 open) — Dolt DB fully synced with JSONL
+- **Full test suite: NOT YET RUN this session** — changes need testing before push
+- **Benchmarks: Tier 1-3 ALL PASS** (as of prior session)
+- Last pushed commit: `94a6fcb` on `master`
 - `bd stats` for live counts
-
-**IMPORTANT**: 177 issues were missing from Dolt DB (stale JSONL vs Dolt desync). Imported via `bd import` this session. Total issues now 529 (was showing 352 before import).
 
 ---
 
-## 3 Remaining Open Issues
+## ⚠ CRITICAL: UNCOMMITTED CHANGES — TEST BEFORE PUSH
+
+All changes below are **uncommitted**. The next agent MUST:
+
+1. **Kill any running Julia** (`ps aux | grep julia` — Tobias's REPL may still be running)
+2. **Run the full test suite**: `julia --project -e 'using Pkg; Pkg.test()'`
+3. **Run benchmarks tier 1-3**: `julia -t4 --project=benchmarks benchmarks/run_all.jl --tier 3`
+4. **If all pass**: commit with message below, push to master, close issues
+5. **If tests fail**: fix the failures, DO NOT push broken code
+
+### Suggested commit message
+
+```
+Add REPL UX fixes + Bianchi identity reduction (TGR-2ai)
+
+REPL tensor mode (src/repl/tensor_mode.jl):
+- Function-call syntax: simplify(expr), contract(%), level2(%)
+- Variable assignment: expr = R_{abcd}, simplify varname
+- Up-arrow history recall via _record_history in on_done callback
+- New commands: level2, simplify_level2, to_riemann, to_ricci
+
+LaTeX parser (src/parser/latex_parser.jl):
+- Antisymmetrization brackets: R_{a[bcd]} → antisymmetrize(R, [:b,:c,:d])
+- Symmetrization parentheses: T_{(ab)} → symmetrize(T, [:a,:b])
+- New _IndexGroupResult struct for bracket position tracking
+
+Bianchi identity (src/invariants/simplify_levels.jl):
+- simplify_level2 now applies first Bianchi via _bianchi_reduce_direct
+- Greedy rewrite: R_{abcd} = -R_{acdb} - R_{adbc}, keep if term count drops
+- R_{a[bcd]} correctly simplifies to zero with level2 command
+- Fixed wrong comment in bianchi.jl (xperm does NOT handle multi-term Bianchi)
+
+Tests: ~20 new tests (parser brackets, REPL function-call + variables)
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+```
+
+### Issues to close after push
+
+```bash
+bd close TGR-2ai.1  # LaTeX parser brackets
+bd close TGR-2ai.2  # Variable assignment
+bd close TGR-2ai.3  # Function-call syntax
+bd close TGR-2ai.4  # Up-arrow history
+```
+
+---
+
+## What Was Done This Session (Session 18)
+
+### 1. REPL Mode Epic (TGR-2ai): 4 P1 bugs fixed + 6 P2/P3 features filed
+
+**Epic**: TGR-2ai — REPL Mode Improvements (10 children)
+
+**Bugs fixed (P1):**
+
+**TGR-2ai.1 — LaTeX parser antisymmetrization/symmetrization brackets**
+- Files: `src/parser/latex_parser.jl`
+- Added `[` `]` tokens to tokenizer (`:lbracket`, `:rbracket`)
+- New `_IndexGroupResult` struct tracks bracket positions within index groups
+- `_parse_index_group` detects `[...]` (antisymmetrize) and `(...)` (symmetrize) inside `_{...}` brace groups
+- `_parse_tensor` applies `antisymmetrize()`/`symmetrize()` on bracketed index positions
+- Expression-level `(...)` still works for grouping (separate code path in `_parse_atom`)
+- Tests: 7 new tests in `test/test_latex_parser.jl`
+
+**TGR-2ai.2 — Variable assignment in REPL**
+- File: `src/repl/tensor_mode.jl`
+- Added `TensorREPL._variables` dict (`Dict{String, Any}`)
+- `_process_tensor_input` detects `name = expr` pattern via regex before command loop
+- `_process_tensor_rhs` handles RHS as command, variable ref, or LaTeX
+- Bare variable names recall stored values
+- Commands accept variable names as arguments: `simplify myvar`
+- Tests: 5 new tests in `test/test_repl_mode.jl`
+
+**TGR-2ai.3 — Function-call syntax**
+- File: `src/repl/tensor_mode.jl`
+- Command loop now matches `cmd(arg)` in addition to `cmd arg`
+- Extracted `_apply_command` helper shared by space and paren syntax
+- Tests: 3 new tests in `test/test_repl_mode.jl`
+
+**TGR-2ai.4 — Up-arrow history recall**
+- File: `src/repl/tensor_mode.jl`
+- Added `_record_history(prompt, line)` that pushes to `hp.history`/`hp.modes`
+- Called from `on_done` callback before processing input
+- Uses `:tensor` mode tag for mode-filtered history navigation
+
+**New REPL commands added:**
+- `level2` / `simplify_level2` — Bianchi-aware simplification
+- `to_riemann` — curvature basis conversion
+- `to_ricci` — curvature basis conversion
+
+**Features filed (not implemented):**
+- TGR-2ai.5 (P2): Tab completion of tensor names
+- TGR-2ai.6 (P2): Numbered output history (%1, %2, %N)
+- TGR-2ai.7 (P2): Additional commands (covd, perturbation, substitute, define)
+- TGR-2ai.8 (P2): vars/info workspace introspection
+- TGR-2ai.9 (P3): Pipe/chain syntax
+- TGR-2ai.10 (P3): Derivative shorthands
+
+### 2. First Bianchi identity: simplify_level2 now works
+
+**Problem**: `simplify_level2(R_{a[bcd]})` returned 3 terms instead of 0. The comment in `bianchi.jl:27` claimed "algebraic Bianchi is already captured by RiemannSymmetry in xperm" — this was **wrong**. xperm only handles monoterm symmetries. The Bianchi identity `R_{abcd} + R_{acdb} + R_{adbc} = 0` is multi-term.
+
+**Full workflow followed** (Rules 4+5):
+1. **xAct research agent**: Confirmed xAct handles this via Invar pre-stored rule database (scalar invariants only). For free-index expressions, xAct users register explicit `MakeRule` rewrite rules. xperm never sees the Bianchi identity.
+2. **Solution A (TRInv-based)**: Convert TensorExpr → TRInv, use existing `bianchi_relations_trinv` + Gaussian elimination, convert back. Complex: ~150 lines, free index name reconstruction required.
+3. **Solution B (direct rewrite)**: Greedy TensorExpr-level rewrite. For each Riemann term, try `R_{abcd} = -R_{acdb} - R_{adbc}`, re-simplify, keep only if term count decreases. ~70 lines, no conversion layer.
+4. **Chose Solution B**: simpler, lower-risk, preserves free index names naturally.
+5. **Reviewer agent**: PASS on all 7 checklist items (math correctness, termination, edge cases).
+
+**Changes**:
+- `src/invariants/simplify_levels.jl`: Replaced `simplify_level2` body with `simplify` + `_bianchi_reduce_direct`. Added `_bianchi_reduce_direct`, `_extract_riem_indices`, `_rebuild_with_riem` helpers.
+- `src/gr/bianchi.jl`: Fixed comment (line 27) — multi-term Bianchi handled by `_bianchi_reduce_direct`, NOT by xperm.
+- Algorithm: greedy, monotone (only reduces term count), guaranteed termination.
+
+**Risk**: LOW — `_bianchi_reduce_direct` is only called from `simplify_level2` (opt-in), never from the default `simplify` pipeline. Existing tests/benchmarks unaffected.
+
+---
+
+## ⚠ Core Changes To Monitor
+
+**This session** (uncommitted):
+
+**Bianchi reduction** (simplify_level2):
+- Location: `src/invariants/simplify_levels.jl` (lines ~186-290)
+- Risk: LOW — opt-in via `simplify_level2`, not in default `simplify` pipeline
+- Revert: restore old `simplify_level2` body (just `simplify_level1 + simplify`)
+
+**LaTeX parser brackets**:
+- Location: `src/parser/latex_parser.jl`
+- Risk: LOW — additive (new token types, new struct, `(` in index groups)
+- Key invariant: expression-level `(...)` grouping unchanged (tested)
+- Revert: restore old `_parse_index_group` (returns `Vector{TIndex}`), old `_parse_tensor`
+
+**REPL mode**:
+- Location: `src/repl/tensor_mode.jl`
+- Risk: LOW — additive features, no changes to existing command behavior
+- Revert: restore old `_process_tensor_input`, remove `_variables` dict
+
+---
+
+## Open Issues (prior + new)
 
 | ID | P | Title | Notes |
 |----|---|-------|-------|
-| `TGR-byb` | P2 | BinaryBuilder for xperm.c | Yggdrasil recipe for cross-platform binaries. Blocks Pkg registration. |
-| `TGR-erv` | P2 | Pkg registration | Submit to Julia General registry. Requires BinaryBuilder or deps/build.jl. Tobias wants to think about it. |
-| `TensorGR.jl-6e8` | P2 | Collect xAct papers corpus | Research task: download all papers using xAct. Old prefix (pre-rename). |
-
----
-
-## What Was Done This Session
-
-### 1. Bulk issue triage: 40+ implemented-but-unclosed issues closed
-
-Found and batch-closed issues implemented in prior sessions but never `bd close`d:
-- **10 epics cleared**: Index-Free, BRST (partial), BH-Pert2, Fermion Fields, Tetrad, Hamiltonian, Metric-Affine, Bimetric, Invar, xPPN
-- **3 deferred "stretch goals" found already implemented**: Syzygy detection (simplify_levels.jl), RInv conversion (to/from_tensor_expr), Tetrad indices (VBundle :Lorentz)
-- **Submanifolds/boundaries** (TGR-1kw): already fully implemented with 111 tests
-- **Symmetry-reduced ansatz** (TGR-293h): implemented in commit 79d3a28
-
-### 2. Database repair: 177 issues imported from JSONL to Dolt
-
-Beads Dolt DB had 352 issues but JSONL had 529. Imported the missing 177 (172 closed + 5 open) via `bd import`. Database now complete.
-
-### 3. TGR-655.3 + TGR-655.4: Yang-Mills field strength & equations
-
-**New file**: `src/gauge/yang_mills.jl` (~220 lines)
-
-Indexed tensor Yang-Mills (complements AlgValuedForm versions in exterior/algebra_forms.jl):
-- `yang_mills_field_strength(ggp, I, a, b)` → F^I_{ab}
-- `gauge_covariant_deriv(ggp, expr, I, a)` → D_a X^I
-- `yang_mills_bianchi(ggp, I, a, b, c)` → D_{[a} F^I_{bc]}
-- `yang_mills_lagrangian(ggp)` → −(1/4) F^I_{ab} F_I^{ab}
-- `yang_mills_field_equations(ggp, I, b)` → D_a F^{Ia}_b
-
-**Tests**: 13 tests in `test/test_yang_mills.jl`
-
-### 4. TGR-bm6.1–6: Regge-Wheeler / Zerilli master equations
-
-**New files** (4, ~420 lines total):
-- `src/harmonics/schwarzschild.jl`: Schwarzschild 2+2 (M2 × S2) background
-- `src/harmonics/rw_gauge.jl`: RW gauge DOF counting
-- `src/harmonics/regge_wheeler.jl`: RW/Zerilli master equations with potentials
-- `src/harmonics/master_functions.jl`: Ψ_RW and Ψ_Z extraction specs
-
-Isospectrality verified via cross-check with bh_second_order.jl, sign-change test, large-r centrifugal limit.
-
-**Tests**: 62 tests in `test/test_rw_zerilli.jl`
-
-### 5. Missing test coverage filled
-
-- **12 tests** for order-independent rule matching (TGR-88e, pending since session 14)
-- **11 tests** for symbolic manifold dimensions (session 15 gap)
-
-### 6. Benchmark ground truth updated
-
-Updated 2 pinned term counts (26→14) per Rule 6: improved canonicalization produces fewer terms with correct physics. All 445 benchmarks green (Tier 1-3).
+| `TGR-byb` | P2 | BinaryBuilder for xperm.c | Yggdrasil recipe. Blocks Pkg registration. |
+| `TGR-erv` | P2 | Pkg registration | Requires BinaryBuilder or deps/build.jl. |
+| `TensorGR.jl-6e8` | P2 | Collect xAct papers corpus | Research task. |
+| `TGR-2ai` | P1 | REPL Mode Improvements (epic) | 4 P1 bugs done, 6 P2/P3 features open |
+| `TGR-2ai.5` | P2 | Tab completion | Not implemented |
+| `TGR-2ai.6` | P2 | Numbered output history | Not implemented |
+| `TGR-2ai.7` | P2 | Additional commands | Not implemented |
+| `TGR-2ai.8` | P2 | vars/info commands | Not implemented |
+| `TGR-2ai.9` | P3 | Pipe/chain syntax | Not implemented |
+| `TGR-2ai.10` | P3 | Derivative shorthands | Not implemented |
 
 ---
 
 ## Key Decisions / Lessons
 
 ### Carried from previous sessions
-- All decisions from session 16 HANDOFF still apply
+- All decisions from session 17 HANDOFF still apply
 - Cross-project parallel Julia is OK (different --project paths)
 
-### New this session (session 17)
-- **Beads JSONL ↔ Dolt desync**: The JSONL (git-tracked) and Dolt DB (live) can diverge. Always check both. Use `bd import` to repair.
-- **Old prefix issues**: `TensorGR.jl-6e8` uses old prefix, invisible to `bd` until imported.
-- **Schwarzschild 2+2 uses separate vbundles**: `:Tangent_M2` and `:Tangent_S2`. Warning about overwriting `:Tangent` is cosmetic.
-- **Superpotential formula dropped**: Chandrasekhar's W(r) Darboux relation is convention-dependent. Used direct algebraic verification instead.
-- **Yang-Mills indexed form**: Parallel API to exterior calculus forms. Both coexist.
-- **Nested `using` in Julia 1.12**: `using TensorGR:` inside nested `@testset` blocks causes "syntax: using expression not at top level". Move all imports to the outermost `@testset` block.
-- **Pkg registration**: Tobias is considering but not ready. Main blocker: xperm.c cross-platform (BinaryBuilder or deps/build.jl). License concern: xperm.c is GPL, package is Apache-2.0.
+### New this session (session 18)
+- **xperm does NOT handle multi-term symmetries**: The first Bianchi identity `R_{a[bcd]}=0` is multi-term. xperm/Butler-Portugal only handles monoterm (permutation) symmetries. This was incorrectly claimed in `bianchi.jl:27` (now fixed).
+- **Bianchi reduction strategy**: Direct greedy rewrite (Solution B) chosen over TRInv Gaussian elimination (Solution A). B is simpler, preserves free index names, lower regression risk.
+- **Parser bracket context**: `(` inside `_{...}` means symmetrization; `(` at expression level means grouping. These are separate code paths (`_parse_index_group` vs `_parse_atom`).
+- **REPL history**: Julia's `REPLHistoryProvider` has parallel `history::Vector{String}` and `modes::Vector{Symbol}` vectors. Must push to both with matching `:tensor` mode tag.
+- **AbstractString vs String**: `strip()` returns `SubString`, Dict{String,...} keys need `String()` conversion. Functions accepting user input should use `AbstractString` parameter types.
 
 ---
 
-## ⚠ Core Changes To Monitor
+## ⚠ BEADS DATABASE: CRITICAL CROSS-DEVICE INSTRUCTIONS
 
-**This session** (commits 0b0c7bc through dc857ee):
+The beads Dolt DB (`.beads/dolt/`) is **gitignored and local** to each machine.
+The JSONL (`.beads/issues.jsonl`) is **git-tracked** and is the source of truth.
 
-**Yang-Mills** (TGR-655.3, TGR-655.4):
-- Location: `src/gauge/yang_mills.jl` (new)
-- Risk: Low — purely additive
-- Revert: Delete file, remove include + exports from TensorGR.jl
+**On EVERY new device or fresh clone:**
+1. Update bd: `go install github.com/steveyegge/beads/cmd/bd@latest && cp ~/go/bin/bd ~/.local/bin/bd`
+2. Verify version: `bd --version` must be **v0.62.0+** (older versions lack `bd import`)
+3. Import JSONL: `bd import` (imports `.beads/issues.jsonl` into Dolt)
+4. Verify: `bd stats` should show ~540 total issues
 
-**RW/Zerilli** (TGR-bm6.1 through bm6.6):
-- Location: `src/harmonics/{schwarzschild,rw_gauge,regge_wheeler,master_functions}.jl` (all new)
-- Risk: Low — purely additive
-- Revert: Delete files, remove includes + exports from TensorGR.jl
+**After closing/creating issues:** `bd export -o .beads/issues.jsonl` to flush Dolt → JSONL, then git commit the JSONL.
 
-**Benchmark ground truth** (bench_05, bench_07):
-- Location: `benchmarks/ground_truth.jl`
-- Change: SCHWARZ_D1RIC_SIMPLIFIED_TERMS 26→14, DS_D1RIEM_SIMPLIFIED_TERMS 26→14
-- Risk: None — physics unchanged, simplifier produces fewer terms
-
-**Test additions** (test_rules.jl, test_registry.jl):
-- 23 new tests for order-independent matching + symbolic dims
-- Risk: None — purely additive
+**ROOT CAUSE of repeated desyncs**: bd v0.58.0 lacked `bd import`. Sessions claimed to import but the command didn't exist. Fixed by upgrading to v0.62.0.
 
 ---
-
-## What Was Done Later This Session (REPL + Chaos Monkey + Wald)
-
-### REPL tensor mode (src/repl/tensor_mode.jl)
-- Press `\` to enter `tensor>` prompt, type LaTeX, get Unicode output
-- Commands: simplify, canon, contract, expand, latex, indices, terms
-- Name resolution: R(4)→Riem, R(2)→Ric, R(0)→RicScalar, G(2)→Ein, C(4)→Weyl
-- Registry context: `init_repl_mode!(reg)` binds to a registry
-- MIME dispatch: `text/plain` → Unicode, `text/latex` → LaTeX (Jupyter/Pluto)
-- Tests: 36 tests in test_repl_mode.jl
-
-### Chaos Monkey epic (TGR-kq0y) — 7 subtasks, all closed
-- 121 tests in test_chaos_monkey.jl, zero crashes
-- Random bytes, typo fuzzing, clipboard dumps, code injection, Unicode, stress test
-- Parameterized: `chaos_monkey(n=500, seed=42)` — deterministic, CI-ready
-
-### Wald textbook verification
-- 37 tests in test_wald_textbook.jl (Ch 3,4,6,7,10, App C)
-- Tutorial: docs/src/wald_verification.md (what simplifies automatically vs needs Level 2)
 
 ## TODO Next Session
 
-1. **`deps/build.jl`** for cross-platform xperm.c compilation (enables Pkg registration)
-2. **xAct papers corpus** (TensorGR.jl-6e8) — if desired
-3. **GPL/Apache-2.0 license review** — xperm.c is GPL, rest is Apache-2.0
-4. **REPL tab-completion** of tensor names from registry
-5. **Einstein trace rule** and **Weyl trace-free rule** — would make G^a_a=-R and g^{ac}C_{abcd}=0 work in simplify
+1. **RUN TESTS** — full suite + benchmarks (changes not yet tested!)
+2. **Audit remaining ~35 open issues** for stale ones (audit agent was started but not finished)
+3. **REPL tab-completion** (TGR-2ai.5) — most impactful remaining REPL feature
+4. **Einstein trace rule** and **Weyl trace-free rule** — G^a_a=-R and g^{ac}C_{abcd}=0
+5. **`deps/build.jl`** for cross-platform xperm.c compilation
+6. **GPL/Apache-2.0 license review** — xperm.c is GPL, rest is Apache-2.0
 
 ## Quick Commands
 
 ```bash
-bd stats                    # project health (529 total, 3 open)
+bd stats                    # project health
 bd list --status=open       # remaining open issues
-julia --project -e 'using Pkg; Pkg.test()'  # full test suite (~375k tests)
+bd list --parent TGR-2ai    # REPL epic status
+julia --project -e 'using Pkg; Pkg.test()'  # full test suite
 julia -t4 --project=benchmarks benchmarks/run_all.jl --tier 3  # all benchmarks
 git log --oneline -15       # recent commits
+git diff --stat             # uncommitted changes summary
 ```

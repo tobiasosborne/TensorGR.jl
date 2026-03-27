@@ -185,13 +185,105 @@ Ground truth: Garcia-Parrado & Martin-Garcia (2007) Sec 4.1, Level 2.
 """
 function simplify_level2(expr::TensorExpr;
                           registry::TensorRegistry=current_registry())
-    # First apply Level 1
-    expr1 = simplify_level1(expr; registry=registry)
-
-    # Then simplify via the full pipeline which includes Bianchi rules
-    with_registry(registry) do
-        simplify(expr1; registry=registry)
+    result = with_registry(registry) do
+        simplify(expr; registry=registry)
     end
+    # Apply first Bianchi identity reduction
+    result isa TSum || return result
+    _bianchi_reduce_direct(result; registry=registry)
+end
+
+"""
+    _bianchi_reduce_direct(expr::TSum; registry) -> TensorExpr
+
+Reduce a sum using the first Bianchi identity R_{abcd} + R_{acdb} + R_{adbc} = 0.
+
+For each Riemann factor in each term, tries the Bianchi rewrite
+R_{abcd} = -R_{acdb} - R_{adbc}, then re-canonicalizes and collects.
+Keeps the result only if it reduces the number of terms (greedy).
+Iterates until no further reduction is possible.
+"""
+function _bianchi_reduce_direct(expr::TSum;
+                                 registry::TensorRegistry=current_registry())
+    current = expr
+    changed = true
+    while changed
+        changed = false
+        current isa TSum || return current
+        terms = current.terms
+
+        for (ti, term) in enumerate(terms)
+            scalar, core = _split_scalar(term)
+            riem_indices = _extract_riem_indices(core)
+            riem_indices === nothing && continue
+
+            # Bianchi: R_{abcd} = -R_{acdb} - R_{adbc}
+            a, b, c, d = riem_indices
+            r1 = _rebuild_with_riem(core, Tensor(:Riem, [a, c, d, b]))
+            r2 = _rebuild_with_riem(core, Tensor(:Riem, [a, d, b, c]))
+
+            remaining = TensorExpr[terms[j] for j in eachindex(terms) if j != ti]
+            replacement = TensorExpr[
+                tproduct(-scalar, TensorExpr[r1]),
+                tproduct(-scalar, TensorExpr[r2]),
+            ]
+
+            candidate = tsum(vcat(remaining, replacement))
+            candidate = with_registry(registry) do
+                simplify(candidate; registry=registry, maxiter=5)
+            end
+
+            nc = candidate isa TSum ? length(candidate.terms) :
+                 (candidate isa TScalar && candidate.val == 0 // 1 ? 0 : 1)
+            if nc < length(terms)
+                current = candidate
+                changed = true
+                break
+            end
+        end
+    end
+    current
+end
+
+"""Extract the 4 indices of a single Riemann tensor from a term's core."""
+function _extract_riem_indices(core::Tensor)
+    core.name == :Riem && length(core.indices) == 4 || return nothing
+    (core.indices[1], core.indices[2], core.indices[3], core.indices[4])
+end
+
+function _extract_riem_indices(core::TProduct)
+    # Single-factor product wrapping a Riemann
+    length(core.factors) == 1 && return _extract_riem_indices(core.factors[1])
+    # Multi-factor product: find the (first) Riemann factor
+    for f in core.factors
+        f isa Tensor && f.name == :Riem && length(f.indices) == 4 &&
+            return (f.indices[1], f.indices[2], f.indices[3], f.indices[4])
+    end
+    nothing
+end
+
+_extract_riem_indices(::TensorExpr) = nothing
+
+"""Rebuild a term's core with a different Riemann tensor (replacing the first :Riem factor)."""
+function _rebuild_with_riem(core::Tensor, new_riem::Tensor)
+    new_riem  # bare tensor → just return the new one
+end
+
+function _rebuild_with_riem(core::TProduct, new_riem::Tensor)
+    if length(core.factors) == 1
+        return new_riem
+    end
+    new_factors = TensorExpr[]
+    replaced = false
+    for f in core.factors
+        if !replaced && f isa Tensor && f.name == :Riem && length(f.indices) == 4
+            push!(new_factors, new_riem)
+            replaced = true
+        else
+            push!(new_factors, f)
+        end
+    end
+    tproduct(core isa TProduct ? core.scalar : 1 // 1, new_factors)
 end
 
 """

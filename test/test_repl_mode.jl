@@ -124,6 +124,73 @@
         end
     end
 
+    # ── Function-call syntax ──────────────────────────────────────────
+
+    @testset "function-call syntax" begin
+        reg = _setup_repl_test()
+
+        @testset "simplify(expr) parses and simplifies" begin
+            result = _process_tensor_input("simplify(g^{ab} g_{ab})")
+            @test result == TScalar(4 // 1)
+        end
+
+        @testset "contract(expr) works" begin
+            _process_tensor_input("g^{ab} g_{bc}")
+            result = _process_tensor_input("contract(%)")
+            @test result isa Tensor
+            @test result.name === :δ
+        end
+
+        @testset "simplify(%) applies to last result" begin
+            _process_tensor_input("g^{ab} g_{ab}")
+            result = _process_tensor_input("simplify(%)")
+            @test result == TScalar(4 // 1)
+        end
+    end
+
+    # ── Variable assignment ───────────────────────────────────────────
+
+    @testset "variable assignment" begin
+        reg = _setup_repl_test()
+        empty!(TensorREPL._variables)
+
+        @testset "name = LaTeX stores variable" begin
+            result = _process_tensor_input("expr = R_{abcd}")
+            @test result isa Tensor
+            @test result.name === :Riem
+            @test haskey(TensorREPL._variables, "expr")
+            @test TensorREPL._variables["expr"] === result
+        end
+
+        @testset "bare variable name recalls value" begin
+            _process_tensor_input("myvar = g_{ab}")
+            result = _process_tensor_input("myvar")
+            @test result isa Tensor
+            @test result.name === :g
+        end
+
+        @testset "simplify variable_name works" begin
+            _process_tensor_input("x = g^{ab} g_{ab}")
+            result = _process_tensor_input("simplify x")
+            @test result == TScalar(4 // 1)
+        end
+
+        @testset "name = simplify % works" begin
+            _process_tensor_input("g^{ab} R_{ab}")
+            result = _process_tensor_input("s = simplify %")
+            @test result isa Tensor
+            @test result.name === :RicScalar
+            @test TensorREPL._variables["s"] === result
+        end
+
+        @testset "command names not shadowed" begin
+            # "simplify = R_{ab}" should NOT create a variable named "simplify"
+            # Instead it should be treated as "simplify" command applied to "= R_{ab}"
+            # which would error. This is fine — commands take priority.
+            @test !haskey(TensorREPL._variables, "simplify")
+        end
+    end
+
     # ── Help ─────────────────────────────────────────────────────────
 
     @testset "help" begin

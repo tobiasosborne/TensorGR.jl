@@ -27,7 +27,8 @@ Grammar:
 
 struct TexToken
     type::Symbol  # :name :number :sup :sub :lbrace :rbrace :plus :minus
-                  # :slash :frac :partial :nabla :lparen :rparen :eof
+                  # :slash :frac :partial :nabla :lparen :rparen
+                  # :lbracket :rbracket :eof
     value::String
     pos::Int
 end
@@ -110,6 +111,12 @@ function _tex_tokenize(s::AbstractString)
             i += 1
         elseif c == ')'
             push!(tokens, TexToken(:rparen, ")", i))
+            i += 1
+        elseif c == '['
+            push!(tokens, TexToken(:lbracket, "[", i))
+            i += 1
+        elseif c == ']'
+            push!(tokens, TexToken(:rbracket, "]", i))
             i += 1
         elseif c == '+'
             push!(tokens, TexToken(:plus, "+", i))
@@ -357,6 +364,19 @@ function _read_one_index(p::_TexParser, pos::IndexPosition)
     end
 end
 
+# ── Index group result (with symmetrization markers) ─────────────────
+
+"""
+Result of parsing an index group, including symmetrization markers.
+`sym_ranges` and `antisym_ranges` store (start, stop) index offsets within
+`indices` — these are LOCAL to this group and must be shifted by the caller.
+"""
+struct _IndexGroupResult
+    indices::Vector{TIndex}
+    sym_ranges::Vector{Tuple{Int,Int}}      # (start,stop) for (...) groups
+    antisym_ranges::Vector{Tuple{Int,Int}}   # (start,stop) for [...] groups
+end
+
 # ── Tensor: Name with optional index blocks ─────────────────────────
 
 function _parse_tensor(p::_TexParser)
@@ -365,15 +385,33 @@ function _parse_tensor(p::_TexParser)
 
     # Parse index blocks: sequences of ^{...} and _{...}
     indices = TIndex[]
+    sym_ranges = Tuple{Int,Int}[]
+    antisym_ranges = Tuple{Int,Int}[]
 
     while true
         t = _peek(p)
         if t.type == :sup
             _advance!(p)
-            append!(indices, _parse_index_group(p, Up))
+            grp = _parse_index_group(p, Up)
+            offset = length(indices)
+            append!(indices, grp.indices)
+            for (s, e) in grp.sym_ranges
+                push!(sym_ranges, (s + offset, e + offset))
+            end
+            for (s, e) in grp.antisym_ranges
+                push!(antisym_ranges, (s + offset, e + offset))
+            end
         elseif t.type == :sub
             _advance!(p)
-            append!(indices, _parse_index_group(p, Down))
+            grp = _parse_index_group(p, Down)
+            offset = length(indices)
+            append!(indices, grp.indices)
+            for (s, e) in grp.sym_ranges
+                push!(sym_ranges, (s + offset, e + offset))
+            end
+            for (s, e) in grp.antisym_ranges
+                push!(antisym_ranges, (s + offset, e + offset))
+            end
         elseif t.type == :lbrace
             # Check for empty braces {} (index separator)
             next_i = p.pos + 1
@@ -392,7 +430,21 @@ function _parse_tensor(p::_TexParser)
     # Apply registry alias if available
     name = _resolve_tex_alias(name, length(indices))
 
-    Tensor(name, indices)
+    expr::TensorExpr = Tensor(name, indices)
+
+    # Apply antisymmetrization: T_{a[bcd]} → antisymmetrize(T, [:b,:c,:d])
+    for (s, e) in antisym_ranges
+        idx_names = Symbol[indices[i].name for i in s:e]
+        expr = antisymmetrize(expr, idx_names)
+    end
+
+    # Apply symmetrization: T_{a(bc)d} → symmetrize(T, [:b,:c])
+    for (s, e) in sym_ranges
+        idx_names = Symbol[indices[i].name for i in s:e]
+        expr = symmetrize(expr, idx_names)
+    end
+
+    expr
 end
 
 """Resolve a tex name via registry aliases: (name, rank) first, then (name, -1) fallback."""
@@ -410,15 +462,56 @@ function _parse_index_group(p::_TexParser, pos::IndexPosition)
     if t.type == :lbrace
         _advance!(p)  # consume {
         indices = TIndex[]
+        sym_ranges = Tuple{Int,Int}[]
+        antisym_ranges = Tuple{Int,Int}[]
 
         while _peek(p).type != :rbrace
             tok = _peek(p)
             if tok.type == :name
                 _advance!(p)
-                # Split multi-ASCII names into individual character indices
                 for c in tok.value
                     push!(indices, TIndex(Symbol(c), pos))
                 end
+            elseif tok.type == :lbracket
+                # Antisymmetrization: [indices]
+                _advance!(p)
+                start = length(indices) + 1
+                while _peek(p).type != :rbracket
+                    inner = _peek(p)
+                    if inner.type == :name
+                        _advance!(p)
+                        for c in inner.value
+                            push!(indices, TIndex(Symbol(c), pos))
+                        end
+                    elseif inner.type == :eof
+                        _parse_error(p, "unclosed '[' in index group")
+                    else
+                        _parse_error(p, "unexpected '$(inner.value)' in antisymmetrization group")
+                    end
+                end
+                _advance!(p)  # consume ]
+                stop = length(indices)
+                stop >= start && push!(antisym_ranges, (start, stop))
+            elseif tok.type == :lparen
+                # Symmetrization: (indices)
+                _advance!(p)
+                start = length(indices) + 1
+                while _peek(p).type != :rparen
+                    inner = _peek(p)
+                    if inner.type == :name
+                        _advance!(p)
+                        for c in inner.value
+                            push!(indices, TIndex(Symbol(c), pos))
+                        end
+                    elseif inner.type == :eof
+                        _parse_error(p, "unclosed '(' in index group")
+                    else
+                        _parse_error(p, "unexpected '$(inner.value)' in symmetrization group")
+                    end
+                end
+                _advance!(p)  # consume )
+                stop = length(indices)
+                stop >= start && push!(sym_ranges, (start, stop))
             elseif tok.type == :eof
                 _parse_error(p, "unclosed brace in index group")
             else
@@ -427,22 +520,21 @@ function _parse_index_group(p::_TexParser, pos::IndexPosition)
         end
 
         _advance!(p)  # consume }
-        return indices
+        return _IndexGroupResult(indices, sym_ranges, antisym_ranges)
 
     elseif t.type == :name
         _advance!(p)
         val = t.value
         if length(val) == 1 || !isascii(val[1]) || length(collect(val)) == 1
-            # Single character or single Unicode: one index
-            return TIndex[TIndex(Symbol(val), pos)]
+            return _IndexGroupResult(TIndex[TIndex(Symbol(val), pos)],
+                                     Tuple{Int,Int}[], Tuple{Int,Int}[])
         else
-            # Multi-char without braces: first char is the index,
-            # rest goes back as a name token (it's the next tensor name)
             rest = val[nextind(val, 1):end]
             if !isempty(rest)
                 insert!(p.tokens, p.pos, TexToken(:name, rest, t.pos + 1))
             end
-            return TIndex[TIndex(Symbol(val[1]), pos)]
+            return _IndexGroupResult(TIndex[TIndex(Symbol(val[1]), pos)],
+                                     Tuple{Int,Int}[], Tuple{Int,Int}[])
         end
     else
         _parse_error(p, "expected index name or {indices} after ^ or _")
