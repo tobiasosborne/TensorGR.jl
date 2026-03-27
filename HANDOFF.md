@@ -28,7 +28,7 @@
 - **526 of 529 issues closed** (3 remaining open)
 - **Full test suite: 375,695 tests, ALL PASS** (1 known Broken in test_euler_density.jl:480)
 - **Benchmarks: Tier 1-3 ALL PASS** (445 pass, 3 broken stretch goals)
-- All changes pushed to `master` (commit dc857ee)
+- All changes pushed to `master` (commit d09ba45)
 - `bd stats` for live counts
 
 **IMPORTANT**: 177 issues were missing from Dolt DB (stale JSONL vs Dolt desync). Imported via `bd import` this session. Total issues now 529 (was showing 352 before import).
@@ -137,11 +137,32 @@ Updated 2 pinned term counts (26→14) per Rule 6: improved canonicalization pro
 
 ---
 
+## What Was Done Later This Session (REPL + Chaos Monkey + Wald)
+
+### REPL tensor mode (src/repl/tensor_mode.jl)
+- Press `\` to enter `tensor>` prompt, type LaTeX, get Unicode output
+- Commands: simplify, canon, contract, expand, latex, indices, terms
+- Name resolution: R(4)→Riem, R(2)→Ric, R(0)→RicScalar, G(2)→Ein, C(4)→Weyl
+- Registry context: `init_repl_mode!(reg)` binds to a registry
+- MIME dispatch: `text/plain` → Unicode, `text/latex` → LaTeX (Jupyter/Pluto)
+- Tests: 36 tests in test_repl_mode.jl
+
+### Chaos Monkey epic (TGR-kq0y) — 7 subtasks, all closed
+- 121 tests in test_chaos_monkey.jl, zero crashes
+- Random bytes, typo fuzzing, clipboard dumps, code injection, Unicode, stress test
+- Parameterized: `chaos_monkey(n=500, seed=42)` — deterministic, CI-ready
+
+### Wald textbook verification
+- 37 tests in test_wald_textbook.jl (Ch 3,4,6,7,10, App C)
+- Tutorial: docs/src/wald_verification.md (what simplifies automatically vs needs Level 2)
+
 ## TODO Next Session
 
-1. **Consider `deps/build.jl`** for cross-platform xperm.c compilation (enables Pkg registration)
+1. **`deps/build.jl`** for cross-platform xperm.c compilation (enables Pkg registration)
 2. **xAct papers corpus** (TensorGR.jl-6e8) — if desired
-3. **GPL/Apache-2.0 license review** — xperm.c is GPL, rest is Apache-2.0. May need to clarify in NOTICE or switch license.
+3. **GPL/Apache-2.0 license review** — xperm.c is GPL, rest is Apache-2.0
+4. **REPL tab-completion** of tensor names from registry
+5. **Einstein trace rule** and **Weyl trace-free rule** — would make G^a_a=-R and g^{ac}C_{abcd}=0 work in simplify
 
 ## Quick Commands
 
