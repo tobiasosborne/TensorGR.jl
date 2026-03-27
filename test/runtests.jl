@@ -337,6 +337,8 @@ using TensorGR
     include("test_brst.jl")
     # Yang-Mills field strength and equations
     include("test_yang_mills.jl")
+    # REPL tensor mode
+    include("test_repl_mode.jl")
     # Bimetric linearized perturbation
     include("test_bimetric_linearize.jl")
     # Bimetric mass eigenstates diagonalization
