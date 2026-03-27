@@ -254,6 +254,8 @@ Call this after `using TensorGR` in an interactive session, or set
 The tensor mode accepts LaTeX-style tensor expressions and displays
 results in Unicode notation. Type `help` in tensor mode for commands.
 """
+const _TENSOR_MODE_INIT = Ref{Bool}(false)
+
 function init_repl_mode!(reg::TensorRegistry=current_registry())
     # Only works in interactive REPL
     isdefined(Base, :active_repl) || return nothing
@@ -261,6 +263,13 @@ function init_repl_mode!(reg::TensorRegistry=current_registry())
 
     # Store registry for tensor mode
     TensorREPL._registry[] = reg
+
+    # Guard against double-init (calling twice corrupts keymaps)
+    if _TENSOR_MODE_INIT[]
+        printstyled("  Tensor mode registry updated\n"; color=:cyan)
+        return nothing
+    end
+    _TENSOR_MODE_INIT[] = true
 
     _init_commands!()
 
@@ -289,9 +298,9 @@ function init_repl_mode!(reg::TensorRegistry=current_registry())
         Base.@invokelatest _on_tensor_done(line)
     end
 
-    # Build keymap: search + prefix + mode-switch + history + defaults
+    # Build keymap: mode-switch + history + defaults (skip prefix search
+    # to avoid history_move transition bug with mixed-mode history)
     search_prompt, skeymap = LineEdit.setup_search_keymap(hp)
-    prefix_prompt, prefix_keymap = LineEdit.setup_prefix_keymap(hp, tensor_prompt)
     mk = REPL.mode_keymap(main_mode)
 
     # Backspace on empty line returns to julia>
@@ -310,7 +319,7 @@ function init_repl_mode!(reg::TensorRegistry=current_registry())
     )
 
     b = Dict{Any, Any}[
-        skeymap, exit_keymap, mk, prefix_keymap,
+        skeymap, exit_keymap, mk,
         LineEdit.history_keymap, LineEdit.default_keymap,
         LineEdit.escape_defaults,
     ]
