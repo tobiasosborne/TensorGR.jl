@@ -34,6 +34,7 @@ makedocs(
             "Metric Ansatz" => "api/ansatz.md",
             "Advanced Features" => "api/advanced.md",
         ],
+        "Wald Verification" => "wald_verification.md",
         "xperm.c Internals" => "xperm_internals.md",
     ],
     format = Documenter.HTML(
