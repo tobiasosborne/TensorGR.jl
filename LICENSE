@@ -188,3 +188,9 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+---
+
+Note: The file deps/xperm.c is licensed under the GNU General Public
+License version 2 or later (GPL-2.0-or-later), copyright Jose M.
+Martin-Garcia 2003-2011. See deps/LICENSE_xperm for details.

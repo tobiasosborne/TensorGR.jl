@@ -1,0 +1,13 @@
+xperm.c — Butler-Portugal Canonicalization Library
+
+Copyright (C) 2003-2011 Jose M. Martin-Garcia
+  jose@xAct.es
+  http://www.xAct.es/
+
+This file (xperm.c) is free software, distributed under the
+GNU General Public License version 2 or later (GPL-2.0-or-later).
+
+See: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+
+This license applies ONLY to the file deps/xperm.c. The rest of
+TensorGR.jl is licensed under the Apache License 2.0.

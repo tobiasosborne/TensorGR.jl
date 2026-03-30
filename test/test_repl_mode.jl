@@ -1,8 +1,9 @@
 @testset "REPL Tensor Mode" begin
     using TensorGR: _process_tensor_input, _init_commands!, _parse_and_resolve,
                     _display_tensor_result, _tensor_registry, set_tensor_registry!,
+                    _record_result!, _resolve_percent_ref, _tensor_completions,
                     TensorREPL,
-                    TensorRegistry, Tensor, TProduct, TSum, TDeriv, TScalar,
+                    TensorRegistry, Tensor, TProduct, TSum, TDeriv, TScalar, TIndex,
                     up, down, with_registry, current_registry,
                     simplify, to_unicode, to_latex
 
@@ -13,6 +14,9 @@
         end
         set_tensor_registry!(reg)
         _init_commands!()
+        # Clean state for each test group
+        empty!(TensorREPL._history)
+        TensorREPL._last_result[] = nothing
         reg
     end
 
@@ -119,6 +123,7 @@
         end
 
         @testset "% with no prior result" begin
+            empty!(TensorREPL._history)
             TensorREPL._last_result[] = nothing
             @test_throws ErrorException _process_tensor_input("simplify %")
         end
@@ -217,6 +222,256 @@
         _display_tensor_result(buf, expr)
         s = String(take!(buf))
         @test occursin("Riem", s)
+    end
+
+    # ── Workspace introspection ──────────────────────────���──────────────
+
+    @testset "workspace introspection" begin
+        reg = _setup_repl_test()
+        empty!(TensorREPL._variables)
+
+        @testset "vars with no variables" begin
+            @test _process_tensor_input("vars") === nothing
+        end
+
+        @testset "vars with variables" begin
+            _process_tensor_input("x = R_{abcd}")
+            @test _process_tensor_input("vars") === nothing  # prints, returns nothing
+        end
+
+        @testset "info on expression" begin
+            _process_tensor_input("R_{abcd}")
+            @test _process_tensor_input("info %") === nothing
+        end
+
+        @testset "info on variable" begin
+            _process_tensor_input("y = R_{ab}")
+            @test _process_tensor_input("info y") === nothing
+        end
+
+        @testset "info on inline expression" begin
+            @test _process_tensor_input("info R_{abcd} + R_{bacd}") === nothing
+        end
+
+        @testset "registry command" begin
+            @test _process_tensor_input("registry") === nothing
+        end
+
+        @testset "info with no prior result errors" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            @test_throws ErrorException _process_tensor_input("info")
+        end
+    end
+
+    # ── Additional commands ────────────────────────────────────────────
+
+    @testset "additional commands" begin
+        reg = _setup_repl_test()
+
+        @testset "define command" begin
+            _process_tensor_input("define T_{ab}")
+            @test TensorGR.has_tensor(reg, :T)
+        end
+
+        @testset "define already registered" begin
+            @test _process_tensor_input("define g_{ab}") === nothing
+        end
+
+        @testset "sub command" begin
+            _process_tensor_input("R_{ab}")
+            result = _process_tensor_input("sub R_{ab} -> g_{ab}")
+            @test result isa Tensor
+            @test result.name === :g
+        end
+
+        @testset "sub needs prior result" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            @test_throws ErrorException _process_tensor_input("sub R_{ab} -> g_{ab}")
+        end
+    end
+
+    # ── Pipe/chain syntax ──────────────────────────────────────────────
+
+    @testset "pipe syntax" begin
+        reg = _setup_repl_test()
+
+        @testset "basic pipe" begin
+            result = _process_tensor_input("g^{ab} g_{ab} | simplify")
+            @test result == TScalar(4 // 1)
+        end
+
+        @testset "multi-pipe" begin
+            result = _process_tensor_input("g^{ab} R_{ab} | contract | simplify")
+            @test result isa Tensor
+            @test result.name === :RicScalar
+        end
+
+        @testset "pipe with variable assignment" begin
+            empty!(TensorREPL._variables)
+            result = _process_tensor_input("s = g^{ab} g_{ab} | simplify")
+            @test result == TScalar(4 // 1)
+            @test TensorREPL._variables["s"] == TScalar(4 // 1)
+        end
+
+        @testset "pipe with %N" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            _process_tensor_input("g^{ab} g_{ab}")   # [1]
+            result = _process_tensor_input("%1 | simplify")
+            @test result == TScalar(4 // 1)
+        end
+
+        @testset "unknown command in pipe errors" begin
+            @test_throws ErrorException _process_tensor_input("R_{ab} | nonexistent")
+        end
+    end
+
+    # ── Tab completion ──────────────────────────────────────────────────
+
+    @testset "tab completion" begin
+        reg = _setup_repl_test()
+        TensorREPL._variables["myexpr"] = Tensor(:Riem, TIndex[])
+
+        @testset "completes commands" begin
+            comps, _ = TensorGR._tensor_completions("sim")
+            @test "simplify" in comps
+            @test "simplify_level2" in comps
+        end
+
+        @testset "completes variable names" begin
+            comps, _ = TensorGR._tensor_completions("mye")
+            @test "myexpr" in comps
+        end
+
+        @testset "completes registry tensors" begin
+            comps, _ = TensorGR._tensor_completions("Ri")
+            @test any(c -> startswith(c, "Ri"), comps)
+        end
+
+        @testset "completes LaTeX names" begin
+            comps, _ = TensorGR._tensor_completions("\\alp")
+            @test "\\alpha" in comps
+        end
+
+        @testset "empty input gives no completions" begin
+            comps, _ = TensorGR._tensor_completions("")
+            @test isempty(comps)
+        end
+
+        @testset "completes built-in commands" begin
+            comps, _ = TensorGR._tensor_completions("var")
+            @test "vars" in comps
+        end
+    end
+
+    # ── Numbered output history ────────────────────────────────────────
+
+    @testset "numbered history" begin
+        reg = _setup_repl_test()
+        empty!(TensorREPL._history)
+        TensorREPL._last_result[] = nothing
+
+        @testset "%N references" begin
+            _process_tensor_input("R_{abcd}")           # [1]
+            _process_tensor_input("g_{ab}")             # [2]
+            @test length(TensorREPL._history) >= 2
+
+            # %1 recalls first result
+            r = _process_tensor_input("%1")
+            @test r isa Tensor
+            @test r.name === :Riem
+
+            # %2 recalls second result
+            r = _process_tensor_input("%2")
+            @test r isa Tensor
+            @test r.name === :g
+        end
+
+        @testset "% still means last" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            _process_tensor_input("R_{ab}")
+            r = _process_tensor_input("simplify %")
+            @test r isa Tensor
+            @test r.name === :Ric
+        end
+
+        @testset "%N in commands" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            _process_tensor_input("g^{ab} g_{ab}")      # [1]
+            _process_tensor_input("R_{abcd}")            # [2]
+            r = _process_tensor_input("simplify %1")
+            @test r == TScalar(4 // 1)
+        end
+
+        @testset "out of range errors" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            @test_throws ErrorException _process_tensor_input("%0")
+            @test_throws ErrorException _process_tensor_input("%999")
+        end
+
+        @testset "display shows [N] prefix" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            _process_tensor_input("R_{abcd}")
+            buf = IOBuffer()
+            _display_tensor_result(buf, TensorREPL._history[end])
+            s = String(take!(buf))
+            @test occursin("[", s)
+        end
+
+        @testset "variable assignment stores from %N" begin
+            empty!(TensorREPL._history)
+            TensorREPL._last_result[] = nothing
+            empty!(TensorREPL._variables)
+            _process_tensor_input("R_{abcd}")            # [1]
+            _process_tensor_input("g_{ab}")              # [2]
+            _process_tensor_input("x = %1")
+            @test haskey(TensorREPL._variables, "x")
+            @test TensorREPL._variables["x"].name === :Riem
+        end
+    end
+
+    # ── Derivative shorthands ──────────────────────────────────────────
+
+    @testset "derivative shorthands" begin
+        reg = _setup_repl_test()
+
+        @testset "\\partial stays partial" begin
+            expr = _parse_and_resolve("\\partial_a R_{bc}")
+            @test expr isa TDeriv
+            @test expr.covd == :partial
+        end
+
+        @testset "\\nabla resolves to covd" begin
+            expr = _parse_and_resolve("\\nabla_a R_{bc}")
+            @test expr isa TDeriv
+            # Should resolve to the manifold's derivative (not :partial or :nabla)
+            @test expr.covd != :nabla
+        end
+
+        @testset "\\nabla fallback without covd" begin
+            # Create a registry without a CovD
+            bare_reg = TensorRegistry()
+            with_registry(bare_reg) do
+                TensorGR.register_manifold!(bare_reg, TensorGR.ManifoldProperties(
+                    :M, 4, nothing, nothing, Symbol[]))
+                TensorGR.register_tensor!(bare_reg, TensorGR.TensorProperties(;
+                    name=:T, manifold=:M, rank=(0,2)))
+            end
+            set_tensor_registry!(bare_reg)
+            _init_commands!()
+            expr = _parse_and_resolve("\\nabla_a T_{bc}")
+            @test expr isa TDeriv
+            @test expr.covd == :partial  # falls back when no CovD
+
+            # Restore
+            set_tensor_registry!(reg)
+        end
     end
 
     # ── Wald ground truth calculations ───────────────────────────────

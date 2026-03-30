@@ -381,6 +381,7 @@
         end
 
         @testset "% edge cases" begin
+            empty!(TensorREPL._history)
             TensorREPL._last_result[] = nothing
             @test _monkey_input("simplify %") === :error  # no prior result
             @test _monkey_input("%") in (:ok, :error)      # bare %

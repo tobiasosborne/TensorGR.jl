@@ -2,6 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Julia](https://img.shields.io/badge/Julia-1.10%2B-blue.svg)](https://julialang.org/)
+[![CI](https://github.com/tobiasosborne/TensorGR.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/tobiasosborne/TensorGR.jl/actions/workflows/ci.yml)
 
 **Abstract tensor algebra and general relativity in Julia.**
 
@@ -85,6 +86,32 @@ with_registry(reg) do
     println(bianchi)             # 0
 end
 ```
+
+## Interactive REPL Mode
+
+TensorGR includes a `tensor>` REPL mode for interactive tensor algebra with LaTeX input. Press `\` to enter, backspace on an empty line to exit.
+
+![REPL Demo](docs/assets/repl_demo.svg)
+
+```
+tensor> R_{abcd} + R_{bacd}
+  [1] Riem_{a b c d} + Riem_{b a c d}
+tensor> simplify %
+  [2] 0
+tensor> g^{ab} R_{ab} | contract | simplify
+  [3] RicScalar
+tensor> expr = R_{abcd} R^{abcd} | simplify
+  [4] ...
+tensor> info %
+  Expression info:
+    Free indices: (scalar)
+    Terms: 1
+    Tensors: Riem
+```
+
+Features: tab completion, numbered history (`%1`, `%2`), pipe chains (`|`), variables, workspace introspection (`vars`, `info`, `registry`), derivative shorthands (`\nabla` resolves to active CovD).
+
+Activate with `init_repl_mode!(reg)` after setup, or set `ENV["TENSORGR_REPL"] = "1"` before loading.
 
 ## Installation
 

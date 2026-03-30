@@ -1228,3 +1228,104 @@ end
 ```
 
 > **See also:** [`examples/11_6deriv_gravity_dS.jl`](https://github.com/tobiasosborne/TensorGR.jl/blob/master/examples/11_6deriv_gravity_dS.jl) for a full worked example with perturbation theory and cosmological backgrounds.
+
+## 8. Interactive REPL Mode
+
+TensorGR includes a `tensor>` REPL mode for interactive tensor algebra with LaTeX input.
+
+### Activation
+
+```julia
+using TensorGR
+
+reg = TensorRegistry()
+with_registry(reg) do
+    @manifold M4 dim=4 metric=g
+    define_curvature_tensors!(reg, :M4, :g)
+end
+
+init_repl_mode!(reg)
+# Press \ to enter tensor mode
+```
+
+Or auto-activate by setting `ENV["TENSORGR_REPL"] = "1"` before `using TensorGR`.
+
+### Typing Tensor Expressions
+
+Type LaTeX notation directly at the `tensor>` prompt:
+
+```
+tensor> g^{ab} g_{ab}
+  [1] g^a^b g_a_b
+tensor> simplify %
+  [2] 4
+```
+
+### Working with Curvature
+
+```
+tensor> R_{abcd} + R_{bacd}
+  [1] Riem_a_b_c_d + Riem_b_a_c_d
+tensor> simplify %
+  [2] 0
+```
+
+Standard LaTeX names are resolved automatically: `R` with 4 indices becomes `Riem`, with 2 becomes `Ric`, with 0 becomes `RicScalar`. `G` with 2 indices becomes `Ein`.
+
+### Pipe Chains
+
+Chain commands with `|` for multi-step operations:
+
+```
+tensor> g^{ab} R_{ab} | contract | simplify
+  [1] RicScalar
+tensor> R_{abcd} R^{abcd} | simplify
+  [2] ...
+```
+
+### Variables
+
+Store intermediate results:
+
+```
+tensor> expr = R_{abcd}
+tensor> result = simplify expr
+tensor> result
+```
+
+### Numbered History
+
+Results are numbered. Use `%N` to recall any previous result:
+
+```
+tensor> R_{abcd}         [1] Riem_a_b_c_d
+tensor> g_{ab}           [2] g_a_b
+tensor> simplify %1      [3] ...
+```
+
+### Workspace Inspection
+
+```
+tensor> vars              # list stored variables
+tensor> info %            # inspect last result (indices, terms, symmetries)
+tensor> registry          # show manifolds and tensors
+```
+
+### Tab Completion
+
+Press Tab to complete command names, variable names, registered tensors, and LaTeX names (`\alp` -> `\alpha`).
+
+### Derivative Shorthands
+
+- `\partial_a T^{bc}` creates a partial derivative
+- `\nabla_a T^{bc}` resolves to the active covariant derivative
+
+### Substitution and Other Commands
+
+```
+tensor> R_{ab}
+tensor> sub R_{ab} -> g_{ab}     # apply substitution to last result
+tensor> define T_{ab}            # register a new tensor
+tensor> covd %                   # expand CovD to Christoffel symbols
+tensor> perturb %                # linearize (first-order perturbation)
+```

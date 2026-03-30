@@ -30,6 +30,9 @@ using ..TensorGR
 # Last result (% in tensor mode)
 const _last_result = Ref{Any}(nothing)
 
+# Numbered output history: %1, %2, etc.
+const _history = Any[]
+
 # Active registry for tensor mode (set via init_repl_mode! or set_tensor_registry!)
 const _registry = Ref{Union{TensorRegistry, Nothing}}(nothing)
 
@@ -46,6 +49,70 @@ end
 
 end  # module TensorREPL
 
+# ── Tab completion ──────────────────────────────────────────────────
+
+"""Completion provider for tensor REPL mode."""
+struct TensorCompletionProvider <: REPL.LineEdit.CompletionProvider end
+
+function REPL.LineEdit.complete_line(c::TensorCompletionProvider, s; hint::Bool=false)
+    partial = REPL.LineEdit.input_string(s)
+    pos = position(REPL.LineEdit.buffer(s))
+    # Only complete up to cursor position
+    before_cursor = partial[1:min(pos, lastindex(partial))]
+    completions, last_word = _tensor_completions(before_cursor)
+    named = REPL.LineEdit.NamedCompletion.(completions)
+    return named, last_word, !isempty(completions)
+end
+
+"""Generate completions for the given partial input."""
+function _tensor_completions(partial::AbstractString)
+    # Find the last word being typed
+    m = match(r"(\\?[\w]*)$", partial)
+    last_word = m !== nothing ? String(m[1]) : ""
+    isempty(last_word) && return (String[], "")
+
+    candidates = String[]
+
+    # Commands
+    for cmd in keys(TensorREPL._commands)
+        startswith(cmd, last_word) && push!(candidates, cmd)
+    end
+    # Built-in commands not in _commands
+    for special in ("help", "vars", "info", "registry", "define", "sub", "substitute")
+        startswith(special, last_word) && push!(candidates, special)
+    end
+
+    # Variables
+    for v in keys(TensorREPL._variables)
+        startswith(v, last_word) && push!(candidates, v)
+    end
+
+    # Registry tensor names
+    reg = TensorREPL._registry[]
+    if reg !== nothing
+        for tname in keys(reg.tensors)
+            s = string(tname)
+            startswith(s, last_word) && push!(candidates, s)
+        end
+    end
+
+    # LaTeX names when typing \...
+    if startswith(last_word, "\\")
+        prefix = last_word[2:end]
+        for name in ("alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta",
+                      "theta", "iota", "kappa", "lambda", "mu", "nu", "xi",
+                      "pi", "rho", "sigma", "tau", "upsilon", "phi", "chi",
+                      "psi", "omega", "partial", "nabla", "frac",
+                      "Gamma", "Delta", "Theta", "Lambda", "Xi", "Pi",
+                      "Sigma", "Phi", "Psi", "Omega")
+            startswith(name, prefix) && push!(candidates, "\\" * name)
+        end
+    end
+
+    sort!(unique!(candidates))
+    return (candidates, last_word)
+end
+
 """
     set_tensor_registry!(reg::TensorRegistry)
 
@@ -61,6 +128,46 @@ end
 function _tensor_registry()
     r = TensorREPL._registry[]
     r !== nothing ? r : current_registry()
+end
+
+# ── Result tracking ──────────────────────────────────────────────────
+
+"""Record a result in both the numbered history and the last-result ref."""
+function _record_result!(result)
+    push!(TensorREPL._history, result)
+    TensorREPL._last_result[] = result
+    result
+end
+
+"""
+Resolve a percent reference: `%` (last), `%N` (by index), `%end`, `%end-1`.
+Returns `nothing` if the string is not a percent reference.
+"""
+function _resolve_percent_ref(s::AbstractString)
+    s = strip(s)
+    # % or %end → last result
+    if s == "%" || s == "%end"
+        isempty(TensorREPL._history) && error("No previous result (%) available")
+        return TensorREPL._history[end]
+    end
+    # %end-N
+    m = match(r"^%end-(\d+)$", s)
+    if m !== nothing
+        offset = parse(Int, m[1])
+        idx = length(TensorREPL._history) - offset
+        (idx < 1 || idx > length(TensorREPL._history)) &&
+            error("History index %end-$(m[1]) out of range (1:$(length(TensorREPL._history)))")
+        return TensorREPL._history[idx]
+    end
+    # %N
+    m = match(r"^%(\d+)$", s)
+    if m !== nothing
+        n = parse(Int, m[1])
+        (n < 1 || n > length(TensorREPL._history)) &&
+            error("History index %$n out of range (1:$(length(TensorREPL._history)))")
+        return TensorREPL._history[n]
+    end
+    return nothing  # not a percent reference
 end
 
 # ── Command registry ─────────────────────────────────────────────────
@@ -97,6 +204,67 @@ function _init_commands!()
     TensorREPL.register_command!("to_ricci",
         expr -> with_registry(_tensor_registry()) do; to_ricci(expr); end,
         "Convert to Ricci basis")
+    TensorREPL.register_command!("covd",
+        expr -> begin
+            reg = _tensor_registry()
+            covd_sym = _find_active_covd(reg)
+            with_registry(reg) do; covd_to_christoffel(expr, covd_sym); end
+        end,
+        "Expand covariant derivatives to Christoffel symbols")
+    TensorREPL.register_command!("perturb",
+        expr -> begin
+            reg = _tensor_registry()
+            metric_name = _find_metric_name(reg)
+            bg = Symbol(metric_name, :_bg)
+            with_registry(reg) do
+                linearize(expr, metric_name => (bg, :h))
+            end
+        end,
+        "Linearize expression (first-order metric perturbation)")
+    TensorREPL.register_command!("perturbation",
+        expr -> begin
+            reg = _tensor_registry()
+            metric_name = _find_metric_name(reg)
+            bg = Symbol(metric_name, :_bg)
+            with_registry(reg) do
+                linearize(expr, metric_name => (bg, :h))
+            end
+        end,
+        "Linearize expression (first-order metric perturbation)")
+end
+
+"""Find the active covariant derivative name from the registry."""
+function _find_active_covd(reg::TensorRegistry)
+    # Check manifold default derivative first
+    for (_, mp) in reg.manifolds
+        mp.derivative !== nothing && return mp.derivative
+    end
+    # Scan for any registered CovD
+    for (name, tp) in reg.tensors
+        tp.is_covd && return name
+    end
+    error("No covariant derivative registered. Use @covd to define one.")
+end
+
+"""Find the active CovD name, falling back to :partial if none registered."""
+function _find_active_covd_or_partial(reg::TensorRegistry)
+    for (_, mp) in reg.manifolds
+        mp.derivative !== nothing && return mp.derivative
+    end
+    for (name, tp) in reg.tensors
+        tp.is_covd && return name
+    end
+    :partial  # fallback — no CovD registered
+end
+
+"""Find the metric name from the first manifold in the registry."""
+function _find_metric_name(reg::TensorRegistry)
+    for (mname, _) in reg.manifolds
+        if haskey(reg.metric_cache, mname)
+            return reg.metric_cache[mname]
+        end
+    end
+    error("No metric registered.")
 end
 
 # ── Input processing ─────────────────────────────────────────────────
@@ -117,6 +285,65 @@ function _process_tensor_input(line::AbstractString)
         return nothing
     end
 
+    # Workspace introspection commands
+    if s == "vars"
+        _print_vars()
+        return nothing
+    end
+    if s == "registry"
+        _print_registry_info()
+        return nothing
+    end
+    if s == "info" || s == "info %"
+        isempty(TensorREPL._history) && error("No expression to inspect")
+        _print_info(TensorREPL._history[end])
+        return nothing
+    end
+    if startswith(s, "info ")
+        arg = strip(s[6:end])
+        ref = _resolve_percent_ref(arg)
+        if ref !== nothing
+            _print_info(ref)
+        elseif _is_variable_ref(arg)
+            _print_info(TensorREPL._variables[String(arg)])
+        else
+            _print_info(_parse_and_resolve(arg))
+        end
+        return nothing
+    end
+
+    # Substitute command: sub pattern -> replacement (applied to last result)
+    m_sub = match(r"^(?:sub|substitute)\s+(.+?)\s*->\s*(.+)$", s)
+    if m_sub !== nothing
+        isempty(TensorREPL._history) && error("No expression to substitute into (use %)")
+        pattern = _parse_and_resolve(String(m_sub[1]))
+        replacement = _parse_and_resolve(String(m_sub[2]))
+        rule = RewriteRule(pattern, replacement)
+        result = with_registry(_tensor_registry()) do
+            apply_rules(TensorREPL._history[end], RewriteRule[rule])
+        end
+        return _record_result!(result)
+    end
+
+    # Define command: define T_{ab} [on=M4]
+    m_def = match(r"^define\s+(\w+)(?:_\{([a-zA-Z]+)\})?(?:\s+on=(\w+))?$", s)
+    if m_def !== nothing
+        name = Symbol(m_def[1])
+        idx_str = m_def[2]
+        reg = _tensor_registry()
+        manifold_name = m_def[3] !== nothing ? Symbol(m_def[3]) : first(keys(reg.manifolds))
+        n_idx = idx_str !== nothing ? length(idx_str) : 0
+        rank = (0, n_idx)
+        if has_tensor(reg, name)
+            println("  Tensor $name already registered")
+        else
+            register_tensor!(reg, TensorProperties(;
+                name=name, manifold=manifold_name, rank=rank))
+            println("  Registered tensor $name with rank $rank on $manifold_name")
+        end
+        return nothing
+    end
+
     # Check for variable assignment: "name = expr" or "name = command expr"
     m = match(r"^([a-zA-Z_]\w*)\s*=\s*(.+)$", s)
     if m !== nothing
@@ -126,7 +353,7 @@ function _process_tensor_input(line::AbstractString)
         if !haskey(TensorREPL._commands, varname)
             result = _process_tensor_rhs(rhs)
             TensorREPL._variables[varname] = result
-            TensorREPL._last_result[] = result
+            _record_result!(result)
             return result
         end
     end
@@ -147,29 +374,75 @@ function _process_tensor_input(line::AbstractString)
         end
     end
 
+    # Pipe/chain syntax: expr | cmd1 | cmd2
+    if occursin("|", s)
+        return _process_pipe_chain(s)
+    end
+
     # Check for bare variable reference
     if _is_variable_ref(s)
         result = TensorREPL._variables[String(s)]
-        TensorREPL._last_result[] = result
+        _record_result!(result)
         return result
+    end
+
+    # Check for %N history reference
+    ref = _resolve_percent_ref(s)
+    if ref !== nothing
+        _record_result!(ref)
+        return ref
     end
 
     # Plain LaTeX expression
     expr = _parse_and_resolve(s)
-    TensorREPL._last_result[] = expr
+    _record_result!(expr)
     return expr
 end
 
-"""Process the RHS of a variable assignment (may be a command or plain LaTeX)."""
+"""Process a pipe chain: expr | cmd1 | cmd2."""
+function _process_pipe_chain(s::AbstractString)
+    segments = strip.(split(s, "|"))
+    filter!(!isempty, segments)
+    isempty(segments) && return nothing
+
+    first_seg = String(segments[1])
+    # First segment: resolve as percent ref, variable, or LaTeX
+    ref = _resolve_percent_ref(first_seg)
+    if ref !== nothing
+        result = ref
+    elseif _is_variable_ref(first_seg)
+        result = TensorREPL._variables[first_seg]
+    else
+        result = _parse_and_resolve(first_seg)
+    end
+
+    # Apply each subsequent command
+    for i in 2:length(segments)
+        cmd_name = String(strip(segments[i]))
+        isempty(cmd_name) && continue
+        if !haskey(TensorREPL._commands, cmd_name)
+            error("Unknown command in pipe: '$cmd_name'")
+        end
+        func, _ = TensorREPL._commands[cmd_name]
+        result = func(result)
+    end
+
+    _record_result!(result)
+    return result
+end
+
+"""Process the RHS of a variable assignment (may be a command, pipe, or plain LaTeX)."""
 function _process_tensor_rhs(s::AbstractString)
     s = String(strip(s))
 
-    # RHS could be "%" or a variable name
-    if s == "%"
-        TensorREPL._last_result[] === nothing &&
-            error("No previous result (%) available")
-        return TensorREPL._last_result[]
+    # RHS could be a pipe chain
+    if occursin("|", s)
+        return _process_pipe_chain(s)
     end
+
+    # RHS could be a percent reference (%N, %end, etc.)
+    ref = _resolve_percent_ref(s)
+    ref !== nothing && return ref
 
     # RHS could be a command: "simplify %" or "simplify expr" or "simplify(expr)"
     for (cmd, (func, _)) in TensorREPL._commands
@@ -194,18 +467,23 @@ end
 
 """Apply a command function to an argument string (shared by space and paren syntax)."""
 function _apply_command(func::Function, arg_str::AbstractString)
-    if isempty(arg_str) || arg_str == "%"
+    if isempty(arg_str)
         # Apply to last result
-        TensorREPL._last_result[] === nothing &&
-            error("No previous result (%) available")
-        expr = TensorREPL._last_result[]
-    elseif _is_variable_ref(arg_str)
-        expr = TensorREPL._variables[String(arg_str)]
+        isempty(TensorREPL._history) && error("No previous result (%) available")
+        expr = TensorREPL._history[end]
     else
-        expr = _parse_and_resolve(arg_str)
+        # Try percent ref (%N, %end, etc.)
+        ref = _resolve_percent_ref(arg_str)
+        if ref !== nothing
+            expr = ref
+        elseif _is_variable_ref(arg_str)
+            expr = TensorREPL._variables[String(arg_str)]
+        else
+            expr = _parse_and_resolve(arg_str)
+        end
     end
     result = func(expr)
-    TensorREPL._last_result[] = result
+    _record_result!(result)
     return result
 end
 
@@ -249,7 +527,14 @@ function _resolve_names(s::TSum)
 end
 
 function _resolve_names(d::TDeriv)
-    TDeriv(d.index, _resolve_names(d.arg), d.covd)
+    new_arg = _resolve_names(d.arg)
+    if d.covd == :nabla
+        # Resolve \nabla to the active covariant derivative
+        reg = current_registry()
+        covd_sym = _find_active_covd_or_partial(reg)
+        return TDeriv(d.index, new_arg, covd_sym)
+    end
+    TDeriv(d.index, new_arg, d.covd)
 end
 
 function _resolve_names(s::TScalar)
@@ -294,6 +579,109 @@ function _try_resolve_name(reg::TensorRegistry, name::Symbol, n_indices::Int)
     name  # no resolution found
 end
 
+# ── Workspace introspection ──────────────────────────────────────────
+
+"""Print all stored variables."""
+function _print_vars()
+    if isempty(TensorREPL._variables)
+        println("  No variables defined.")
+        return
+    end
+    printstyled("  Variables:\n"; bold=true, color=:cyan)
+    for (name, val) in sort(collect(TensorREPL._variables))
+        printstyled("    $name"; color=:yellow)
+        print(" = ")
+        if val isa TensorExpr
+            printstyled(to_unicode(val); color=:white)
+        else
+            print(val)
+        end
+        println()
+    end
+end
+
+"""Print info about an expression: indices, terms, tensors used."""
+function _print_info(expr)
+    printstyled("  Expression info:\n"; bold=true, color=:cyan)
+
+    if expr isa TensorExpr
+        # Free indices
+        fi = free_indices(expr)
+        idx_str = isempty(fi) ? "(scalar)" : join(map(string, fi), ", ")
+        println("    Free indices: $idx_str")
+
+        # Term count
+        n_terms = expr isa TSum ? length(expr.terms) : 1
+        println("    Terms: $n_terms")
+
+        # Tensor names used
+        names = Set{Symbol}()
+        _collect_names_repl!(names, expr)
+        println("    Tensors: ", isempty(names) ? "(none)" : join(sort(collect(names)), ", "))
+
+        # Type
+        println("    Type: ", nameof(typeof(expr)))
+
+        # Symmetries (if single tensor)
+        if expr isa Tensor
+            reg = _tensor_registry()
+            if has_tensor(reg, expr.name)
+                tp = get_tensor(reg, expr.name)
+                if !isempty(tp.symmetries)
+                    println("    Symmetries: ", join(string.(tp.symmetries), ", "))
+                end
+            end
+        end
+    else
+        println("    Value: $expr")
+        println("    Type: ", typeof(expr))
+    end
+end
+
+"""Collect tensor names from an AST."""
+function _collect_names_repl!(names::Set{Symbol}, t::Tensor)
+    push!(names, t.name)
+end
+function _collect_names_repl!(names::Set{Symbol}, p::TProduct)
+    for f in p.factors; _collect_names_repl!(names, f); end
+end
+function _collect_names_repl!(names::Set{Symbol}, s::TSum)
+    for t in s.terms; _collect_names_repl!(names, t); end
+end
+function _collect_names_repl!(names::Set{Symbol}, d::TDeriv)
+    _collect_names_repl!(names, d.arg)
+end
+function _collect_names_repl!(names::Set{Symbol}, ::TScalar) end
+function _collect_names_repl!(names::Set{Symbol}, ::TensorExpr) end
+
+"""Print registry summary."""
+function _print_registry_info()
+    reg = _tensor_registry()
+    printstyled("  Registry:\n"; bold=true, color=:cyan)
+
+    if !isempty(reg.manifolds)
+        printstyled("    Manifolds:\n"; color=:yellow)
+        for (name, mp) in reg.manifolds
+            println("      $name  dim=$(mp.dim)")
+        end
+    end
+
+    n_tensors = length(reg.tensors)
+    printstyled("    Tensors: $n_tensors\n"; color=:yellow)
+
+    # Show a sample of tensor names
+    if n_tensors > 0
+        tnames = sort(collect(keys(reg.tensors)))
+        shown = tnames[1:min(10, length(tnames))]
+        print("      ")
+        print(join(shown, ", "))
+        n_tensors > 10 && print(", ... ($(n_tensors - 10) more)")
+        println()
+    end
+
+    println("    Rules: $(length(reg.rules))")
+end
+
 function _print_tensor_help()
     printstyled("  Tensor Mode\n"; bold=true, color=:cyan)
     println("  Type LaTeX tensor expressions directly:")
@@ -309,11 +697,25 @@ function _print_tensor_help()
         println()
     end
     println()
-    println("  Variables:")
+    println("  Variables and pipes:")
     printstyled("    expr = R_{abcd}\n"; color=:green)
     printstyled("    result = simplify expr\n"; color=:green)
+    printstyled("    g^{ab} R_{ab} | contract | simplify\n"; color=:green)
+    printstyled("    x = R_{abcd} | simplify\n"; color=:green)
     println()
-    println("  % refers to the last result")
+    println("  Workspace:")
+    printstyled("    vars"; color=:yellow)
+    println("      — list stored variables")
+    printstyled("    info"; color=:yellow)
+    println("      — inspect expression (indices, terms, tensors)")
+    printstyled("    registry"; color=:yellow)
+    println("  — show registered manifolds and tensors")
+    println()
+    println("  History:")
+    printstyled("    %"; color=:yellow)
+    println("   — last result")
+    printstyled("    %N"; color=:yellow)
+    println("  — result N (e.g. %1, %3)")
     println("  Press backspace on empty line to return to julia>")
 end
 
@@ -321,12 +723,13 @@ end
 
 function _display_tensor_result(io::IO, result)
     result === nothing && return
+    n = length(TensorREPL._history)
+    printstyled(io, "  [$n] "; color=:light_black)
     if result isa TensorExpr
-        printstyled(io, "  "; color=:light_black)
         printstyled(io, to_unicode(result); color=:white, bold=true)
         println(io)
     else
-        println(io, "  ", result)
+        println(io, result)
     end
 end
 
@@ -371,6 +774,7 @@ function init_repl_mode!(reg::TensorRegistry=current_registry())
     tensor_prompt = LineEdit.Prompt("tensor> ";
         prompt_prefix = repl.options.hascolor ? Base.text_colors[:cyan] : "",
         prompt_suffix = "",
+        complete = TensorCompletionProvider(),
         sticky = true
     )
 

@@ -307,7 +307,7 @@ end
 # ── Derivative: \partial_a expr  or  \nabla_a expr ─────────────────
 
 function _parse_derivative(p::_TexParser)
-    _advance!(p)  # consume \partial or \nabla
+    tok = _advance!(p)  # consume \partial or \nabla
 
     # Parse the derivative index
     idx = _parse_single_index(p, Down)  # default Down for \partial_a
@@ -315,7 +315,9 @@ function _parse_derivative(p::_TexParser)
     # Parse the argument
     arg = _parse_atom(p)
 
-    TDeriv(idx, arg)
+    # Tag \nabla derivatives so REPL can resolve to active CovD
+    covd = tok.type == :nabla ? :nabla : :partial
+    TDeriv(idx, arg, covd)
 end
 
 function _parse_single_index(p::_TexParser, default_pos::IndexPosition)

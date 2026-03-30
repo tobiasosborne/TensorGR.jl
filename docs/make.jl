@@ -7,10 +7,12 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Tutorial" => "tutorial.md",
+        "Examples" => "examples.md",
         "API Reference" => [
             "Types & Registry" => "api/types.md",
             "Algebra" => "api/algebra.md",
             "GR Objects" => "api/gr.md",
+            "REPL Mode" => "api/repl.md",
             "Spinor Formalism" => "api/spinors.md",
             "Curvature Invariants" => "api/invariants.md",
             "Matter Fields" => "api/matter.md",
@@ -40,4 +42,10 @@ makedocs(
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true"
     ),
+)
+
+deploydocs(
+    repo = "github.com/tobiasosborne/TensorGR.jl.git",
+    devbranch = "master",
+    push_preview = true,
 )
