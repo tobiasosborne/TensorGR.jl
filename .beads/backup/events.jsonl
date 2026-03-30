@@ -1281,3 +1281,17 @@
 {"actor":"tobias","comment":null,"created_at":"2026-03-27T13:48:13Z","event_type":"created","id":"f86df9eb-b8b0-4f6a-9e64-4c2144a65d22","issue_id":"TGR-5vn","new_value":"","old_value":""}
 {"actor":"tobias","comment":null,"created_at":"2026-03-27T13:48:13Z","event_type":"created","id":"fbefd6e2-2594-499d-a0bb-7157d5c647e5","issue_id":"TGR-7z5","new_value":"","old_value":""}
 {"actor":"tobias","comment":null,"created_at":"2026-03-27T13:48:13Z","event_type":"created","id":"fd405d29-0c45-417e-932e-11130a98c2f7","issue_id":"TGR-ug3","new_value":"","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T13:59:00Z","event_type":"closed","id":"1e94eac1-5837-493a-967c-b164262af12e","issue_id":"TGR-2ai.3","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T13:59:00Z","event_type":"closed","id":"b35edebc-14b8-4ba4-94b2-1edf498a9d8d","issue_id":"TGR-2ai.4","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T13:59:00Z","event_type":"closed","id":"db30ecf7-f2c4-4a47-9ac4-b754dfeaaa7d","issue_id":"TGR-2ai.2","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T13:59:00Z","event_type":"closed","id":"fab61fee-663a-43ef-9424-56a3c2784e3d","issue_id":"TGR-2ai.1","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T13:59:05Z","event_type":"closed","id":"b981f996-9388-4420-b0ca-18340a356de7","issue_id":"TGR-1kw","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-27T13:59:06Z","event_type":"closed","id":"360724ae-d20a-4096-afe3-fdf15384fc98","issue_id":"TGR-293h","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:11Z","event_type":"closed","id":"bb98b79e-aefb-42b0-8567-1d8b8b65eee1","issue_id":"TGR-2ai.5","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:12Z","event_type":"closed","id":"35097841-9da0-478d-a781-680356c364b5","issue_id":"TGR-2ai.6","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:13Z","event_type":"closed","id":"2d344d37-fb6b-4f20-8ca6-56a899fa8a45","issue_id":"TGR-2ai.7","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:14Z","event_type":"closed","id":"bf2969ca-e8fd-4d11-a410-1ff22f7c7adc","issue_id":"TGR-2ai.8","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:15Z","event_type":"closed","id":"a6faebdb-c36c-406d-b5f5-e4b3f5471e7e","issue_id":"TGR-2ai.9","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:16Z","event_type":"closed","id":"20a2f6b5-0030-49d1-a337-fbb4113f5f2e","issue_id":"TGR-2ai.10","new_value":"Closed","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:16Z","event_type":"closed","id":"3e18c872-0633-41f4-9c6d-21918c581612","issue_id":"TGR-2ai","new_value":"all steps complete","old_value":""}
+{"actor":"tobias","comment":null,"created_at":"2026-03-30T13:51:17Z","event_type":"closed","id":"997dc89c-ec57-4ddd-a914-482e9b5acc08","issue_id":"TGR-2ai","new_value":"Closed","old_value":""}
