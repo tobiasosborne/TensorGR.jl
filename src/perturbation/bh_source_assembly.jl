@@ -312,6 +312,351 @@ function is_gauge_invariant_at_zero(gv::GaugeInvariantVariable)
     gv.correction_order == 2
 end
 
+# ── Master field representation ─────────────────────────────────────
+
+"""
+    MasterField
+
+A first-order master field (Zerilli Psi or RW Phi/Pi) at mode (l,m)
+with specified time and radial derivative orders.
+
+Represents objects like (1)Psi, d/dt(1)Psi, d^2/dr*^2(1)Pi, etc.
+
+# Fields
+- `name::Symbol` -- field name (`:Psi` for Zerilli, `:Phi` or `:Pi` for RW)
+- `l::Int` -- angular momentum
+- `m::Int` -- magnetic quantum number
+- `dt_order::Int` -- number of time derivatives (dots)
+- `dr_order::Int` -- number of tortoise-coordinate derivatives (primes)
+"""
+struct MasterField
+    name::Symbol
+    l::Int
+    m::Int
+    dt_order::Int
+    dr_order::Int
+end
+
+function MasterField(name::Symbol, l::Int, m::Int)
+    MasterField(name, l, m, 0, 0)
+end
+
+function Base.show(io::IO, f::MasterField)
+    dots = repeat(".", f.dt_order)
+    primes = repeat("'", f.dr_order)
+    print(io, "(1)", f.name, dots, primes,
+          "(l=", f.l, ",m=", f.m, ")")
+end
+
+function Base.:(==)(a::MasterField, b::MasterField)
+    a.name === b.name && a.l == b.l && a.m == b.m &&
+    a.dt_order == b.dt_order && a.dr_order == b.dr_order
+end
+
+function Base.hash(f::MasterField, h::UInt)
+    hash((:MasterField, f.name, f.l, f.m, f.dt_order, f.dr_order), h)
+end
+
+"""
+    time_deriv(f::MasterField) -> MasterField
+
+Return a new MasterField with one additional time derivative.
+"""
+function time_deriv(f::MasterField)
+    MasterField(f.name, f.l, f.m, f.dt_order + 1, f.dr_order)
+end
+
+"""
+    radial_deriv(f::MasterField) -> MasterField
+
+Return a new MasterField with one additional radial (r*) derivative.
+"""
+function radial_deriv(f::MasterField)
+    MasterField(f.name, f.l, f.m, f.dt_order, f.dr_order + 1)
+end
+
+# ── Gauge correction bilinear terms ─────────────────────────────────
+
+"""
+    GaugeCorrectionTerm
+
+A single bilinear term in the gauge correction Q_reg. Represents:
+
+    coeff * r^r_power * (2M-r)^f_power * M^M_power * field1 * field2
+
+where coeff is a Rational, and sqrt_prefactor stores the argument of
+an overall sqrt(n/pi) factor (e.g., 5 for sqrt(5/pi)).
+
+# Fields
+- `coeff::Rational{Int}` -- rational coefficient
+- `r_power::Int` -- power of r in the background factor
+- `f_power::Int` -- power of (2M-r) = -r*f(r)/(1-2M/r) factor
+- `M_power::Int` -- power of M in the background factor
+- `field1::MasterField` -- first factor in the bilinear
+- `field2::MasterField` -- second factor in the bilinear
+"""
+struct GaugeCorrectionTerm
+    coeff::Rational{Int}
+    r_power::Int
+    f_power::Int
+    M_power::Int
+    field1::MasterField
+    field2::MasterField
+end
+
+function Base.show(io::IO, t::GaugeCorrectionTerm)
+    print(io, t.coeff)
+    t.r_power != 0 && print(io, "*r^", t.r_power)
+    t.f_power != 0 && print(io, "*(2M-r)^", t.f_power)
+    t.M_power != 0 && print(io, "*M^", t.M_power)
+    print(io, "*", t.field1, "*", t.field2)
+end
+
+"""
+    GaugeCorrection
+
+The full gauge correction Q_reg as a sum of bilinear terms, with an
+overall sqrt(sqrt_prefactor / pi) prefactor.
+
+Represents Eqs 89, 94 of Brizuela, Martin-Garcia & Tiglio, PRD 80,
+024021 (2009).
+
+# Fields
+- `parity::Symbol` -- `:even` or `:odd`
+- `l::Int` -- target angular momentum
+- `m::Int` -- target magnetic quantum number
+- `lhat::Int` -- first source mode l
+- `mhat::Int` -- first source mode m
+- `lbar::Int` -- second source mode l
+- `mbar::Int` -- second source mode m
+- `sqrt_prefactor::Rational{Int}` -- argument of sqrt(n/pi), e.g., 5//1
+- `terms::Vector{GaugeCorrectionTerm}` -- bilinear terms
+"""
+struct GaugeCorrection
+    parity::Symbol
+    l::Int
+    m::Int
+    lhat::Int
+    mhat::Int
+    lbar::Int
+    mbar::Int
+    sqrt_prefactor::Rational{Int}
+    terms::Vector{GaugeCorrectionTerm}
+end
+
+function Base.show(io::IO, Q::GaugeCorrection)
+    p = Q.parity == :even ? "even" : "odd"
+    print(io, "Q_reg(", p, ", l=", Q.l, ",m=", Q.m,
+          "; lhat=", Q.lhat, ",lbar=", Q.lbar, "): ",
+          length(Q.terms), " terms")
+end
+
+"""
+    gauge_correction(parity; l=2, m=0, lhat=2, mhat=0, lbar=2, mbar=0)
+        -> GaugeCorrection
+
+Compute the gauge correction Q_reg for the specified mode coupling.
+
+Currently implements the quadrupole self-coupling case
+(l,m)=(lhat,mhat)=(lbar,mbar)=(2,0) from Brizuela et al. (2009):
+- Even parity: Eq 89 (Q_reg for Zerilli)
+- Odd parity: Eq 94 (Q^reg_Phi for RW)
+
+# References
+Brizuela, Martin-Garcia & Tiglio, PRD 80, 024021 (2009), Sec VI.
+"""
+function gauge_correction(parity::Symbol;
+                          l::Int=2, m::Int=0,
+                          lhat::Int=2, mhat::Int=0,
+                          lbar::Int=2, mbar::Int=0)
+    l >= 2 || error("gauge_correction: l must be >= 2")
+    # Currently only (2,0)x(2,0) -> (2,0) is implemented
+    if !(l == 2 && m == 0 && lhat == 2 && mhat == 0 && lbar == 2 && mbar == 0)
+        error("gauge_correction: only (l,m)=(lhat,mhat)=(lbar,mbar)=(2,0) implemented")
+    end
+
+    if parity === :even
+        _gauge_correction_even_220()
+    elseif parity === :odd
+        _gauge_correction_odd_220()
+    else
+        error("gauge_correction: parity must be :even or :odd")
+    end
+end
+
+# Even-parity Q_reg for (2,0)x(2,0) -> (2,0), Eq 89 of Brizuela et al. 2009
+# Fields: Psi = Zerilli master, Pi = RW master
+function _gauge_correction_even_220()
+    Psi = MasterField(:Psi, 2, 0)
+    Pi = MasterField(:Pi, 2, 0)
+    Psi_dot = time_deriv(Psi)
+    Psi_ddot = time_deriv(Psi_dot)
+    Psi_prime = radial_deriv(Psi)
+    Pi_dot = time_deriv(Pi)
+    Pi_ddot = time_deriv(Pi_dot)
+
+    # Eq 89, first block: prefactor -1/(252(2M-r)) * sqrt(5/pi)
+    # Terms inside the braces multiplied by the outer prefactor:
+    #
+    # 2(2M-r)((9M+r)*Psi_dot*Psi_ddot + 6*Psi*Psi_ddot)
+    #   -> 2(9M+r)*Psi_dot*Psi_ddot  (with extra (2M-r) cancels denom)
+    #     = 18M * Psi_dot*Psi_ddot + 2r * Psi_dot*Psi_ddot
+    #   -> 12*Psi*Psi_ddot (with extra (2M-r) cancels denom)
+    #
+    # After distributing -1/252:
+    # Term 1: -18M/(252) * Psi_dot * Psi_ddot = -1/14 * M * ...
+    # Term 2: -2r/(252) * Psi_dot * Psi_ddot = -1/126 * r * ...
+    # Term 3: -12/(252) * Psi * Psi_ddot = -1/21 * ...
+    #
+    # (110M^3 - 21rM^2 + 14r^2M + 4r^3)/(252(2M-r)) * Psi_dot * Psi_ddot
+    # Term 4: -110M^3/(252(2M-r)) = -55M^3/(126(2M-r))
+    # Term 5: 21rM^2/(252(2M-r)) = M^2*r/(12(2M-r))
+    # Term 6: -14r^2M/(252(2M-r)) = -r^2M/(18(2M-r))
+    # Term 7: -4r^3/(252(2M-r)) = -r^3/(63(2M-r))
+    #
+    # [-1/(252(2M-r))]*[-2(2M-r)](4r^2 Psi' - (15M-6r)Psi) * Psi_ddot
+    # = +2(4r^2 Psi' - (15M-6r)Psi)/252 * Psi_ddot  (double negative!)
+    # Term 8: +8r^2/252 * Psi' * Psi_ddot = +2r^2/63 * ...
+    # Term 9: -2(15M-6r)/252 * Psi * Psi_ddot = (-30M+12r)/252 * ...
+    #       = -5M/42 * Psi*Psi_ddot + r/21 * Psi*Psi_ddot
+    #
+    # Second block: -3r^6/224 * sqrt(5/pi) * {16*Pi_dot*Pi + (2r-3M)*Pi_dot*Pi_ddot}
+    # Term 10: -48r^6/224 * Pi_dot * Pi = -3r^6/14 * Pi_dot*Pi
+    # Term 11: -3r^6(2r)/(224) * Pi_dot * Pi_ddot = -3r^7/112 * ...
+    # Term 12: -3r^6(-3M)/(224) * Pi_dot * Pi_ddot = 9Mr^6/224 * ...
+
+    terms = GaugeCorrectionTerm[]
+
+    # Block 1 terms (from expanding Eq 89 first brace):
+    # Cancellation of (2M-r) between numerator and denominator in
+    # the first two lines gives terms without (2M-r) in denominator.
+
+    # Term: -1/14 * M * Psi_dot * Psi_ddot  (from 2(9M)(2M-r)/[252(2M-r)])
+    push!(terms, GaugeCorrectionTerm(-1//14, 0, 0, 1, Psi_dot, Psi_ddot))
+    # Term: -1/126 * r * Psi_dot * Psi_ddot  (from 2r(2M-r)/[252(2M-r)])
+    push!(terms, GaugeCorrectionTerm(-1//126, 1, 0, 0, Psi_dot, Psi_ddot))
+    # Term: -1/21 * Psi * Psi_ddot  (from 12(2M-r)/[252(2M-r)] = 12/252)
+    push!(terms, GaugeCorrectionTerm(-1//21, 0, 0, 0, Psi, Psi_ddot))
+
+    # Middle line: (110M^3 - 21rM^2 + 14r^2M + 4r^3) * Psi_dot * Psi_ddot
+    # divided by 252(2M-r), with overall minus from -1/252
+    push!(terms, GaugeCorrectionTerm(-55//126, 0, -1, 3, Psi_dot, Psi_ddot))
+    push!(terms, GaugeCorrectionTerm(1//12, 1, -1, 2, Psi_dot, Psi_ddot))
+    push!(terms, GaugeCorrectionTerm(-1//18, 2, -1, 1, Psi_dot, Psi_ddot))
+    push!(terms, GaugeCorrectionTerm(-1//63, 3, -1, 0, Psi_dot, Psi_ddot))
+
+    # Last line of first brace: +2(4r^2 Psi' - (15M-6r)Psi)/252 * Psi_ddot
+    push!(terms, GaugeCorrectionTerm(2//63, 2, 0, 0, Psi_prime, Psi_ddot))
+    push!(terms, GaugeCorrectionTerm(-5//42, 0, 0, 1, Psi, Psi_ddot))
+    push!(terms, GaugeCorrectionTerm(1//21, 1, 0, 0, Psi, Psi_ddot))
+
+    # Block 2: -3r^6/224 * {16 Pi_dot Pi + (2r-3M) Pi_dot Pi_ddot}
+    push!(terms, GaugeCorrectionTerm(-3//14, 6, 0, 0, Pi_dot, Pi))
+    push!(terms, GaugeCorrectionTerm(-3//112, 7, 0, 0, Pi_dot, Pi_ddot))
+    push!(terms, GaugeCorrectionTerm(9//224, 6, 0, 1, Pi_dot, Pi_ddot))
+
+    GaugeCorrection(:even, 2, 0, 2, 0, 2, 0, 5//1, terms)
+end
+
+# Odd-parity Q^reg_Phi for (2,0)x(2,0) -> (2,0), Eq 94 of Brizuela et al. 2009
+# Fields: Psi = Zerilli master, Pi = RW master
+function _gauge_correction_odd_220()
+    Psi = MasterField(:Psi, 2, 0)
+    Pi = MasterField(:Pi, 2, 0)
+    Psi_dot = time_deriv(Psi)
+    Pi_dot = time_deriv(Pi)
+    Psi_ddot = time_deriv(Psi_dot)
+    Pi_ddot = time_deriv(Pi_dot)
+
+    # Eq 94: Q^reg_Phi = r^3/84 * sqrt(5/pi) *
+    #   {3 Pi_dot Psi_dot + Pi_ddot Psi + Psi_ddot Pi}
+    terms = GaugeCorrectionTerm[
+        GaugeCorrectionTerm(3//84, 3, 0, 0, Pi_dot, Psi_dot),
+        GaugeCorrectionTerm(1//84, 3, 0, 0, Pi_ddot, Psi),
+        GaugeCorrectionTerm(1//84, 3, 0, 0, Psi_ddot, Pi),
+    ]
+
+    GaugeCorrection(:odd, 2, 0, 2, 0, 2, 0, 5//1, terms)
+end
+
+"""
+    is_bilinear(Q::GaugeCorrection) -> Bool
+
+Verify that every term in Q is bilinear (product of exactly two MasterFields).
+"""
+function is_bilinear(Q::GaugeCorrection)
+    # Each GaugeCorrectionTerm has exactly field1 and field2 by construction.
+    # We verify neither is degenerate (both must be valid MasterFields).
+    all(t -> t.field1.l >= 0 && t.field2.l >= 0, Q.terms)
+end
+
+"""
+    correction_vanishes_at_zero(Q::GaugeCorrection) -> Bool
+
+When all first-order master fields vanish, Q -> 0 because every term
+is bilinear in first-order fields.
+"""
+function correction_vanishes_at_zero(Q::GaugeCorrection)
+    # Every term has exactly two field factors; setting fields to zero
+    # makes each term vanish. This is structural (bilinear).
+    is_bilinear(Q)
+end
+
+# ── Regularized source ──────────────────────────────────────────────
+
+"""
+    RegularizedSource
+
+The regularized second-order source: S^reg = S + Box(Q) - V * Q.
+
+This is the RHS of the regularized master equation (Eqs 88, 92-93
+of Brizuela et al. 2009).
+
+# Fields
+- `original_source::SourcedMasterEquation` -- the unregularized equation
+- `correction::GaugeCorrection` -- the gauge correction Q_reg
+- `potential_name::Symbol` -- `:Zerilli` or `:RW`
+"""
+struct RegularizedSource
+    original_source::SourcedMasterEquation
+    correction::GaugeCorrection
+    potential_name::Symbol
+end
+
+function Base.show(io::IO, rs::RegularizedSource)
+    print(io, "S^reg(", rs.potential_name,
+          ", l=", rs.correction.l,
+          "): S + Box(Q) - V*Q")
+end
+
+"""
+    regularized_source_term(eq::SourcedMasterEquation,
+                            Q::GaugeCorrection) -> RegularizedSource
+
+Construct the regularized source S^reg = S + Box(Q) - V * Q.
+
+The regularized master equation has the same differential operator
+(same potential V) as the unregularized one, but the source is modified
+to account for the gauge correction. This ensures the regularized
+variable Psi^{(2),GI} = Psi^{(2)} + Q satisfies a well-posed equation.
+
+# Arguments
+- `eq::SourcedMasterEquation` -- the unregularized second-order equation
+- `Q::GaugeCorrection` -- the gauge correction from `gauge_correction()`
+
+# References
+Brizuela et al. (2009): Eq 88 (even), Eq 92-93 (odd).
+"""
+function regularized_source_term(eq::SourcedMasterEquation,
+                                 Q::GaugeCorrection)
+    eq.equation.parity === Q.parity ||
+        error("regularized_source_term: parity mismatch")
+    eq.equation.l == Q.l ||
+        error("regularized_source_term: l mismatch")
+    pot = eq.equation.potential_name
+    RegularizedSource(eq, Q, pot)
+end
+
 # ── Gravitational wave energy flux ───────────────────────────────────
 
 """

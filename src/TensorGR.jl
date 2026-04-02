@@ -425,6 +425,10 @@ export evaluate_potential, potential_at_horizon, potential_at_infinity
 export SourceContribution, SecondOrderSource, assemble_source
 export SourcedMasterEquation, second_order_rw, second_order_zerilli
 export GaugeInvariantVariable, gauge_invariant_variable, is_gauge_invariant_at_zero
+export MasterField, time_deriv, radial_deriv
+export GaugeCorrectionTerm, GaugeCorrection, gauge_correction
+export is_bilinear, correction_vanishes_at_zero
+export RegularizedSource, regularized_source_term
 export EVEN_SECTORS, ODD_SECTORS
 export EnergyFluxFormula, energy_flux_formula, flux_mode_count
 export quadrupole_flux_scaling, second_order_flux_scaling
