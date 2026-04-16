@@ -414,3 +414,12 @@ using TensorGR
     # Parametric derivatives (TParamDeriv)
     include("test_param_deriv.jl")
 end
+
+# Golden-master cross-validation against xAct. Gated because generators
+# require a local wolframscript install (see test/golden/PLAN.md).
+if get(ENV, "TENSORGR_GOLDEN", "") != ""
+    @info "TENSORGR_GOLDEN set — running xAct golden-master cases."
+    include("test_golden.jl")
+else
+    @info "Golden master tests skipped. Set TENSORGR_GOLDEN=1 to enable."
+end

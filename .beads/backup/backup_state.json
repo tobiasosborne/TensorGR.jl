@@ -1,12 +1,4 @@
 {
-  "last_dolt_commit": "9csnru4qg69opl56gpvrp7ss6t1u1ur9",
-  "timestamp": "2026-04-02T13:00:11.005172538Z",
-  "counts": {
-    "issues": 539,
-    "events": 1301,
-    "comments": 3,
-    "dependencies": 731,
-    "labels": 432,
-    "config": 11
-  }
+  "last_dolt_commit": "1oq2ua2joc85chs0ip0ledr7u8l61aia",
+  "timestamp": "2026-04-16T15:55:07.184696541Z"
 }

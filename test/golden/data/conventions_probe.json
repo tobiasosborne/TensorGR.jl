@@ -1,0 +1,33 @@
+{
+	"schema":"conventions_probe\/v0",
+	"generator":"test\/golden\/generators\/conventions_probe.wl",
+	"conventions":{
+		"signature":"-+++",
+		"dimension":4,
+		"generator_xact_version":"{1.3.0, {2025, 12, 29}}"
+	},
+	"cases":[
+		{
+			"name":"metric_compatibility",
+			"description":"Metric compatibility: grad of metric is zero.",
+			"input_wl":"CD[-c][g[-a, -b]]",
+			"canonical_wl":"0",
+			"is_zero":true
+		},
+		{
+			"name":"ricci_contraction",
+			"description":"Ricci is R contracted on slots 1 (up) and 3 (down): R^c_{acb} - R_{ab} = 0.",
+			"input_wl":"RiemannCD[-a, -c, -b, c] - RicciCD[-a, -b]",
+			"canonical_wl":"0",
+			"is_zero":true
+		},
+		{
+			"name":"ricci_scalar_trace",
+			"description":"Ricci scalar is the trace: g^{ab} R_{ab} - R = 0.",
+			"input_wl":"g[a, b]*RicciCD[-a, -b] - RicciScalarCD[]",
+			"canonical_wl":"0",
+			"is_zero":true
+		}
+	],
+	"all_zero":true
+}

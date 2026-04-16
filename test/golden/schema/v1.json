@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tensorgr.jl/golden/schema/v1.json",
+  "title": "TensorGR Golden-Master Expr v1",
+  "description": "Neutral JSON schema for tensor algebra expressions, shared by xAct and TensorGR. Pinned by TGR-bhs5.4. See test/golden/CONVENTIONS.md for semantics.",
+  "$ref": "#/definitions/Expr",
+
+  "definitions": {
+    "Rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "additionalProperties": false,
+      "properties": {
+        "num": {"type": "integer"},
+        "den": {"type": "integer", "not": {"const": 0}}
+      }
+    },
+
+    "TIndex": {
+      "type": "object",
+      "required": ["name", "pos"],
+      "additionalProperties": false,
+      "properties": {
+        "name":    {"type": "string", "minLength": 1},
+        "pos":     {"type": "string", "enum": ["up", "down"]},
+        "vbundle": {"type": "string", "default": "Tangent"}
+      }
+    },
+
+    "Tensor": {
+      "type": "object",
+      "required": ["type", "name", "indices"],
+      "additionalProperties": false,
+      "properties": {
+        "type":    {"type": "string", "const": "tensor"},
+        "name":    {"type": "string", "minLength": 1},
+        "indices": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/TIndex"}
+        }
+      }
+    },
+
+    "Product": {
+      "type": "object",
+      "required": ["type", "coef", "factors"],
+      "additionalProperties": false,
+      "properties": {
+        "type":    {"type": "string", "const": "product"},
+        "coef":    {"$ref": "#/definitions/Rational"},
+        "factors": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/Expr"}
+        }
+      }
+    },
+
+    "Sum": {
+      "type": "object",
+      "required": ["type", "terms"],
+      "additionalProperties": false,
+      "properties": {
+        "type":  {"type": "string", "const": "sum"},
+        "terms": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/definitions/Expr"}
+        }
+      }
+    },
+
+    "Deriv": {
+      "type": "object",
+      "required": ["type", "covd", "index", "arg"],
+      "additionalProperties": false,
+      "properties": {
+        "type":  {"type": "string", "const": "deriv"},
+        "covd":  {"type": "string", "minLength": 1},
+        "index": {"$ref": "#/definitions/TIndex"},
+        "arg":   {"$ref": "#/definitions/Expr"}
+      }
+    },
+
+    "ScalarRational": {
+      "type": "object",
+      "required": ["rational"],
+      "additionalProperties": false,
+      "properties": {
+        "rational": {"$ref": "#/definitions/Rational"}
+      }
+    },
+
+    "ScalarSymbol": {
+      "type": "object",
+      "required": ["symbol"],
+      "additionalProperties": false,
+      "properties": {
+        "symbol": {"type": "string", "minLength": 1}
+      }
+    },
+
+    "Scalar": {
+      "type": "object",
+      "required": ["type", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type":  {"type": "string", "const": "scalar"},
+        "value": {
+          "oneOf": [
+            {"$ref": "#/definitions/ScalarRational"},
+            {"$ref": "#/definitions/ScalarSymbol"}
+          ]
+        }
+      }
+    },
+
+    "Expr": {
+      "oneOf": [
+        {"$ref": "#/definitions/Tensor"},
+        {"$ref": "#/definitions/Product"},
+        {"$ref": "#/definitions/Sum"},
+        {"$ref": "#/definitions/Deriv"},
+        {"$ref": "#/definitions/Scalar"}
+      ]
+    },
+
+    "CaseFile": {
+      "type": "object",
+      "required": ["schema_version", "conventions", "cases"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"type": "integer", "const": 1},
+        "conventions": {
+          "type": "object",
+          "required": ["signature"],
+          "properties": {
+            "signature":    {"type": "string"},
+            "riemann_sign": {"type": "string"},
+            "name_map":     {"type": "object"}
+          }
+        },
+        "manifolds": {"type": "object"},
+        "tensors":   {"type": "object"},
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "input", "op", "expected"],
+            "properties": {
+              "name":     {"type": "string"},
+              "input":    {"$ref": "#/definitions/Expr"},
+              "op":       {"type": "string"},
+              "op_args":  {"type": "object"},
+              "expected": {"$ref": "#/definitions/Expr"},
+              "generator":{"type": "string"},
+              "notes":    {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}
