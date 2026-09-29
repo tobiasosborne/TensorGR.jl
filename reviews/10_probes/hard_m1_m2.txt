@@ -1,0 +1,14 @@
+# instance (R_abcd R^abcd)^1: 2 identical Riemanns, n=8 slots, 4 dummy pairs; slot group order 8^2 * 2!
+# xperm: 7 generators on 10 points
+# first xperm call (incl. Schreier-Sims): 0.443 ms, sign -1; Sonnet sign -1, Opus sign -1
+# correctness gate over 64 relabellings: all three consistent
+# Schreier-Sims once: 0.223 ms (SGS: 7 gens, base 8)
+RESULT m=1 n=8  Sonnet       10.5 us  Opus        5.6 us  xperm(cached SGS)       98.3 us  xperm(stock, SGS per call)      206.4 us
+# instance (R_abcd R^abcd)^2: 4 identical Riemanns, n=16 slots, 8 dummy pairs; slot group order 8^4 * 4!
+# xperm: 15 generators on 18 points
+# first xperm call (incl. Schreier-Sims): 12.137 ms, sign 1; Sonnet sign 1, Opus sign 1
+# correctness gate over 64 relabellings: all three consistent
+# Schreier-Sims once: 5.676 ms (SGS: 15 gens, base 16)
+RESULT m=2 n=16  Sonnet       32.2 us  Opus       17.6 us  xperm(cached SGS)     3753.6 us  xperm(stock, SGS per call)     7976.0 us
+
+[exited with code 143]

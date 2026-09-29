@@ -1,0 +1,9 @@
+      16 KiB    3.68 ns
+# instance (R_abcd R^abcd)^3: 6 identical Riemanns, n=24 slots, 12 dummy pairs; slot group order 8^6 * 6!
+# xperm: 23 generators on 26 points
+# first xperm call (incl. Schreier-Sims): 5478.560 ms, sign -1; Sonnet sign -1, Opus sign -1
+# xperm too slow for gate/timing loops; S vs O only below
+# correctness gate over 64 relabellings: all three consistent
+RESULT m=3 n=24  Sonnet       60.4 us  Opus       28.6 us  xperm(cached SGS)  5478560.4 us  xperm(stock, SGS per call)  5478560.4 us
+exit=0
+      16 KiB    2.55 ns
