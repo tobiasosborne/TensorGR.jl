@@ -1,4 +1,4 @@
-# HANDOFF — 2026-04-16 (Session 19: xAct golden-master infrastructure, TGR-bhs5 epic)
+# HANDOFF — 2026-09-29 (Session 20: architecture review, canonicalization reboot research, C prototypes)
 
 ## DO NOT DELETE THIS FILE. Read it completely before working.
 
@@ -25,19 +25,69 @@
 
 ## Current State
 
-- **Last pushed commit**: `e4abb5f` on `master` (pre-session; updated by this commit)
-- **571 beads issues total** (up from 540) — TGR-bhs5 epic + 30 children added
-- **Full test suite**: NOT RUN this session (another TensorGR Julia process was
-  not running, but a Bennett.jl suite WAS active on the machine; skipped the
-  targeted full-suite run to avoid juggling). Run `julia --project -e 'using
-  Pkg; Pkg.test()'` next session to confirm no regressions.
-- **Golden suite** (new this session): 11/11 cases pass locally when run via
-  `julia --project=test test/test_golden.jl` or with
-  `TENSORGR_GOLDEN=1 julia --project -e 'using Pkg; Pkg.test()'`.
+- **master** is pushed through the session-20 review/research commits (see `git log`); **no `src/` changes
+  this session** — all work is in `reviews/` plus two local prototype branches.
+- **Tobias is considering a total reboot**, starting with replacing `deps/xperm.c` by a new canonicalization
+  core. Session 20 produced the research, a speed-of-light bound, and two blind C prototypes.
+- **⚠ Beads DB out of sync**: after the bd v0.62→v1.0.0 upgrade the local Dolt DB has 537 issues, but
+  `.beads/issues.jsonl` (git) has 571 incl. the TGR-bhs5 epic (`bd show TGR-bhs5` → not found).
+  Run `bd doctor` then `bd import` before touching issues. **No beads issues were filed this session**
+  for the bugs below — file them after the resync.
+- **Full test suite**: still NOT RUN since session 18. Golden suite: last known 11/11 (session 19).
+- `deps/libxperm.so` was built by hand this session (gitignored); `deps/build.jl` cannot build it (below).
 
 ---
 
-## What Was Done This Session (Session 19)
+## What Was Done This Session (Session 20) — read `reviews/07`–`10`
+
+**1. Architecture review vs Julia best practices** — `reviews/07_julia_best_practices_review.md`,
+runtime probes in `reviews/07_probes/` (`julia --project reviews/07_probes/probe_correctness.jl`).
+**Verified silent correctness bugs in the current core (P0, unfiled):**
+- `canonicalize` treats covariant derivatives as commuting (`src/algebra/canonicalize.jl:272`, no
+  `covd == :partial` check): `simplify(V^e(∇_b∇_a S_cd − ∇_a∇_b S_cd))` returns **0**. Affects `∇∇h` on
+  curved backgrounds → MSS covariant output, 6-deriv dS spectrum, bench_12 must be re-verified.
+- `canonicalize` permutes index names but pins Up/Down to slots (`canonicalize.jl:313`): `S^b_a → S^a_b`
+  (free-index positions change); `A^b_a + A_a^b` does not simplify to 0. Root cause: all indices passed
+  to xperm as free (no dummy double-coset step) — `fix_dummy_positions` is a band-aid for this.
+- `to_latex`/`to_unicode` print every derivative as ∂ (`show.jl:189,306`).
+- No free-index consistency check: `V^a + V_a` accepted.
+- `deps/build.jl` can never succeed (soft-scope + top-level `return`); CI ran once (Mar 2026, failed).
+- `canonicalize(trinv; registry=…)` at `invariants/trinv.jl:958,982` is a guaranteed MethodError (JET).
+- `simplify` on `TParamDeriv` / harmonic node types → MethodError; objectid-keyed global caches leak.
+- Architecture: 54k lines, 1,083 exports, 18 TensorExpr subtypes with hand-written traversals (83 passes
+  on TDeriv, 9 on TParamDeriv), ambient task-local registry, `Rational{Int}` overflow, `Expr` as CAS.
+  CLAUDE.md is stale (claims 12k lines / 71 files).
+
+**2. Canonicalization literature survey** — `reviews/08_canonicalization_literature_survey.md` (+ parallel
+study `reviews/08b_parallel_racing_pareto.md`). Key points: graph individualization–refinement (IR)
+beats Butler–Portugal on identical-factor products (SeQuant 2511.09943); graph backtracking
+(Jefferson–Waldecker–Wilson, Vole) unifies both; multi-term (Bianchi) is a separate linear-algebra layer;
+**`leanprover/hex-graph-iso` has verified Lean 4 implementations of pinned nauty 2.9.3 configurations**
+(verified to exist) — the cheap route to Lean-checked canonicity. Competitors: Alakazam.jl (Aug 2026),
+Symbolica/graphica, GraphCombinations.jl.
+
+**3. Speed-of-light bound** — `reviews/09_canonicalization_perf_bound.md` (+ rendered `.html`, model
+`reviews/09_probes/bound.py`). Generic 8-core desktop + RTX 4060-class GPU: CPU is compute-bound
+(10–200 ns/term), GPU only pays if terms stay on device (PCIe floor 10–22 ns/term). Current TensorGR:
+438 µs/term for Riem³ (≈500–1000× above floor). Known model flaw: search term assumes S_k on identical
+factors (wrong for chains) — revise §4.
+
+**4. Two blind C prototypes (IR canonicalizer, SeQuant-style graph)** — `reviews/10_blind_prototype_comparison.md`.
+- Branches (**local only, not pushed**): `proto/canon-ir-baseline` (Sonnet, `302bd12`) and
+  `proto/canon-ir-baseline-opus` (Opus, `a5351dc`); code in `proto/canonir/`, write-ups in
+  `proto/canonir/RESULTS.md`. Worktrees still exist under `.claude/worktrees/agent-*` (locked).
+- Both pass their own suites (1.0 M / 0.32 M checks, plain + ASan/UBSan) and a **blind cross-check**
+  (`reviews/10_probes/xcheck.c`, ~2.33 M checks, 0 disagreements, sensitivity verified).
+  Reproduce: `bash reviews/10_probes/build_and_run.sh`.
+- Opus impl is 1.2–1.35× faster on random terms, 1.9–3.3× on symmetric products → **recommended base**.
+- **vs xperm.c called correctly** (`reviews/10_probes/hard.c`, full double-coset mode):
+  $(R_{abcd}R^{abcd})^3$ = 6 identical Riemanns: xperm **5.48 s/call** vs Opus **28.6 µs** (≈190,000×).
+  xperm convention (found empirically): `PERM[name] = slot`, dummies given as slots of (up, down) —
+  TensorGR never passed dummies, so this was never exercised.
+
+---
+
+## Previous Session (Session 19)
 
 **Epic: TGR-bhs5** — Cross-platform xAct ↔ TensorGR golden-master infrastructure.
 
@@ -189,6 +239,19 @@ Unchanged from session 18:
 
 ## TODO Next Session
 
+**Session-20 items (reboot track — decide direction with Tobias first):**
+1. **Beads resync** (`bd doctor`, `bd import`), then file P0 issues for the verified core bugs in
+   `reviews/07` §1 (∇ commutation, free-index positions, ∂ display) and the broken `deps/build.jl`.
+2. **Decide**: patch the current core vs reboot on the C prototype. If rebooting: take the Opus prototype
+   as base, port Sonnet's `tests/mutate.sh` + high-volume random tests, keep `xcheck.c` as a permanent
+   differential test; next features = spinor ε metric signs, multiple vbundles, derivative slots
+   (∂ commuting, ∇ not), certificate output compatible with `hex-graph-iso`, Julia `ccall` binding,
+   then xAct golden-master comparison.
+3. Hostile review of the chosen prototype before relying on it (HANDOFF rule 5).
+4. Decide whether to push the two `proto/*` branches; clean up `.claude/worktrees/agent-*`.
+5. Re-verify curved-background results (dS 6-deriv spectrum, bench_12) independently of `canonicalize`.
+
+**Carried over from session 19:**
 1. **Run full test suite with goldens** —
    `TENSORGR_GOLDEN=1 julia --project -e 'using Pkg; Pkg.test()'` — confirm
    no regressions introduced by this session.
@@ -204,6 +267,13 @@ Unchanged from session 18:
 ## Quick Commands
 
 ```bash
+# Session 20: correctness probes, bound model, prototype cross-check
+julia --project reviews/07_probes/probe_correctness.jl   # needs deps/libxperm.so:
+#   gcc -shared -fPIC -O2 -o deps/libxperm.so deps/xperm.c   (build.jl is broken)
+python3 reviews/09_probes/bound.py
+bash reviews/10_probes/build_and_run.sh                  # needs local proto/* branches
+git log --oneline proto/canon-ir-baseline-opus -3
+
 # Golden suite
 julia --project=test test/test_golden.jl
 TENSORGR_GOLDEN=1 julia --project -e 'using Pkg; Pkg.test()'
