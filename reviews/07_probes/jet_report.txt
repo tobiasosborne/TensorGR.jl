@@ -1,0 +1,136 @@
+═════ 41 possible errors found ═════
+┌ from_index_free(ifree::IndexFree; free_names::Vector{Symbol}, registry::TensorRegistry) @ TensorGR src/algebra/index_free.jl:272
+│┌ GammaMatrix(index::Nothing) @ TensorGR src/fermions/gamma.jl:26
+││ no matching method found `convert(::Type{TIndex}, ::Nothing)`: @_3 = convert(fieldtype(#ctor-self#::Type{GammaMatrix}, 1)::Type{TIndex}, _3::Nothing)
+│└────────────────────
+┌ metric_signature(reg::TensorRegistry, metric::Symbol) @ TensorGR src/gr/metric.jl:125
+│ no matching method found `lorentzian(::Symbol)` (1/2 union split): lorentzian((get_manifold(reg::TensorRegistry, props.manifold::Symbol)::ManifoldProperties).dim::Union{Int64, Symbol})
+└────────────────────
+┌ _pushforward_expr(T::Tensor, mp::MappingProperties, reg::TensorRegistry) @ TensorGR src/gr/mapping.jl:197
+│┌ Tensor(name::Nothing, indices::Vector{TIndex}) @ TensorGR src/types.jl:38
+││ no matching method found `convert(::Type{Symbol}, ::Nothing)`: @_5 = convert(fieldtype(#ctor-self#::Type{Tensor}, 1)::Type{Symbol}, _5::Nothing)
+│└────────────────────
+┌ _get_christoffel_order(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, k::Int64; _avoid::Set{Symbol}) @ TensorGR src/perturbation/expand.jl:57
+│┌ kwcall(::@NamedTuple{…}, ::typeof(δchristoffel), mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, order::Int64) @ TensorGR src/perturbation/expand.jl:78
+││┌ δchristoffel(mp::MetricPerturbation, a::TIndex, b::TIndex, c::TIndex, order::Int64; _avoid::Set{Symbol}) @ TensorGR src/perturbation/expand.jl:154
+│││ local variable `key` may be undefined: key::Tuple{Symbol, TIndex, TIndex, TIndex, Int64}
+││└────────────────────
+┌ δricci(mp::MetricPerturbation, a::TIndex, b::TIndex, order::Int64; _avoid::Set{Symbol}) @ TensorGR src/perturbation/expand.jl:295
+│ local variable `key` may be undefined: key::Tuple{Symbol, TIndex, TIndex, Int64}
+└────────────────────
+┌ define_basis!(reg::TensorRegistry, name::Symbol; manifold::Symbol, basis_type::Symbol) @ TensorGR src/components/basis.jl:70
+│┌ BasisProperties(name::Symbol, manifold::Symbol, dim::Symbol, basis_type::Symbol) @ TensorGR src/components/basis.jl:55
+││ no matching method found `convert(::Type{Int64}, ::Symbol)`: @_7 = convert(fieldtype(#ctor-self#::Type{BasisProperties}, 3)::Type{Int64}, _7::Symbol)
+│└────────────────────
+┌ segre_classify(Ric::Matrix, ginv::Matrix; atol::Any) @ TensorGR src/xideal/segre.jl:51
+│┌ kwcall(::NamedTuple{(:atol,), <:Tuple{Any}}, ::typeof(segre_classify), R_mixed::Matrix) @ TensorGR src/xideal/segre.jl:59
+││┌ segre_classify(R_mixed::Matrix; atol::Any) @ TensorGR src/xideal/segre.jl:65
+│││┌ kwcall(::NamedTuple{…}, ::typeof(TensorGR._segre_notation), eigenvalues::Vector{…}, multiplicities::Vector{…}, jordan_sizes::Vector{…}, dim::Int64) @ TensorGR src/xideal/segre.jl:180
+││││┌ _segre_notation(eigenvalues::Vector{…}, multiplicities::Vector{…}, jordan_sizes::Vector{…}, dim::Int64; atol::Any) @ TensorGR src/xideal/segre.jl:245
+│││││┌ _insert_segre_comma(s::String, dim::Int64) @ TensorGR src/xideal/segre.jl:262
+││││││ no matching method found `(::Colon)(::Int64, ::Nothing)` (1/2 union split): i::Int64 TensorGR.:(:) j
+│││││└────────────────────
+│││││┌ _insert_segre_comma(s::String, dim::Int64) @ TensorGR src/xideal/segre.jl:263
+││││││ no matching method found `+(::Nothing, ::Int64)` (1/2 union split): i = (j TensorGR.:+ 1)
+│││││└────────────────────
+│││││┌ _insert_segre_comma(s::String, dim::Int64) @ TensorGR src/xideal/segre.jl:262
+││││││ no matching method found `(::Colon)(::Int64, ::Nothing)` (1/2 union split): i::Int64 TensorGR.:(:) j::UnitRange{Int64}
+│││││└────────────────────
+│││││┌ _insert_segre_comma(s::String, dim::Int64) @ TensorGR src/xideal/segre.jl:263
+││││││ no matching method found `+(::Nothing, ::Int64)` (1/2 union split): i = (j TensorGR.:+ 1)::Int64
+│││││└────────────────────
+┌ _replace_triple_riem_ddi(p::TProduct, identity_expr::TensorExpr, metric::Symbol) @ TensorGR src/algebra/ddi_rules.jl:516
+│ no matching method found `tproduct(::Complex, ::Vector{TensorExpr})` (1/2 union split): replacement = tproduct((-1 TensorGR.:// i1_coeff::Any)::Union{Complex, Rational}, (TensorExpr)[tsum(other_terms::Vector{TensorExpr})::TensorExpr]::Vector{TensorExpr})
+└────────────────────
+┌ _expr_to_trinv_relation(expr::TensorExpr, registry::TensorRegistry, metric::Symbol) @ TensorGR src/invariants/trinv.jl:958
+│ no matching method found `kwcall(::@NamedTuple{registry::TensorRegistry}, ::typeof(canonicalize), ::TRInv)`: canon = Core.kwcall(NamedTuple{(:registry,)}(tuple(registry::TensorRegistry)::Tuple{TensorRegistry})::@NamedTuple{registry::TensorRegistry}, canonicalize, trinv)
+└────────────────────
+┌ _expr_to_trinv_relation(expr::TensorExpr, registry::TensorRegistry, metric::Symbol) @ TensorGR src/invariants/trinv.jl:958
+│ no matching method found `kwcall(::@NamedTuple{registry::TensorRegistry}, ::typeof(canonicalize), ::TRInv)`: canon = Core.kwcall(NamedTuple{(:registry,)}(tuple(registry::TensorRegistry)::Tuple{TensorRegistry})::@NamedTuple{registry::TensorRegistry}, canonicalize, trinv::TRInv)
+└────────────────────
+┌ _parse_trinv_sum(expr::TensorExpr, registry::TensorRegistry, metric::Symbol) @ TensorGR src/invariants/trinv.jl:982
+│ no matching method found `kwcall(::@NamedTuple{registry::TensorRegistry}, ::typeof(canonicalize), ::TRInv)`: canon = Core.kwcall(NamedTuple{(:registry,)}(tuple(registry::TensorRegistry)::Tuple{TensorRegistry})::@NamedTuple{registry::TensorRegistry}, canonicalize, trinv)
+└────────────────────
+┌ _parse_trinv_sum(expr::TensorExpr, registry::TensorRegistry, metric::Symbol) @ TensorGR src/invariants/trinv.jl:982
+│ no matching method found `kwcall(::@NamedTuple{registry::TensorRegistry}, ::typeof(canonicalize), ::TRInv)`: canon = Core.kwcall(NamedTuple{(:registry,)}(tuple(registry::TensorRegistry)::Tuple{TensorRegistry})::@NamedTuple{registry::TensorRegistry}, canonicalize, trinv::TRInv)
+└────────────────────
+┌ detect_primary_constraints(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:279
+│ no matching method found `-(::Symbol, ::Int64)` (1/2 union split): d_spatial = (d TensorGR.:- 1)
+└────────────────────
+┌ constraint_algebra(constraints::Vector{TensorGR.PrimaryConstraint}; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:458
+│ no matching method found `+(::Int64, ::Symbol)` (1/2 union split): n_total_first_class = n_fc::Int64 TensorGR.:+ n_secondary
+└────────────────────
+┌ constraint_algebra(constraints::Vector{TensorGR.PrimaryConstraint}; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:471
+│ no matching method found `+(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:+ 1)
+└────────────────────
+┌ constraint_algebra(constraints::Vector{TensorGR.PrimaryConstraint}; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:471
+│ no matching method found `*(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:* (d TensorGR.:+ 1)::Int64)
+└────────────────────
+┌ generate_secondary_constraints(adm::ADMDecomposition, primary_constraints::Vector{…}; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:562
+│ no matching method found `-(::Symbol, ::Int64)` (1/2 union split): d_spatial = (d TensorGR.:- 1)
+└────────────────────
+┌ dirac_algorithm(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:753
+│ no matching method found `+(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:+ 1)
+└────────────────────
+┌ dirac_algorithm(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:753
+│ no matching method found `*(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:* (d TensorGR.:+ 1)::Int64)
+└────────────────────
+┌ total_constraint_count(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:788
+│ no matching method found `*(::Int64, ::Symbol)` (1/2 union split): 2 TensorGR.:* d
+└────────────────────
+┌ physical_dof_count(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:821
+│ no matching method found `+(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:+ 1)
+└────────────────────
+┌ physical_dof_count(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:821
+│ no matching method found `*(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:* (d TensorGR.:+ 1)::Int64)
+└────────────────────
+┌ physical_dof_count(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/adm.jl:822
+│ no matching method found `*(::Int64, ::Symbol)` (1/2 union split): n_first_class = 2 TensorGR.:* d
+└────────────────────
+┌ classify_constraints(primary_constraints::Vector{…}, secondary_constraints::Vector{…}; phase_space_dim::Union{…}, registry::TensorRegistry) @ TensorGR src/hamiltonian/constraints.jl:132
+│┌ _infer_phase_space_dim(primary_constraints::Vector{…}, secondary_constraints::Vector{…}, registry::TensorRegistry) @ TensorGR src/hamiltonian/constraints.jl:177
+││ no matching method found `+(::Symbol, ::Int64)` (1/2 union split): (d::Union{Int64, Symbol} TensorGR.:+ 1)
+│└────────────────────
+│┌ _infer_phase_space_dim(primary_constraints::Vector{…}, secondary_constraints::Vector{…}, registry::TensorRegistry) @ TensorGR src/hamiltonian/constraints.jl:177
+││ no matching method found `*(::Symbol, ::Int64)` (1/2 union split): (d::Union{Int64, Symbol} TensorGR.:* (d::Union{Int64, Symbol} TensorGR.:+ 1)::Int64)
+│└────────────────────
+┌ dof_summary(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/dof.jl:185
+│ no matching method found `+(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:+ 1)
+└────────────────────
+┌ dof_summary(adm::ADMDecomposition; registry::TensorRegistry) @ TensorGR src/hamiltonian/dof.jl:185
+│ no matching method found `*(::Symbol, ::Int64)` (1/2 union split): (d TensorGR.:* (d TensorGR.:+ 1)::Int64)
+└────────────────────
+┌ bimetric_mass_eigenstates(bp::BimetricPerturbation) @ TensorGR src/bimetric/linearize.jl:220
+│ no matching method found `tproduct(::Complex, ::Vector{TensorExpr})` (1/2 union split): tproduct(norm::Union{Complex, Rational}, (TensorExpr)[dg::Tensor]::Vector{TensorExpr})
+└────────────────────
+┌ bimetric_mass_eigenstates(bp::BimetricPerturbation) @ TensorGR src/bimetric/linearize.jl:227
+│ no matching method found `tproduct(::Complex, ::Vector{TensorExpr})` (1/2 union split): tproduct(norm::Union{Complex, Rational}, (TensorExpr)[dg::Tensor]::Vector{TensorExpr})
+└────────────────────
+┌ bimetric_mass_eigenstates(bp::BimetricPerturbation) @ TensorGR src/bimetric/linearize.jl:227
+│ no matching method found `tproduct(::Complex, ::Vector{TensorExpr})` (1/2 union split): tproduct(TensorGR.:-(norm::Union{Complex, Rational})::Union{Complex, Rational}, (TensorExpr)[df::Tensor]::Vector{TensorExpr})
+└────────────────────
+┌ _tex_tokenize(s::AbstractString) @ TensorGR src/parser/latex_parser.jl:87
+│┌ TensorGR.TexToken(type::Symbol, value::Missing, pos::Int64) @ TensorGR src/parser/latex_parser.jl:29
+││ no matching method found `convert(::Type{String}, ::Missing)`: @_6 = convert(fieldtype(#ctor-self#::Type{TensorGR.TexToken}, 2)::Type{String}, _6::Missing)
+│└────────────────────
+│┌ TensorGR.TexToken(type::Symbol, value::Regex, pos::Int64) @ TensorGR src/parser/latex_parser.jl:29
+││ no matching method found `convert(::Type{String}, ::Regex)`: @_6 = convert(fieldtype(#ctor-self#::Type{TensorGR.TexToken}, 2)::Type{String}, _6::Regex)
+│└────────────────────
+┌ _resolve_percent_ref(s::AbstractString) @ TensorGR src/repl/tensor_mode.jl:156
+│ no matching method found `parse(::Type{Int64}, ::Nothing)` (1/2 union split): offset = TensorGR.parse(TensorGR.Int, (m::RegexMatch{String})[1]::Union{Nothing, SubString{String}})
+└────────────────────
+┌ _resolve_percent_ref(s::AbstractString) @ TensorGR src/repl/tensor_mode.jl:165
+│ no matching method found `parse(::Type{Int64}, ::Nothing)` (1/2 union split): n = TensorGR.parse(TensorGR.Int, (m::RegexMatch{String})[1]::Union{Nothing, SubString{String}})
+└────────────────────
+┌ _process_tensor_input(line::AbstractString) @ TensorGR src/repl/tensor_mode.jl:319
+│ no matching method found `String(::Nothing)` (1/2 union split): TensorGR.String((m_sub::RegexMatch{String})[1]::Union{Nothing, SubString{String}})
+└────────────────────
+┌ _process_tensor_input(line::AbstractString) @ TensorGR src/repl/tensor_mode.jl:320
+│ no matching method found `String(::Nothing)` (1/2 union split): TensorGR.String((m_sub::RegexMatch{String})[2]::Union{Nothing, SubString{String}})
+└────────────────────
+┌ _process_tensor_input(line::AbstractString) @ TensorGR src/repl/tensor_mode.jl:350
+│ no matching method found `String(::Nothing)` (1/2 union split): varname = TensorGR.String((m::RegexMatch{String})[1]::Union{Nothing, SubString{String}})
+└────────────────────
+┌ _process_tensor_input(line::AbstractString) @ TensorGR src/repl/tensor_mode.jl:351
+│ no matching method found `String(::Nothing)` (1/2 union split): TensorGR.String((m::RegexMatch{String})[2]::Union{Nothing, SubString{String}})
+└────────────────────

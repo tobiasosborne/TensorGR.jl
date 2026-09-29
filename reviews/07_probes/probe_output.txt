@@ -1,0 +1,25 @@
+── §1a covariant derivatives treated as commuting ──
+A1 canonicalize D_b D_a S_cd            [correct: unchanged]   => D[-a](D[-b](S[-c, -d]))
+A2 simplify V^e(D_bD_aS_cd - D_aD_bS_cd) [correct: Riemann terms] => 0//1
+A3 same with ∂ (control)                 [correct: 0]          => 0//1
+── §1c display renders ∇ as ∂ ──
+C1 to_latex(D_a D_b S_cd)                [correct: \nabla or D] => \partial_{b} \partial_{a} S_{c d}
+C2 to_unicode(D_a D_b S_cd)                                    => ∂_b(∂_a(S_c_d))
+── §1b free-index positions not preserved ──
+B1 free_indices(S^b_a) vs canonicalize    [correct: equal]     => (TIndex[-a, b], TIndex[a, -b])
+B2 simplify A^b_a + A_a^b (A antisym)     [correct: 0]         => A[-a, b] + -A[a, -b]
+── §1d no well-formedness validation ──
+D1 simplify V^a + V_a                     [correct: error]     => V[-a] + V[a]
+D2 simplify S^b_a - S^a_b                 [correct: error]     => 0//1
+── §2.1 node types not handled by core passes ──
+E1 simplify(TParamDeriv)                                       => THROWS MethodError: MethodError: no method matching expand_products(::TParamDeriv)
+E2 simplify(Y_{2,1} + Y_{2,1})                                 => THROWS MethodError: MethodError: no method matching expand_products(::ScalarHarmonic)
+── §2.5 coefficient / scalar layer ──
+F1 (1//3)^20 * ((1//3)^20 * V)                                 => THROWS OverflowError: OverflowError: 3486784401 * 3486784401 overflowed for type Int64
+F2 0.1 * V                                                     => (3602879701896397//36028797018963968) * V[e]
+F3 im * V                                                      => THROWS InexactError: InexactError: Rational(im)
+F4 TScalar(:x)^2 == simplify(x*x)          [correct: true]     => false
+── §2.6 multiple zero representations ──
+G1 ZERO == TSum([]), ZERO == 0*V (raw)     [correct: true, true] => (false, false)
+── §2.3 objectid-keyed global cache ──
+H1 _DDI_REGISTERED entries after 50 throwaway registries       => 50   [correct: 0 retained]
