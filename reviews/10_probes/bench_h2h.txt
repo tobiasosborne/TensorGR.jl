@@ -1,0 +1,11 @@
+      16 KiB    3.13 ns
+random, <=12 slots                 n= 1024  Sonnet      4808 ns  Opus      4119 ns  S/O =  1.17
+random, <=24 slots                 n= 1024  Sonnet     10678 ns  Opus      8795 ns  S/O =  1.21
+random, <=48 slots                 n= 1024  Sonnet     26199 ns  Opus     19381 ns  S/O =  1.35
+Riemann chain k=3 (64 relabellings) n=   64  Sonnet     15126 ns  Opus      7936 ns  S/O =  1.91
+Riemann chain k=8 (64 relabellings) n=   64  Sonnet     73278 ns  Opus     36642 ns  S/O =  2.00
+Riemann chain k=12 (64 relabellings) n=   64  Sonnet    167178 ns  Opus     66182 ns  S/O =  2.53
+(RabcdR^abcd)^2 (64 relabellings)  n=   64  Sonnet     30687 ns  Opus     15976 ns  S/O =  1.92
+(RabcdR^abcd)^4 (64 relabellings)  n=   64  Sonnet    132419 ns  Opus     57530 ns  S/O =  2.30
+(RabcdR^abcd)^6 (64 relabellings)  n=   64  Sonnet    376265 ns  Opus    116510 ns  S/O =  3.23
+      16 KiB    3.04 ns
